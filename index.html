@@ -752,7 +752,7 @@ function blankLife(cfg){
   age:0, born:2026, alive:true, cause:null,
   stats:{health:cfg.health??rnd(70,100),happiness:cfg.happiness??rnd(70,100),smarts:cfg.smarts??rnd(20,80),looks:cfg.looks??rnd(20,90),fitness:cfg.fitness??20,fame:0,stress:cfg.stress??10},
   skills:newSkills(),
-  edu:0, eduProgram:null, inSchool:true, schoolStage:'elementary', major:null, gpaSeed:rnd(50,95), school:{popularity:rnd(25,55),clique:null,team:null}, invest:{}, market:{}, marketChg:{}, acts:0,
+  edu:0, eduProgram:null, inSchool:true, schoolStage:'elementary', major:null, gpaSeed:rnd(50,95), school:{popularity:rnd(25,55),clique:null,team:null}, invest:{}, market:{}, marketChg:{},
   cash:0, debt:0, creditScore:600,
   job:null, special:null, military:null,
   addiction:{alcohol:0,drugs:0},
@@ -888,7 +888,6 @@ function ageUp(){
  if(pendingChoice){toast('Resolve the choice first.');return;}
  G.age++; G.year++;
  startYearLog();
- G.acts={};
  // jail
  if(G.jailUntil>G.age){
   log(`You spent the year in prison. The days are identical and the nights are worse. You are ${G.jailUntil-G.age} year(s) from release.`,'bad');
@@ -1254,13 +1253,7 @@ function importSave(input){
 }
 
 // ---- shared post-action helper: small time cost is abstract; just re-render ----
-const ACT_CAP=3, ACT_TOTAL_CAP=10;
-function spendAct(key){
- key=key||'generic';if(!G.acts||typeof G.acts!=='object')G.acts={};
- if((G.acts._total||0)>=ACT_TOTAL_CAP){toast('This year is already full. Age up when you are ready.');return false;}
- if((G.acts[key]||0)>=ACT_CAP){toast('You have wrung about all you can out of that this year.');return false;}
- G.acts[key]=(G.acts[key]||0)+1;G.acts._total=(G.acts._total||0)+1;return true;
-}
+function spendAct(){return true;}
 function afterAction(stress){ if(stress)S.stress=clamp(S.stress+stress); renderAll(); saveGame(true); }
 
 /* =====================================================================
@@ -1325,7 +1318,6 @@ function renderSheet(){
     ${G.addiction.alcohol>25?`<div class="kv"><span>Drinking</span><span style="color:var(--red)">${G.addiction.alcohol>60?'severe':'a problem'}</span></div>`:''}
     ${G.addiction.drugs>25?`<div class="kv"><span>Drugs</span><span style="color:var(--red)">${G.addiction.drugs>60?'severe':'a problem'}</span></div>`:''}
     ${G.record.length?`<div class="kv"><span>Record</span><span>${G.record.length} offense(s)</span></div>`:''}
-    <div class="kv"><span>This year</span><span>${Math.max(0,ACT_TOTAL_CAP-((G.acts&&G.acts._total)||0))} actions left</span></div>
     ${G.balance&&G.balance.livingCost?`<div class="kv"><span>Living costs</span><span>~${money(G.balance.livingCost)}/yr</span></div>`:''}
     <h3 class="sec">Skills</h3>
     <div class="skills">${skillsHtml}</div>
@@ -2253,7 +2245,7 @@ function sanitizeSave(){
  if(G.job&&!JOB[G.job.id])G.job=null;if(G.special&&!SPECIAL[G.special.type])G.special=null;
  if(!G.flags)G.flags={};if(!G.addiction)G.addiction={alcohol:0,drugs:0};if(!G.social)G.social={};if(!G.pets)G.pets=[];
  if(!G.school)G.school={popularity:40,clique:null,team:null};if(!G.invest)G.invest={};if(!G.market)G.market={};if(!G.marketChg)G.marketChg={};
- if(!G.acts||typeof G.acts!=='object')G.acts={};if(!G.threads)G.threads=[];if(!G.arcs)G.arcs=[];if(!G.balance)G.balance={livingCost:0};
+ if(!G.threads)G.threads=[];if(!G.arcs)G.arcs=[];if(!G.balance)G.balance={livingCost:0};
  G.npcs=G.npcs||[];G.npcs.forEach(n=>{if(n.career===undefined)n.career=null;if(n.income===undefined)n.income=0;if(n.partnerName===undefined)n.partnerName=null;if(n.children===undefined)n.children=0;if(n.location===undefined)n.location=G.place;if(n.education===undefined)n.education=0;if(!n.memory)n.memory=[];});
  G.version=GAME_VERSION;
 }
