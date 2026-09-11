@@ -982,7 +982,7 @@ function discharge(){
 // ---- relationships ----
 function breakup(p,bad){
   if(!p)return;
-  p.role='ex'; p.married=false;
+  p.role='ex'; p.married=false; p.engaged=false;
   p.memory.push(`Relationship with ${G.name} ended${bad?' badly':''} at ${G.age}.`);
   log(`It ended with ${p.name}.${bad?' There was no soft way through it, and you both stopped pretending there was.':''}`,'bad');
   S.happiness=clamp(S.happiness-8);
@@ -1060,7 +1060,7 @@ function statusLine(){
 }
 function relLine(){
   const p=partner(); if(!p)return 'Single';
-  return `${p.role==='spouse'?'Married to':'With'} ${p.name} (${loyaltyWord(p.loyalty)})`;
+  return `${p.role==='spouse'?'Married to':p.engaged?'Engaged to':'With'} ${p.name} (${loyaltyWord(p.loyalty)})`;
 }
 function renderSheet(){
   const income=annualIncome();
@@ -1109,6 +1109,7 @@ function renderLog(){
    ===================================================================== */
 let menuOpen=null; // null = root menu; otherwise a category id
 let personOpen=null; // when set (within a category), show one person's detail
+let weddingDraft=null; // holds venue/honeymoon choices mid-wedding-flow
 const MENU=[
  {id:'people', title:'Relationships', sub:'Family, friends, the people in your life', icon:'💞', body:tabLife},
  {id:'love',   title:'Love',          sub:'Dating, romance, and everything after', icon:'❤️', body:tabLove,        cond:()=>G.age>=13},
@@ -1169,7 +1170,7 @@ function onActClick(e){
     sweepstakes:sweepstakes, lawsuit:openLawsuit,
     study:schoolStudy, schoolfriend:schoolFriend, clique:joinClique, sports:joinSportsTeam, dance:schoolDance,
     person:openPerson, talk:npcTalk, insult:npcInsult, gift:giftNPC, prank:npcPrank, concert:npcConcert,
-    party:npcParty, deal:npcDeal, askout:npcAskOut, hookup:npcHookup,
+    party:npcParty, deal:npcDeal, askout:npcAskOut, hookup:npcHookup, wedding:openWedding,
     buyasset:buyAsset, sellasset:sellAsset
   };
   const fn=H[act]; if(fn)fn(arg);
@@ -1212,7 +1213,7 @@ function tabLife(){
   return h;
 }
 function npcSpendTime(id){ const n=npc(id); if(!n)return; n.loyalty=clamp(n.loyalty+rnd(6,12)); S.happiness=clamp(S.happiness+2); S.stress=clamp(S.stress-2); n.memory.push(`${G.name} spent time with me at ${G.age}.`); log(`You spent real time with ${n.name}. ${pick(['Nothing dramatic — a long meal, a longer conversation.','You laughed about something old.','It was easy, the way it used to be.','You put the phones away.'])} It mattered more than it looked like it did.`,'good'); afterAction(0); }
-function npcMarry(id){ const n=npc(id); if(!n)return; if(n.loyalty<50){toast(`${n.name} isn't ready for that.`);return;} const ring=Math.min(G.cash,rnd(4000,14000)); pay(ring); n.role='spouse'; n.married=true; n.loyalty=clamp(n.loyalty+10); log(`You married ${n.name}. ${pick(['A small ceremony, the good kind.','Both families cried; one of them from joy.','You wrote your own vows and forgot half of them and it was perfect.','It rained, which everyone said was lucky.'])}`,'good'); S.happiness=clamp(S.happiness+10); afterAction(0); }
+function npcMarry(id){ const n=npc(id); if(!n)return; if(n.role==='spouse'){toast('You are already married to them.');return;} if(n.engaged){toast('You are engaged \u2014 plan the wedding from their page.');return;} proposeRingModal(id); }
 function npcBaby(id){ const p=npc(id); if(!p)return; if(chance(G.flags.fertility?0.82:0.55)){ const sex=chance(0.5)?'Male':'Female'; const k=addNPC('child',(sex==='Male'?pick(MALE):pick(FEMALE))+' '+G.last,0); k.loyalty=70; log(`You and ${p.name} had a baby — ${k.name}. Everything narrowed to one small, furious, sleepless point of light.`,'good'); S.happiness=clamp(S.happiness+8);S.stress=clamp(S.stress+6);pay(4000,true); } else { log(`You and ${p.name} tried for a child this year. Not yet. There's a particular quiet to a month that doesn't take.`); } afterAction(0); }
 function npcBreakup(id){ const n=npc(id); if(!n)return; if(n.role==='friend'||n.role==='fling'){ n.role='ex'; log(`You let ${n.name} drift out of your life. No fight, just fewer replies, then none.`); } else { breakup(n,false); } afterAction(0); }
 
@@ -1613,7 +1614,8 @@ function personDetail(n){
   h+=grp('Money', actBtn('gift',n.id,'Give a gift')+(G.age>=13?actBtn('deal',n.id,'Sell them something'):''));
   if(romance){ let r=''; if(n.role==='friend'||n.role==='coworker')r+=actBtn('askout',n.id,'Ask out'); r+=actBtn('hookup',n.id,'Hook up'); if(r)h+=grp('Romance', r); }
   let st='';
-  if(n.role==='partner'){ st=actBtn('marry',n.id,'Propose')+actBtn('breakup',n.id,'Break up'); }
+  if(n.role==='partner'&&n.engaged){ st=actBtn('wedding',n.id,'Plan the wedding')+actBtn('breakup',n.id,'Call it off'); }
+  else if(n.role==='partner'){ st=actBtn('marry',n.id,'Propose')+actBtn('breakup',n.id,'Break up'); }
   else if(n.role==='spouse'){ st=actBtn('baby',n.id,'Try for a baby')+actBtn('breakup',n.id,'Divorce'); }
   else if(n.role==='friend'||n.role==='fling'){ st=actBtn('breakup',n.id,'Cut off'); }
   if(st)h+=grp('Status', st);
@@ -1664,6 +1666,74 @@ function tabInvest(){
 function buyAsset(id){ ensureMarket(); const a=ASSET[id]; if(!a)return; if(G.age<18){toast('You must be 18 to invest.');return;} const price=G.market[id]; $('modalbox').innerHTML=`<h2>Buy ${a.name}</h2><p>Price ${money2(price)} per share. You have ${money(G.cash)} in cash. How much do you want to put in?</p><div class="row"><label>Amount ($)</label><input type="number" id="invamt" value="${Math.min(1000,Math.max(0,Math.floor(G.cash)))}" min="1" max="${Math.max(0,Math.floor(G.cash))}"></div><div class="opts"><button onclick="confirmBuyAsset('${id}')">Buy shares</button></div>`; openModal(); }
 function confirmBuyAsset(id){ if(G.age<18){toast("You must be 18 to invest.");return;} ensureMarket(); const a=ASSET[id]; const price=G.market[id]; const amt=Math.max(0,Math.round(+($('invamt').value||0))); const shares=Math.floor(amt/price); if(shares<=0){toast('Not enough for even one share.');return;} const cost=shares*price; if(!afford(cost)){toast('You cannot afford that.');return;} forceClose(); pay(cost); if(!G.invest[id])G.invest[id]={shares:0,basis:0}; G.invest[id].shares+=shares; G.invest[id].basis+=cost; log(`You put ${money(Math.round(cost))} into ${a.name} \u2014 ${shares.toLocaleString()} shares at ${money2(price)}. ${pick(['Now you refresh the number like everyone else.','The market does not know you exist, which is rather the point.','Money asleep, hopefully waking up bigger.'])}`,'money'); afterAction(0); }
 function sellAsset(id){ ensureMarket(); const a=ASSET[id]; const hd=G.invest[id]; if(!hd||hd.shares<=0){toast('You do not hold any of that.');return;} const price=G.market[id]; const proceeds=Math.round(hd.shares*price); const gain=proceeds-hd.basis; const sold=hd.shares; G.cash+=proceeds; G.invest[id]={shares:0,basis:0}; log(`You sold ${sold.toLocaleString()} shares of ${a.name} for ${money(proceeds)} \u2014 ${gain>=0?`a gain of ${money(gain)}`:`a loss of ${money(-gain)}`}. ${gain>=0?'You told yourself you always knew.':'You told yourself it was a lesson, which is what losses are for.'}`,'money'); afterAction(0); }
+
+/* ---------------- MARRIAGE: ring, proposal, wedding, name ---------------- */
+const RINGS=[
+ {id:'band',   name:'A simple band',            price:1500,   bonus:0.00},
+ {id:'diamond',name:'A proper diamond ring',    price:12000,  bonus:0.08},
+ {id:'rock',   name:'A stunning rock',          price:45000,  bonus:0.15},
+ {id:'obscene',name:'An obscene, tabloid ring', price:250000, bonus:0.25},
+];
+function ringName(tier){ const r=RINGS.find(x=>x.id===tier); return r?r.name:'a ring'; }
+function lastNameOf(n){ const parts=((n&&n.name)||'').trim().split(/\s+/); return parts.length>1?parts[parts.length-1]:((n&&n.name)||''); }
+function proposeRingModal(id){
+  const n=npc(id); if(!n)return;
+  const owned=(G.flags.ring)?`<button onclick="doPropose('${id}','${G.flags.ring.tier}')">Use the ring you already have<small>${esc(ringName(G.flags.ring.tier))}</small></button>`:'';
+  const rows=RINGS.map(r=>`<button onclick="buyRingAndPropose('${id}','${r.id}')">${esc(r.name)}<small>${money(r.price)}</small></button>`).join('');
+  $('modalbox').innerHTML=`<h2>A ring for ${esc(n.name)}</h2><p>You cannot propose empty-handed. The better the ring, the more it says \u2014 and the more it helps your case, and the more it costs.</p><div class="opts">${owned}${rows}</div>`;
+  openModal();
+}
+function buyRingAndPropose(id,tier){ const r=RINGS.find(x=>x.id===tier); if(!r)return; if(!pay(r.price)){toast('You cannot afford that ring.');return;} G.flags.ring={tier}; forceClose(); doPropose(id,tier); }
+function doPropose(id,tier){
+  const n=npc(id); if(!n){forceClose();return;} const r=RINGS.find(x=>x.id===tier)||RINGS[0];
+  const odds=Math.max(0.02,Math.min(0.98,(n.loyalty-35)/55 + r.bonus));
+  if(chance(odds)){
+    n.engaged=true; n.loyalty=clamp(n.loyalty+8); S.happiness=clamp(S.happiness+10); G.flags.ring=null;
+    log(`You got down on one knee and offered ${n.name} ${ringName(r.id).toLowerCase()}. ${pick(['They said yes before you finished the question.','There was a silence that took a year off your life, and then a yes, and then the two of you laughing like fools.','They cried, you cried, and a stranger at the next table applauded.'])} You are engaged.`,'good');
+    thread('engaged',{npc:n.id});
+  } else {
+    n.loyalty=clamp(n.loyalty-6); S.happiness=clamp(S.happiness-8);
+    log(`You proposed to ${n.name}, and they said no \u2014 kindly, or not, but no. ${pick(['They were not ready, they said, in the tone that means not with you.','It was too soon, or too late; you would spend a while deciding which.','The ring went back into your pocket, where it would sit for a long time.'])} You kept the ring.`,'bad');
+  }
+  afterAction(0);
+}
+const VENUES=[
+ {id:'courthouse',  name:'The courthouse',                     price:200,    happy:5,  fame:0},
+ {id:'backyard',    name:'A backyard with string lights',      price:6000,   happy:10, fame:0},
+ {id:'venue',       name:'A proper reception hall',            price:30000,  happy:14, fame:1},
+ {id:'destination', name:'A destination wedding abroad',       price:120000, happy:20, fame:3},
+ {id:'lavish',      name:'A lavish, no-expense-spared affair', price:600000, happy:26, fame:8},
+];
+const HONEYMOONS=[
+ {id:'none',   name:'Skip it \u2014 straight back to real life', price:0,      happy:0,  fame:0},
+ {id:'road',   name:'A road trip',                              price:2500,   happy:6,  fame:0},
+ {id:'beach',  name:'A beach resort',                           price:12000,  happy:12, fame:0},
+ {id:'europe', name:'Two weeks across Europe',                  price:45000,  happy:18, fame:1},
+ {id:'island', name:'A private island',                         price:300000, happy:30, fame:3},
+];
+function openWedding(id){ const n=npc(id); if(!n)return; if(n.role!=='partner'||!n.engaged){toast('You need to be engaged first.');return;} weddingDraft={id,venue:null,honeymoon:null}; pickVenue(); }
+function pickVenue(){ const rows=VENUES.map(v=>`<button onclick="setVenue('${v.id}')">${esc(v.name)}<small>${money(v.price)}</small></button>`).join(''); $('modalbox').innerHTML=`<h2>The wedding</h2><p>First: where will you hold it? Every guest, every flower, every folding chair is money you will not see again \u2014 and a day you might not forget.</p><div class="opts">${rows}</div>`; openModal(); }
+function setVenue(vid){ if(!weddingDraft)return; weddingDraft.venue=vid; pickHoneymoon(); }
+function pickHoneymoon(){ const rows=HONEYMOONS.map(h=>`<button onclick="setHoneymoon('${h.id}')">${esc(h.name)}<small>${h.price>0?money(h.price):'free'}</small></button>`).join(''); $('modalbox').innerHTML=`<h2>The honeymoon</h2><p>And afterward? A week or two that belongs only to the two of you, before the ordinary days take back the reins.</p><div class="opts">${rows}</div>`; openModal(); }
+function setHoneymoon(hid){ if(!weddingDraft)return; weddingDraft.honeymoon=hid; pickName(); }
+function pickName(){ const n=npc(weddingDraft.id); if(!n){weddingDraft=null;forceClose();return;} const theirs=lastNameOf(n); $('modalbox').innerHTML=`<h2>The name</h2><p>One last decision, quieter than the rest and longer-lasting. What will your name be?</p><div class="opts"><button onclick="setWedName('keep')">Keep my name<small>${esc(G.last||'')}</small></button><button onclick="setWedName('take')">Take theirs<small>${esc(theirs)}</small></button><button onclick="setWedName('hyphen')">Hyphenate<small>${esc((G.last||'')+'-'+theirs)}</small></button></div>`; openModal(); }
+function setWedName(choice){
+  if(!weddingDraft)return; const n=npc(weddingDraft.id); if(!n){weddingDraft=null;forceClose();return;}
+  const v=VENUES.find(x=>x.id===weddingDraft.venue)||VENUES[0];
+  const h=HONEYMOONS.find(x=>x.id===weddingDraft.honeymoon)||HONEYMOONS[0];
+  const cost=v.price+h.price;
+  if(!pay(cost,true)){ toast('You cannot cover the wedding right now.'); return; }
+  const theirs=lastNameOf(n); const theirFirst=(n.name||'').trim().split(/\s+/)[0];
+  if(choice==='take'){ G.last=theirs; } else if(choice==='hyphen'){ G.last=(G.last||'')+'-'+theirs; }
+  G.name=(G.first||'')+' '+(G.last||'');
+  n.role='spouse'; n.married=true; n.engaged=false; n.loyalty=clamp(n.loyalty+10);
+  S.happiness=clamp(S.happiness+v.happy+h.happy); if(v.fame||h.fame)S.fame=clamp(S.fame+(v.fame||0)+(h.fame||0));
+  const nameLine=choice==='keep'?`You kept your name.`:choice==='take'?`You took ${theirFirst}'s name; you are ${G.name} now.`:`You hyphenated it \u2014 the forms will hate it and you do not care. You are ${G.name} now.`;
+  const honey=h.id==='none'?`, and skipped the honeymoon for the ordinary life waiting at home`:`, then left for ${h.name.toLowerCase()}`;
+  forceClose();
+  log(`You married ${n.name} at ${v.name.toLowerCase()}${honey}. ${pick(['Somebody\u2019s parent cried. There was cake, one bad speech, and one that undid the whole room.','It rained, which everyone insisted was lucky.','You forgot half your vows and it was, somehow, exactly right.'])} ${nameLine}`,'good');
+  weddingDraft=null; afterAction(0);
+}
 
 /* =====================================================================
    PART 6 — GOD MODE, CHARACTER CREATION, OBITUARY, BOOT
