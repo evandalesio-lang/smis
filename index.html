@@ -89,6 +89,9 @@ button.person{display:flex;align-items:center;gap:8px;width:100%;text-align:left
 button.person:hover{background:var(--panel2);cursor:pointer}
 button.person .phead{flex:1;margin:0}
 .pchev{align-self:center}
+.box{position:relative}
+.modalx{position:absolute;top:6px;right:8px;background:transparent;border:0;color:var(--muted);font-size:20px;line-height:1;cursor:pointer;padding:6px;z-index:3}
+.modalx:hover{color:var(--ink)}
 /* modal */
 #modal{position:fixed;inset:0;background:rgba(10,14,20,.7);display:none;align-items:center;justify-content:center;z-index:20;padding:16px}
 #modal.open{display:flex}
@@ -377,15 +380,68 @@ const ITEMS=[
  I('moto','Motorcycle','Vehicles',14000,{dep:0.14,upkeep:700,tags:['moto'],happy:3}),
  I('sports','Sports car','Vehicles',120000,{dep:0.12,upkeep:4000,tags:['car'],happy:5,fame:1}),
  I('super','Supercar','Vehicles',420000,{dep:0.1,upkeep:12000,tags:['car'],happy:8,fame:2}),
- I('boat','Speedboat','Vehicles',65000,{dep:0.1,upkeep:5000,happy:4}),
- I('yachtown','Yacht','Vehicles',3500000,{dep:0.06,upkeep:250000,happy:12,fame:3}),
- I('jetown','Private jet','Vehicles',9000000,{dep:0.06,upkeep:900000,happy:15,fame:5}),
+ I('boat','Speedboat','Vehicles',65000,{dep:0.1,upkeep:5000,tags:['boat'],happy:4}),
+ I('yachtown','Yacht','Vehicles',3500000,{dep:0.06,upkeep:250000,tags:['boat'],happy:12,fame:3}),
+ I('jetown','Private jet','Vehicles',9000000,{dep:0.06,upkeep:900000,tags:['plane'],happy:15,fame:5,age:18}),
  I('watch','Luxury watch','Luxury',12000,{dep:0.02,upkeep:200,happy:2,fame:1}),
  I('jewelry','Diamond jewelry','Luxury',30000,{dep:0.01,upkeep:100,happy:3,fame:1}),
  I('art','Original painting','Luxury',80000,{dep:-0.03,upkeep:500,happy:3}),
  I('wine','Wine cellar collection','Luxury',40000,{dep:-0.02,upkeep:1500,happy:3}),
  I('gear','Home gym','Home',3500,{dep:0.1,upkeep:100,tags:['gym'],happy:1}),
  I('books','Personal library','Home',6000,{dep:0.02,upkeep:100,happy:2,tags:['books']}),
+ I('xbox','Xbox','Tech',500,{dep:0.3,happy:2,upkeep:0,age:8}),
+ I('playstation','PlayStation','Tech',500,{dep:0.3,happy:2,upkeep:0,age:8}),
+ I('steambox','Steam Machine','Tech',900,{dep:0.3,happy:2,upkeep:0,age:8}),
+ I('laptop','Laptop','Tech',1600,{dep:0.28,happy:1,age:12}),
+ I('vr','VR headset','Tech',700,{dep:0.35,happy:2,age:12}),
+ I('camera','Camera kit','Tech',2200,{dep:0.2,happy:1}),
+ I('drone','Camera drone','Tech',1500,{dep:0.3,happy:1}),
+ I('hometheater','Home theater','Tech',6000,{dep:0.2,happy:3}),
+ I('violin','Violin','Instruments',3000,{dep:0.04,tags:['instrument'],upkeep:60,age:8}),
+ I('synth','Synthesizer','Instruments',1800,{dep:0.1,tags:['instrument'],upkeep:40,age:12}),
+ I('espresso','Espresso machine','Home',1200,{dep:0.2,happy:1}),
+ I('pooltable','Pool table','Home',3500,{dep:0.1,happy:2}),
+ I('hottub','Hot tub','Home',9000,{dep:0.15,upkeep:800,happy:3}),
+ I('homegym','Home gym','Home',5000,{dep:0.15,upkeep:200,happy:1}),
+ I('mower','Riding mower','Home',3800,{dep:0.15,upkeep:150,happy:1}),
+ I('handbag','Designer handbag','Luxury',6000,{dep:0.05,happy:2,fame:1}),
+ I('sneakers','Rare sneaker collection','Luxury',15000,{dep:-0.01,happy:2,fame:1}),
+ I('watchset','Watch collection','Luxury',180000,{dep:0.0,upkeep:1000,happy:4,fame:2}),
+ I('classic','Classic car','Vehicles',90000,{dep:-0.02,upkeep:3000,tags:['car'],happy:5,fame:2}),
+ I('jetski','Jet ski','Vehicles',18000,{dep:0.15,upkeep:900,tags:['boat'],happy:3}),
+ I('sailboat','Sailboat','Vehicles',140000,{dep:0.08,upkeep:9000,tags:['boat'],happy:5,fame:1}),
+ I('cessna','Propeller plane','Vehicles',350000,{dep:0.08,upkeep:35000,tags:['plane'],happy:8,fame:2,age:18}),
+ I('helicopter','Helicopter','Vehicles',1800000,{dep:0.08,upkeep:180000,tags:['plane'],happy:10,fame:3,age:18}),
+ I('xbox','Xbox','Tech',500,{dep:0.25,happy:3,age:13}),
+ I('playstation','PlayStation','Tech',500,{dep:0.25,happy:3,age:13}),
+ I('steammachine','Steam Machine','Tech',900,{dep:0.25,happy:3,age:13}),
+ I('laptop','Laptop','Tech',1600,{dep:0.28,happy:1,age:13}),
+ I('camera','Mirrorless camera','Tech',2200,{dep:0.2,happy:2}),
+ I('drone','Camera drone','Tech',1500,{dep:0.25,happy:2}),
+ I('vr','VR headset','Tech',600,{dep:0.3,happy:3,age:13}),
+ I('violin','Violin','Instruments',3000,{dep:0.04,tags:['instrument'],upkeep:120,age:13}),
+ I('synth','Synthesizer','Instruments',2200,{dep:0.1,tags:['instrument'],upkeep:60,age:13}),
+ I('sofa','Designer sofa','Home',4000,{dep:0.15,happy:2}),
+ I('tv','Big-screen TV','Home',2600,{dep:0.28,happy:3,age:13}),
+ I('hometheater','Home theater','Home',12000,{dep:0.2,happy:4}),
+ I('espresso','Espresso machine','Home',2500,{dep:0.18,happy:2}),
+ I('pooltable','Pool table','Home',6000,{dep:0.08,happy:3}),
+ I('hottub','Hot tub','Home',9000,{dep:0.12,upkeep:600,happy:4}),
+ I('applpack','Kitchen appliance suite','Home',7000,{dep:0.15,happy:2}),
+ I('watch','Luxury watch','Luxury',18000,{dep:0.04,happy:3,fame:1}),
+ I('necklace','Diamond necklace','Luxury',60000,{dep:0.03,happy:3,fame:1,age:18}),
+ I('handbag','Designer handbag','Luxury',9000,{dep:0.05,happy:2,fame:1}),
+ I('art','A piece of fine art','Luxury',150000,{dep:0.0,happy:3,fame:2,age:18}),
+ I('winecellar','A cellar of fine wine','Luxury',80000,{dep:0.02,happy:3,age:21}),
+ I('speedboat','Speedboat','Vehicles',65000,{dep:0.14,upkeep:5000,tags:['boat'],happy:4}),
+ I('sailboat','Sailboat','Vehicles',120000,{dep:0.1,upkeep:6000,tags:['boat'],happy:4}),
+ I('yacht','Yacht','Vehicles',3500000,{dep:0.1,upkeep:250000,tags:['boat'],happy:8,fame:4,age:18}),
+ I('propplane','Propeller plane','Vehicles',350000,{dep:0.1,upkeep:40000,tags:['plane'],happy:6,fame:2,age:18}),
+ I('jet','Private jet','Vehicles',18000000,{dep:0.1,upkeep:1500000,tags:['plane'],happy:10,fame:8,age:18}),
+ I('ring_band','Wedding band','Rings',1500,{dep:0.05,upkeep:0,happy:1,age:18,tags:['ring'],ringBonus:0.00}),
+ I('ring_solitaire','Solitaire diamond ring','Rings',12000,{dep:0.02,upkeep:0,happy:2,age:18,tags:['ring'],ringBonus:0.08}),
+ I('ring_rock','Three-carat rock','Rings',45000,{dep:0.02,upkeep:0,happy:3,fame:1,age:18,tags:['ring'],ringBonus:0.15}),
+ I('ring_obscene','Obscene tabloid ring','Rings',250000,{dep:0.01,upkeep:0,happy:4,fame:2,age:18,tags:['ring'],ringBonus:0.25}),
 ];
 const ITEM=Object.fromEntries(ITEMS.map(i=>[i.id,i]));
 
@@ -641,7 +697,7 @@ function blankLife(cfg){
   age:0, born:2026, alive:true, cause:null,
   stats:{health:cfg.health??rnd(70,100),happiness:cfg.happiness??rnd(70,100),smarts:cfg.smarts??rnd(20,80),looks:cfg.looks??rnd(20,90),fitness:cfg.fitness??20,fame:0,stress:cfg.stress??10},
   skills:newSkills(),
-  edu:0, eduProgram:null, inSchool:true, schoolStage:'elementary', major:null, gpaSeed:rnd(50,95), school:{popularity:rnd(25,55),clique:null,team:null}, invest:{}, market:{}, marketChg:{},
+  edu:0, eduProgram:null, inSchool:true, schoolStage:'elementary', major:null, gpaSeed:rnd(50,95), school:{popularity:rnd(25,55),clique:null,team:null}, invest:{}, market:{}, marketChg:{}, acts:0,
   cash:0, debt:0, creditScore:600,
   job:null, special:null, military:null,
   addiction:{alcohol:0,drugs:0},
@@ -698,6 +754,7 @@ function ageUp(){
  if(pendingChoice){toast('Resolve the choice first.');return;}
  G.age++; G.year++;
  startYearLog();
+ G.acts={};
  // jail
  if(G.jailUntil>G.age){log(`You spent the year in prison. The days are identical and the nights are worse. You are ${G.jailUntil-G.age} year(s) from release.`,'bad');K.combat+=2;K.stealth+=2;S.happiness-=6;finishYear();return;}
  // schooling
@@ -762,6 +819,10 @@ function handleUpkeep(){
  if(G.home==='rent'){const rent=Math.round(1100*12*col);pay(rent,true);}
  // property upkeep + condition
  for(const p of G.props){const def=PROP[p.id];if(!def)continue;const up=Math.round(def.price*def.upkeep*col);if(p.maintain&&afford(up)){pay(up);p.cond=clamp((p.cond??100)+6,0,100);}else{p.cond=clamp((p.cond??100)-8);}}
+ // mortgages
+ for(const p of G.props.slice()){ if(!p.mortgage||p.mortgage.balance<=0)continue; const def=PROP[p.id]; const m=p.mortgage; const interest=Math.round(m.balance*m.rate); const due=Math.min(m.payment,m.balance+interest); if(afford(due)){ pay(due); m.balance=Math.max(0,m.balance+interest-due); m.missed=0; if(m.balance<=0){ delete p.mortgage; log(`You made the last payment on the ${def.name.toLowerCase()}. The bank's letter used the word satisfied. So were you.`,'good'); } } else { m.missed=(m.missed||0)+1; G.creditScore=clamp(G.creditScore-25,300,850); m.balance=Math.round((m.balance+interest)*1.02); if(m.missed>=3){ const i=G.props.indexOf(p); if(i>=0)G.props.splice(i,1); if(!G.props.length&&G.home==='own')G.home='rent'; S.happiness=clamp(S.happiness-15); S.stress=clamp(S.stress+15); G.creditScore=clamp(G.creditScore-60,300,850); log(`The bank foreclosed on the ${def.name.toLowerCase()}. Strangers carried your life to the curb while a notice fluttered on the door. Your credit will carry this for years.`,'bad'); } else { log(`You missed the mortgage on the ${def.name.toLowerCase()} — ${3-m.missed} more and they take it.`,'bad'); } } }
+ // rental income
+ for(const p of G.props){ if(!p.rented||!p.tenant)continue; const def=PROP[p.id]; const q=p.tenant; if(chance(q.reliability)){ G.cash+=p.rent; if(chance(0.3))p.cond=clamp((p.cond??100)-rnd(1,5)); } else { p.cond=clamp((p.cond??100)-rnd(4,10)); if(chance(0.5))log(`Your tenant ${q.name} in the ${def.name.toLowerCase()} was late on rent again. ${pick(['You heard three excuses and believed none.','The check is in the mail, they swear.'])}`,'bad'); } }
  // item upkeep + condition
  for(const it of G.items){const def=ITEM[it.id];if(!def)continue;it.cond=it.cond??100;it.value=it.value??def.price;it.value=Math.max(0,Math.round(it.value*(1-def.dep)));if(it.maintain&&afford(def.upkeep)){pay(def.upkeep);it.cond=clamp(it.cond+5,0,100);}else{it.cond=clamp(it.cond-10);if(it.cond<20&&chance(0.3)){}}}
  // debt interest
@@ -835,7 +896,7 @@ function eulogy(){
  return pick(bits);
 }
 function capitalize(s){return s.charAt(0).toUpperCase()+s.slice(1);}
-function netWorth(){let w=G.cash-G.debt;G.items.forEach(it=>{const d=ITEM[it.id];if(d)w+=(it.value??d.price)*((it.cond??100)/100);});G.props.forEach(p=>{const d=PROP[p.id];if(d)w+=d.price*((p.cond??100)/100)*0.9;});if(G.invest&&G.market){for(const id in G.invest){const hd=G.invest[id];if(hd&&hd.shares>0)w+=hd.shares*(G.market[id]||0);}}return Math.round(w);}
+function netWorth(){let w=G.cash-G.debt;G.items.forEach(it=>{const d=ITEM[it.id];if(d)w+=(it.value??d.price)*((it.cond??100)/100);});G.props.forEach(p=>{const d=PROP[p.id];if(d)w+=d.price*((p.cond??100)/100)*0.9;if(p.mortgage)w-=p.mortgage.balance;});if(G.invest&&G.market){for(const id in G.invest){const hd=G.invest[id];if(hd&&hd.shares>0)w+=hd.shares*(G.market[id]||0);}}return Math.round(w);}
 
 /* =====================================================================
    PART 5 — LOG, CHOICES, EVENT ROLL, JOB/CAREER/MILITARY GLUE, SAVE I/O
@@ -934,7 +995,7 @@ function handleSpecialYear(){
   G.special.years++;
   S.stress=clamp(S.stress+3);
 }
-function specialWork(){
+function specialWork(){ if(!spendAct())return;
   const sp=SPECIAL[G.special.type], t=G.special.tier;
   const skill=K[sp.skill], aux=S[sp.aux]!==undefined?S[sp.aux]:K[sp.aux]||0;
   const talentMatch=(G.talent&&TALENTS[G.talent]&&TALENTS[G.talent].special===G.special.type);
@@ -1027,12 +1088,15 @@ function importSave(input){
 }
 
 // ---- shared post-action helper: small time cost is abstract; just re-render ----
+const ACT_CAP=5;
+function spendAct(key){ key=key||'generic'; if(!G.acts||typeof G.acts!=='object')G.acts={}; if((G.acts[key]||0)>=ACT_CAP){ toast('You have wrung about all you can out of that this year.'); return false; } G.acts[key]=(G.acts[key]||0)+1; return true; }
 function afterAction(stress){ if(stress)S.stress=clamp(S.stress+stress); renderAll(); saveGame(true); }
 
 /* =====================================================================
    RENDERING — sheet, log, header
    ===================================================================== */
-function openModal(){ $('modal').classList.add('open'); }
+function openModal(){ const mb=$('modalbox'); if(mb&&!(mb.querySelector&&mb.querySelector('.modalx'))){ mb.insertAdjacentHTML('afterbegin','<button class=\'modalx\' type=\'button\' onclick=\'cancelModal()\' aria-label=\'Close\'>\u2715</button>'); } $('modal').classList.add('open'); }
+function cancelModal(){ pendingChoice=null; weddingDraft=null; forceClose(); }
 function closeModal(){ if(pendingChoice)return; $('modal').classList.remove('open'); $('modalbox').innerHTML=''; }
 // hard close (used by god/obituary/creation which manage their own state)
 function forceClose(){ $('modal').classList.remove('open'); $('modalbox').innerHTML=''; }
@@ -1110,6 +1174,8 @@ function renderLog(){
 let menuOpen=null; // null = root menu; otherwise a category id
 let personOpen=null; // when set (within a category), show one person's detail
 let weddingDraft=null; // holds venue/honeymoon choices mid-wedding-flow
+let propOpen=null;   // owned-property detail index
+let socialOpen=null; // social platform detail id
 const MENU=[
  {id:'people', title:'Relationships', sub:'Family, friends, the people in your life', icon:'💞', body:tabLife},
  {id:'love',   title:'Love',          sub:'Dating, romance, and everything after', icon:'❤️', body:tabLove,        cond:()=>G.age>=13},
@@ -1137,14 +1203,16 @@ function renderActions(){
       wrap.innerHTML=`<button class="back" onclick="personOpen=null;renderActions()">‹ Back</button><span class="mtitle">${esc(pn.name)}</span>`;
       body.innerHTML=personDetail(pn); body.onclick=onActClick; return;
     }
+    if(propOpen!=null){ const _pp=G.props[+propOpen]; if(!_pp){ propOpen=null; return renderActions(); } const _pd=PROP[_pp.id]; wrap.innerHTML=`<button class="back" onclick="propOpen=null;renderActions()">‹ Back</button><span class="mtitle">${esc(_pd.name)}</span>`; body.innerHTML=propertyDetail(+propOpen); body.onclick=onActClick; return; }
+    if(socialOpen){ const _sx=SOCIALS.find(x=>x.id===socialOpen); if(!_sx||!(G.social&&G.social[socialOpen])){ socialOpen=null; return renderActions(); } wrap.innerHTML=`<button class="back" onclick="socialOpen=null;renderActions()">‹ Back</button><span class="mtitle">${esc(_sx.name)}</span>`; body.innerHTML=socialDetail(socialOpen); body.onclick=onActClick; return; }
     const cat=MENU.find(m=>m.id===menuOpen);
     if(!cat||(cat.cond&&!safeCond(cat.cond))){ menuOpen=null; return renderActions(); }
-    wrap.innerHTML=`<button class="back" onclick="menuOpen=null;personOpen=null;renderActions()">‹ Back</button><span class="mtitle">${cat.icon} ${esc(cat.title)}</span>`;
+    wrap.innerHTML=`<button class="back" onclick="menuOpen=null;personOpen=null;propOpen=null;socialOpen=null;renderActions()">‹ Back</button><span class="mtitle">${cat.icon} ${esc(cat.title)}</span>`;
     if(jailed && cat.id!=='people' && cat.id!=='crime'){ body.innerHTML=`<div class="note">You're incarcerated for ${G.jailUntil-G.age} more year(s). Age up to serve your time — there's little to do in here but wait, and get harder.</div>`; body.onclick=null; }
     else { body.innerHTML=cat.body()||'<div class="note">Nothing here right now.</div>'; body.onclick=onActClick; }
   } else {
-    wrap.innerHTML='<span class="mtitle">What do you want to do?</span>';
-    body.innerHTML=`<div class="menu">${MENU.filter(m=>!m.cond||safeCond(m.cond)).map(m=>`<button class="mrow" onclick="personOpen=null;menuOpen='${m.id}';renderActions()"><span class="mi">${m.icon}</span><span class="mc"><span class="mt">${esc(m.title)}</span><span class="ms">${esc(m.sub)}</span></span><span class="mchev">›</span></button>`).join('')}</div>`;
+    wrap.innerHTML=`<span class="mtitle">What do you want to do?</span>`;
+    body.innerHTML=`<div class="menu">${MENU.filter(m=>!m.cond||safeCond(m.cond)).map(m=>`<button class="mrow" onclick="personOpen=null;propOpen=null;socialOpen=null;menuOpen='${m.id}';renderActions()"><span class="mi">${m.icon}</span><span class="mc"><span class="mt">${esc(m.title)}</span><span class="ms">${esc(m.sub)}</span></span><span class="mchev">›</span></button>`).join('')}</div>`;
     body.onclick=null;
   }
 }
@@ -1163,22 +1231,24 @@ function onActClick(e){
     'toggle-item':toggleItemMaintain, 'buy-prop':buyProperty, 'sell-prop':sellProperty,
     'toggle-prop':togglePropMaintain, 'clean-prop':cleanProperty, loan:takeLoan, 'pay-debt':payDebt,
     dating:datingApp, celebdate:celebDate, onenight:oneNight, 'make-friend':makeFriend,
-    crime:doCrime, lottery:playLottery, casino:openCasino, drivetest:doDriveTest,
-    fame:doFame, joinsocial:joinSocial, post:postSocial, monetize:monetizeSocial,
+    crime:doCrime, lottery:playLottery, casino:openCasino, drivetest:doDriveTest, license:doLicense,
+    fame:doFame, joinsocial:joinSocial, post:postMenu, monetize:monetizeSocial,
     charity:doCharity, society:joinSociety, getpet:getPet, adopt:adoptChild,
     emigrate:emigrate, fertility:fertilityClinic, horses:horseRaces, fightbet:fightBet,
     sweepstakes:sweepstakes, lawsuit:openLawsuit,
     study:schoolStudy, schoolfriend:schoolFriend, clique:joinClique, sports:joinSportsTeam, dance:schoolDance,
     person:openPerson, talk:npcTalk, insult:npcInsult, gift:giftNPC, prank:npcPrank, concert:npcConcert,
     party:npcParty, deal:npcDeal, askout:npcAskOut, hookup:npcHookup, wedding:openWedding,
-    buyasset:buyAsset, sellasset:sellAsset
+    buyasset:buyAsset, sellasset:sellAsset,
+    prop:openProperty, 'renovate-prop':renovateProp, 'upgrade-prop':upgradeProp, 'rentout-prop':rentOut, 'inspect-prop':inspectProp, 'evict-prop':evictTenant, 'party-prop':partyProp, 'gift-prop':giftProp, 'payoff-prop':payoffProp,
+    social:openSocial, promote:promoteSocial, buysubs:buySubsMenu, verify:verifySocial, delsocial:deleteSocial
   };
   const fn=H[act]; if(fn)fn(arg);
 }
 
 /* ---------------- activities (shared) ---------------- */
 function applyFx(fx){ if(!fx)return; for(const k in fx){ if(k in S)S[k]=clamp(S[k]+fx[k]); else if(k in K)K[k]=clamp(K[k]+fx[k]); } }
-function doActivity(id){
+function doActivity(id){ if(!spendAct('act:'+id))return;
   const a=ACT[id]; if(!a)return;
   if(G.age<a.age){toast('Too young for that.');return;}
   if(a.max&&G.age>a.max){toast('You are past the age for that.');return;}
@@ -1200,7 +1270,7 @@ function relbar(l){ l=clamp(Math.round(l)); return `<div class="relbar ${loyalty
 function personRow(n){
   return `<button class="person" data-act="person" data-arg="${n.id}"><div class="phead"><div><div class="t">${esc(n.name)}</div><div class="s">${capitalize(n.label)} • ${n.age}${n.married?' • married':''}</div></div><div class="rel"><span class="relw">${loyaltyWord(n.loyalty)}</span>${relbar(n.loyalty)}<span class="reln">${Math.round(n.loyalty)} / 100</span></div></div><span class="mchev pchev">›</span></button>`;
 }
-function npcCompliment(id){ const n=npc(id); if(!n)return; if(chance(0.85)){ n.loyalty=clamp(n.loyalty+rnd(3,8)); log(`You told ${n.name} something true and kind. ${pick(['They pretended it was no big deal and clearly kept it.','It landed. You saw it land.','They said it back, and meant it.'])}`,'good'); } else { n.loyalty=clamp(n.loyalty-2); log(`You tried to compliment ${n.name} and it came out sideways. They gave you the polite smile, the one that closes a door softly.`); } afterAction(0); }
+function npcCompliment(id){ if(!spendAct('compliment'))return; const n=npc(id); if(!n)return; if(chance(0.85)){ n.loyalty=clamp(n.loyalty+rnd(3,8)); log(`You told ${n.name} something true and kind. ${pick(['They pretended it was no big deal and clearly kept it.','It landed. You saw it land.','They said it back, and meant it.'])}`,'good'); } else { n.loyalty=clamp(n.loyalty-2); log(`You tried to compliment ${n.name} and it came out sideways. They gave you the polite smile, the one that closes a door softly.`); } afterAction(0); }
 function tabLife(){
   const core=allNPCs().filter(n=>['parent','sibling','spouse','partner','child'].includes(n.role));
   const fr=allNPCs().filter(n=>['friend','fling','coworker'].includes(n.role));
@@ -1212,7 +1282,7 @@ function tabLife(){
   if(ex.length)h+=`<div class="grp"><h4>The past</h4><div class="list">${ex.map(personRow).join('')}</div></div>`;
   return h;
 }
-function npcSpendTime(id){ const n=npc(id); if(!n)return; n.loyalty=clamp(n.loyalty+rnd(6,12)); S.happiness=clamp(S.happiness+2); S.stress=clamp(S.stress-2); n.memory.push(`${G.name} spent time with me at ${G.age}.`); log(`You spent real time with ${n.name}. ${pick(['Nothing dramatic — a long meal, a longer conversation.','You laughed about something old.','It was easy, the way it used to be.','You put the phones away.'])} It mattered more than it looked like it did.`,'good'); afterAction(0); }
+function npcSpendTime(id){ if(!spendAct('spendtime'))return; const n=npc(id); if(!n)return; n.loyalty=clamp(n.loyalty+rnd(6,12)); S.happiness=clamp(S.happiness+2); S.stress=clamp(S.stress-2); n.memory.push(`${G.name} spent time with me at ${G.age}.`); log(`You spent real time with ${n.name}. ${pick(['Nothing dramatic — a long meal, a longer conversation.','You laughed about something old.','It was easy, the way it used to be.','You put the phones away.'])} It mattered more than it looked like it did.`,'good'); afterAction(0); }
 function npcMarry(id){ const n=npc(id); if(!n)return; if(n.role==='spouse'){toast('You are already married to them.');return;} if(n.engaged){toast('You are engaged \u2014 plan the wedding from their page.');return;} proposeRingModal(id); }
 function npcBaby(id){ const p=npc(id); if(!p)return; if(chance(G.flags.fertility?0.82:0.55)){ const sex=chance(0.5)?'Male':'Female'; const k=addNPC('child',(sex==='Male'?pick(MALE):pick(FEMALE))+' '+G.last,0); k.loyalty=70; log(`You and ${p.name} had a baby — ${k.name}. Everything narrowed to one small, furious, sleepless point of light.`,'good'); S.happiness=clamp(S.happiness+8);S.stress=clamp(S.stress+6);pay(4000,true); } else { log(`You and ${p.name} tried for a child this year. Not yet. There's a particular quiet to a month that doesn't take.`); } afterAction(0); }
 function npcBreakup(id){ const n=npc(id); if(!n)return; if(n.role==='friend'||n.role==='fling'){ n.role='ex'; log(`You let ${n.name} drift out of your life. No fight, just fewer replies, then none.`); } else { breakup(n,false); } afterAction(0); }
@@ -1255,10 +1325,10 @@ function tabWork(){
   return h;
 }
 function applyJob(id){ const j=JOB[id]; if(!j||!jobEligible(j)){toast("You don't qualify for that.");return;} setJob(id); afterAction(0); }
-function workHarder(){ if(!G.job)return; G.job.perf=clamp((G.job.perf||60)+rnd(6,14)); S.stress=clamp(S.stress+6); const j=JOB[G.job.id]; applyFx(j.gain); log(`You put your head down and worked. Late nights, skipped lunches, the visible kind of effort. Your standing at work climbed.`,'good'); afterAction(0); }
+function workHarder(){ if(!spendAct())return; if(!G.job)return; G.job.perf=clamp((G.job.perf||60)+rnd(6,14)); S.stress=clamp(S.stress+6); const j=JOB[G.job.id]; applyFx(j.gain); log(`You put your head down and worked. Late nights, skipped lunches, the visible kind of effort. Your standing at work climbed.`,'good'); afterAction(0); }
 function askRaise(){ if(!G.job)return; const odds=(G.job.perf-40)/100; if(chance(odds)){ const r=Math.round(JOB[G.job.id].pay*rnd(3,9)/100); G.job.bonus=(G.job.bonus||0)+r; log(`You made the case and it landed. ${money(r)} more a year. You floated to your car.`,'money'); } else { log(`You asked for a raise. Your manager talked about "the budget" and "timing" and "revisiting in Q3." The answer was no, dressed up for the occasion.`); S.stress=clamp(S.stress+4); G.job.perf=clamp(G.job.perf-4);} afterAction(0); }
 function startSpecialConfirm(type){ startSpecial(type); afterAction(0); }
-function specialTrain(){ const map={actor:'actlessons',musician:'instrument',athlete:'sportstrain'}; doActivity(map[G.special.type]); }
+function specialTrain(){ if(!spendAct())return; const map={actor:'actlessons',musician:'instrument',athlete:'sportstrain'}; doActivity(map[G.special.type]); }
 function quitSpecial(){ const sp=SPECIAL[G.special.type]; log(`You walked away from being ${sp.tiers[G.special.tier].toLowerCase()}. Some nights you'll wonder. Most nights you'll sleep better.`); G.special=null; afterAction(0); }
 function openEnlist(){
   const officer=G.edu>=4;
@@ -1268,7 +1338,7 @@ function openEnlist(){
   if(officer){ const b=document.createElement('button'); b.innerHTML='Enlist instead (not as officer)<small>start at E-1</small>'; b.onclick=()=>{forceClose();enlist(pick(BRANCHES),false);}; box.appendChild(b); }
   openModal();
 }
-function doGig(id){ const g=GIGS.find(x=>x.id===id); if(!g)return; if(G.age<(g.age||14)){toast(`You're too young for that gig (age ${g.age||14}+).`);return;} if(g.needsLicense&&!G.flags.license){toast("That gig needs a driver's license.");return;} const lvl=(g.skill in S)?S[g.skill]:(K[g.skill]||0); if(lvl<g.min){toast("You're not skilled enough for that yet.");return;} const pay=Math.round(g.base*(0.6+lvl/100)); G.cash+=pay; applyFx(g.gain); log(`You took a freelance job — ${g.name.toLowerCase()} — and cleared ${money(pay)}.`,'money'); afterAction(1); }
+function doGig(id){ if(!spendAct('gig:'+id))return; const g=GIGS.find(x=>x.id===id); if(!g)return; if(G.age<(g.age||14)){toast(`You're too young for that gig (age ${g.age||14}+).`);return;} if(g.needsLicense&&!G.flags.license){toast("That gig needs a driver's license.");return;} const lvl=(g.skill in S)?S[g.skill]:(K[g.skill]||0); if(lvl<g.min){toast("You're not skilled enough for that yet.");return;} const pay=Math.round(g.base*(0.6+lvl/100)); G.cash+=pay; applyFx(g.gain); log(`You took a freelance job — ${g.name.toLowerCase()} — and cleared ${money(pay)}.`,'money'); afterAction(1); }
 
 function activityButtons(cats){
   return ACTIVITIES.filter(a=>cats.includes(a.cat)).map(a=>{
@@ -1372,7 +1442,7 @@ function tabAssets(){
   let h='';
   // owned properties
   if(G.props.length){
-    h+=`<div class="grp"><h4>Your property</h4><div class="list">${G.props.map((p,i)=>{const d=PROP[p.id];return `<div class="item"><div><div class="t">${esc(d.name)}</div><div class="s">condition ${Math.round(p.cond??100)}% • upkeep ${p.maintain?'on':'off'}</div></div><div class="acts">${actBtn('clean-prop',i,'Clean')}${actBtn('toggle-prop',i,p.maintain?'Upkeep off':'Upkeep on')}${actBtn('sell-prop',i,'Sell')}</div></div>`;}).join('')}</div></div>`;
+    h+=`<div class="grp"><h4>Your property</h4><div class="list">${G.props.map((p,i)=>{const d=PROP[p.id];const mo=p.mortgage?` • mortgage ${money(p.mortgage.balance)}`:'';const rt=p.rented?' • rented':'';return `<button class="person" data-act="prop" data-arg="${i}"><div class="phead"><div><div class="t">${esc(d.name)}</div><div class="s">condition ${Math.round(p.cond??100)}%${mo}${rt}</div></div></div><span class="mchev pchev">›</span></button>`;}).join('')}</div></div>`;
   }
   // property market
   h+=`<div class="grp"><h4>Property market</h4>${G.age<18?'<div class="note">You can own property once you turn 18.</div>':''}<div class="list">${PROPERTIES.map(p=>`<div class="item"><div><div class="t">${esc(p.name)}</div><div class="s">${money(p.price)}${p.yard?' • yard':''}</div></div><div class="acts">${actBtn('buy-prop',p.id,'Buy','',G.age<(p.age||18))}</div></div>`).join('')}</div></div>`;
@@ -1382,19 +1452,40 @@ function tabAssets(){
   }
   // item market grouped
   const cats=[...new Set(ITEMS.map(i=>i.cat))];
-  cats.forEach(c=>{ h+=grp('Buy · '+c, ITEMS.filter(i=>i.cat===c).map(i=>{const veh=i.tags.includes('car')||i.tags.includes('moto');const lock=G.age<(i.age||16)||(veh&&!G.flags.license);return actBtn('buy-item',i.id,i.name,money(i.price),lock);}).join('')); });
-  // driver's license
-  if(!G.flags.license){ h+=grp("Driver's license", G.age>=16?actBtn('drivetest',null,'Take your driving test'):'', G.age>=16?'A license lets you buy and drive cars.':'You can take your driving test at 16.'); }
-  else { h+=`<div class="grp"><h4>Driver's license</h4><div class="note">Licensed driver.</div></div>`; }
+  cats.forEach(c=>{ h+=grp('Buy · '+c, ITEMS.filter(i=>i.cat===c).map(i=>{const nl=(i.tags.includes('car')||i.tags.includes('moto'))?'license':i.tags.includes('boat')?'boat':i.tags.includes('plane')?'pilot':null;const lock=G.age<(i.age||16)||(nl&&!G.flags[nl]);return actBtn('buy-item',i.id,i.name,money(i.price),lock);}).join('')); });
+  // licenses
+  h+=`<div class="grp"><h4>Licenses</h4><div class="list">${licRow('car',"Driver's license",16,'lets you buy and drive cars')}${licRow('boat','Boating license',16,'required to buy boats')}${licRow('pilot',"Pilot's license",18,'required to buy aircraft')}</div></div>`;
   // home activities
   h+=grp('Around the house', activityButtons(['Home']), hasYard()?'':'Gardening needs a home with a yard.');
   return h;
 }
-function buyItem(id){ const it=ITEM[id]; if(!it)return; const minAge=it.age||16; if(G.age<minAge){toast(`You have to be ${minAge} to buy a ${it.name.toLowerCase()}.`);return;} const vehicle=it.tags.includes('car')||it.tags.includes('moto'); if(vehicle&&!G.flags.license){toast("You need a driver's license before you can buy a car.");return;} if(!pay(it.price,it.price<40000)){toast("You can't afford that.");return;} G.items.push({id,cond:100,value:it.price,maintain:true}); log(`You bought a ${it.name.toLowerCase()} for ${money(it.price)}.`,'money'); afterAction(0); }
+function licRow(kind,name,age,note){
+  const flag={car:'license',boat:'boat',pilot:'pilot'}[kind];
+  if(G.flags[flag]) return `<div class="item"><div><div class="t">${name}</div><div class="s">held</div></div></div>`;
+  if(G.age<age) return `<div class="item"><div><div class="t">${name}</div><div class="s">available at ${age} \u2014 ${note}</div></div></div>`;
+  return `<div class="item"><div><div class="t">${name}</div><div class="s">${note}</div></div><div class="acts">${actBtn('license',kind,'Take the test')}</div></div>`;
+}
+function doLicense(kind){
+  const info={car:{age:16,flag:'license',name:"driver's license",skill:'driving',cost:0},boat:{age:16,flag:'boat',name:'boating license',skill:'discipline',cost:1500},pilot:{age:18,flag:'pilot',name:"pilot's license",skill:'intellect',cost:60000}};
+  const c=info[kind]; if(!c)return;
+  if(G.age<c.age){toast(`You can test for your ${c.name} at ${c.age}.`);return;}
+  if(G.flags[c.flag]){toast(`You already hold your ${c.name}.`);return;}
+  const yk='lic_'+kind+'_y'; if(G.flags[yk]===G.year){toast('You can retake that test next year.');return;}
+  if(c.cost&&!pay(c.cost,true)){toast(`The lessons and test run about ${money(c.cost)}.`);return;}
+  const odds=Math.min(0.95,0.4+S.smarts/220+((K[c.skill]||0)/200));
+  if(chance(odds)){ G.flags[c.flag]=true; K[c.skill]=clamp((K[c.skill]||0)+6); log(kind==='car'?`You passed your driving test, parallel parking and all. The little laminated card felt heavier than it had any right to, and the map of your life quietly got bigger.`:kind==='boat'?`You passed your boating exam \u2014 knots, right-of-way, the works. The water is open to you now, for the price of everything a boat will ever cost you.`:`You earned your pilot's license after more hours and more money than you care to count. The first time you took off alone, the ground let go of you, and something in your chest did too.`,'good'); }
+  else { G.flags[yk]=G.year; S.happiness=clamp(S.happiness-3); log(`You failed the ${c.name} test. ${pick(['The examiner wrote something on a clipboard and would not say what.','So close, and somehow miles away.','You can try again next year.'])}`,'bad'); }
+  afterAction(0);
+}
+function buyItem(id){ const it=ITEM[id]; if(!it)return; const minAge=it.age||16; if(G.age<minAge){toast(`You have to be ${minAge} to buy a ${it.name.toLowerCase()}.`);return;} const needLic=(it.tags.includes('car')||it.tags.includes('moto'))?'car':it.tags.includes('boat')?'boat':it.tags.includes('plane')?'pilot':null; if(needLic){ const fl={car:'license',boat:'boat',pilot:'pilot'}[needLic]; if(!G.flags[fl]){ toast(`You need ${ {car:"a driver's license",boat:'a boating license',pilot:"a pilot's license"}[needLic] } before you can buy that.`); return; } } if(!pay(it.price,it.price<40000)){toast("You can't afford that.");return;} G.items.push({id,cond:100,value:it.price,maintain:true}); log(`You bought a ${it.name.toLowerCase()} for ${money(it.price)}.`,'money'); afterAction(0); }
 function sellItem(i){ i=+i; const inst=G.items[i]; if(!inst)return; const d=ITEM[inst.id]; const val=Math.round((inst.value??d.price)*((inst.cond??100)/100)*0.7); G.cash+=val; G.items.splice(i,1); log(`You sold your ${d.name.toLowerCase()} for ${money(val)}.`,'money'); afterAction(0); }
 function toggleItemMaintain(i){ i=+i; const inst=G.items[i]; if(!inst)return; inst.maintain=!inst.maintain; afterAction(0); }
-function buyProperty(id){ const p=PROP[id]; if(!p)return; if(G.age<(p.age||18)){toast('You have to be 18 to buy property.');return;} if(!pay(p.price,true)){toast('Even the bank blinked.');return;} G.props.push({id,cond:100,maintain:true,owned:true}); G.home='own'; log(`You bought the ${p.name.toLowerCase()} for ${money(p.price)}. You stood in the empty rooms and listened to how they sounded with only you in them.`,'money'); afterAction(0); }
-function sellProperty(i){ i=+i; const p=G.props[i]; if(!p)return; const d=PROP[p.id]; const val=Math.round(d.price*((p.cond??100)/100)*0.92); G.cash+=val; G.props.splice(i,1); if(!G.props.length)G.home='rent'; log(`You sold the ${d.name.toLowerCase()} for ${money(val)}. Someone else's turn to hear those rooms.`,'money'); afterAction(0); }
+function mortTerms(){ const sc=G.creditScore; if(sc>=750)return{frac:0.9,rate:0.05}; if(sc>=680)return{frac:0.8,rate:0.065}; if(sc>=620)return{frac:0.7,rate:0.08}; if(sc>=560)return{frac:0.5,rate:0.11}; return{frac:0,rate:0.15}; }
+function mortPayment(bal,rate){ const term=20; return Math.round(bal*(rate+1/term)); }
+function buyProperty(id){ const p=PROP[id]; if(!p)return; if(G.age<(p.age||18)){toast('You have to be 18 to buy property.');return;} const t=mortTerms(); const loan=Math.round(p.price*t.frac); const down=p.price-loan; const cashOK=G.cash>=p.price; const downOK=t.frac>0&&G.cash>=down; $('modalbox').innerHTML=`<h2>${esc(p.name)}</h2><p>${money(p.price)}. How do you want to pay?</p><div class="opts"><button ${cashOK?'':'disabled'} onclick="buyPropCash('${id}')">Pay cash<small>${money(p.price)} now${cashOK?'':' — you cannot afford this'}</small></button>${t.frac>0?`<button ${downOK?'':'disabled'} onclick="buyPropMortgage('${id}')">Take a mortgage<small>${money(down)} down, then ~${money(mortPayment(loan,t.rate))}/yr at ${(t.rate*100).toFixed(1)}%${downOK?'':' — down payment too steep'}</small></button>`:`<button disabled>Mortgage unavailable<small>credit ${G.creditScore} is too low to qualify</small></button>`}</div>`; openModal(); }
+function buyPropCash(id){ const p=PROP[id]; if(!p)return; if(!pay(p.price)){toast('You cannot afford that.');return;} forceClose(); G.props.push({id,cond:100,maintain:true,owned:true}); if(G.home!=='own')G.home='own'; log(`You bought the ${p.name.toLowerCase()} outright for ${money(p.price)} — no bank, no lien, just yours. You stood in the empty rooms and listened to how they sounded with only you in them.`,'money'); afterAction(0); }
+function buyPropMortgage(id){ const p=PROP[id]; if(!p)return; const t=mortTerms(); if(t.frac<=0){toast('You do not qualify for a mortgage.');return;} const loan=Math.round(p.price*t.frac); const down=p.price-loan; if(!pay(down)){toast('You cannot cover the down payment.');return;} forceClose(); G.props.push({id,cond:100,maintain:true,owned:true,mortgage:{balance:loan,rate:t.rate,payment:mortPayment(loan,t.rate),missed:0}}); if(G.home!=='own')G.home='own'; G.creditScore=clamp(G.creditScore-5,300,850); log(`You put ${money(down)} down on the ${p.name.toLowerCase()} and signed for the rest — ${money(loan)} at ${(t.rate*100).toFixed(1)}%. The keys are yours; so is a payment that will follow you for years.`,'money'); afterAction(0); }
+function sellProperty(i){ i=+i; const p=G.props[i]; if(!p)return; const d=PROP[p.id]; let val=Math.round(d.price*((p.cond??100)/100)*0.92); let owed=p.mortgage?p.mortgage.balance:0; val-=owed; if(val<0){ if(!pay(-val,true)){toast(`You would owe ${money(-val)} at closing and cannot cover it.`);return;} val=0; } else { G.cash+=val; } G.props.splice(i,1); propOpen=null; if(!G.props.length&&G.home==='own')G.home='rent'; log(owed?`You sold the ${d.name.toLowerCase()}. After the ${money(owed)} still owed the bank, you walked with ${money(val)}. Someone else's turn to hear those rooms.`:`You sold the ${d.name.toLowerCase()} for ${money(val)}. Someone else's turn to hear those rooms.`,'money'); afterAction(0); }
 function togglePropMaintain(i){ i=+i; const p=G.props[i]; if(!p)return; p.maintain=!p.maintain; afterAction(0); }
 function cleanProperty(i){ i=+i; const p=G.props[i]; if(!p)return; p.cond=clamp((p.cond??100)+12); log(`You spent a weekend cleaning the ${PROP[p.id].name.toLowerCase()} top to bottom. A place looks after you a little better when you look after it.`); afterAction(0); }
 function doDriveTest(){ if(G.age<16){toast('You can take your driving test at 16.');return;} if(G.flags.license){toast('You already have your license.');return;} if(G.flags.drivetestYear===G.year){toast('You can retake it next year.');return;} const odds=Math.min(0.95,0.45+(S.smarts/200)+((K.driving||0)/200)); if(chance(odds)){ G.flags.license=true; K.driving=clamp((K.driving||0)+8); log(`You took your driving test — parallel parking and all — and passed on ${pick(['the first try','the second try'])}. The little laminated card felt heavier than it had any right to, and the whole map of your life quietly got bigger.`,'good'); } else { G.flags.drivetestYear=G.year; S.happiness=clamp(S.happiness-3); log(`You failed your driving test. The examiner wrote something on a clipboard and wouldn't say what, and you rode home in the passenger seat feeling twelve years old. You can try again next year.`,'bad'); } afterAction(0); }
@@ -1432,7 +1523,7 @@ function tabSocialMedia(){
   if(G.age<13) return '<div class="note">You can join social platforms at 13.</div>';
   if(!G.social)G.social={};
   let h=''; const joined=SOCIALS.filter(x=>G.social[x.id]); const rest=SOCIALS.filter(x=>!G.social[x.id]);
-  if(joined.length)h+=`<div class="grp"><h4>Your accounts</h4><div class="list">${joined.map(x=>{const fo=G.social[x.id].followers||0;return `<div class="item"><div><div class="t">${x.name}</div><div class="s">${fo.toLocaleString()} ${x.unit}</div></div><div class="acts">${actBtn('post',x.id,'Post')}${fo>=10000?actBtn('monetize',x.id,'Monetize'):''}</div></div>`;}).join('')}</div></div>`;
+  if(joined.length)h+=`<div class="grp"><h4>Your accounts</h4><div class="list">${joined.map(x=>{const fo=G.social[x.id].followers||0;const v=G.social[x.id].verified?' \u2022 verified':'';return `<button class="person" data-act="social" data-arg="${x.id}"><div class="phead"><div><div class="t">${x.name}${v}</div><div class="s">${fo.toLocaleString()} ${x.unit}</div></div></div><span class="mchev pchev">\u203A</span></button>`;}).join('')}</div></div>`;
   if(rest.length)h+=grp('Join a platform', rest.map(x=>actBtn('joinsocial',x.id,x.name)).join(''), 'Every account starts at zero. Some of them stay there.');
   return h;
 }
@@ -1529,7 +1620,7 @@ function doFame(kind){
 }
 
 function joinSocial(id){ const x=SOCIALS.find(y=>y.id===id); if(!x)return; if(!G.social)G.social={}; if(G.social[id]){toast('You already have that account.');return;} G.social[id]={followers:rnd(5,60)}; log(`You made a ${x.name} account. The first followers were, as ever, your mother and three bots.`); afterAction(0); }
-function postSocial(id){ const x=SOCIALS.find(y=>y.id===id); const acct=G.social&&G.social[id]; if(!acct)return; const pull=1+(K.charisma||0)/40+(S.looks||0)/60+(S.fame||0)/25; let gain=Math.round((acct.followers||0)*0.04*pull)+rnd(10,120); let viral=false; if(chance(0.05+Math.min(0.15,(S.fame||0)/300))){ gain*=rnd(8,25); viral=true; S.fame=clamp(S.fame+rnd(2,6)); } acct.followers=(acct.followers||0)+gain; K.charisma=clamp((K.charisma||0)+1); log(viral?`A ${x.name} post of yours went viral \u2014 ${gain.toLocaleString()} new ${x.unit} and a spike of fame you did not plan and cannot repeat on purpose.`:`You posted on ${x.name}. ${gain.toLocaleString()} new ${x.unit}. The number is a slot machine and you know it and you pull it anyway.`, viral?'good':null); afterAction(0); }
+function postSocial(id){ if(!spendAct('post:'+id))return; const x=SOCIALS.find(y=>y.id===id); const acct=G.social&&G.social[id]; if(!acct)return; const pull=1+(K.charisma||0)/40+(S.looks||0)/60+(S.fame||0)/25; let gain=Math.round((acct.followers||0)*0.04*pull)+rnd(10,120); let viral=false; if(chance(0.05+Math.min(0.15,(S.fame||0)/300))){ gain*=rnd(8,25); viral=true; S.fame=clamp(S.fame+rnd(2,6)); } acct.followers=(acct.followers||0)+gain; K.charisma=clamp((K.charisma||0)+1); log(viral?`A ${x.name} post of yours went viral \u2014 ${gain.toLocaleString()} new ${x.unit} and a spike of fame you did not plan and cannot repeat on purpose.`:`You posted on ${x.name}. ${gain.toLocaleString()} new ${x.unit}. The number is a slot machine and you know it and you pull it anyway.`, viral?'good':null); afterAction(0); }
 function monetizeSocial(id){ const x=SOCIALS.find(y=>y.id===id); const acct=G.social&&G.social[id]; if(!acct||(acct.followers||0)<10000){toast('You need 10,000 followers to monetize.');return;} const earn=Math.round((acct.followers||0)*rnd(3,12)/100); G.cash+=earn; log(`You monetized your ${x.name} \u2014 sponsorships, a link in the bio, the usual quiet compromises. ${money(earn)} this year off ${acct.followers.toLocaleString()} ${x.unit}.`,'money'); afterAction(0); }
 
 function doCharity(){ const max=Math.min(G.cash,5000000); if(max<1000){toast('You need at least $1,000 to give meaningfully.');return;} $('modalbox').innerHTML=`<h2>Charity donation</h2><p>Give what you like. Karma is not guaranteed, but it is rarely wasted.</p><div class="row"><label>Amount</label><input type="number" id="charamt" value="${Math.min(10000,Math.round(max))}" min="1000" max="${Math.round(max)}"></div><div class="opts"><button onclick="confirmCharity()">Give it</button></div>`; openModal(); }
@@ -1560,8 +1651,9 @@ function tabLuxury(){
   let h='';
   h+=grp('Treat yourself', activityButtons(['Luxury']), 'Happiness costs money. Sometimes it is worth it.');
   h+=grp('Give & belong', actBtn('charity',null,'Charity donation')+actAct('vip')+actBtn('society',null,'Join a secret society'), 'The perks \u2014 and the strings \u2014 of real money.');
+  h+=grp('Engagement rings', ITEMS.filter(i=>i.tags.includes('ring')).map(i=>actBtn('buy-item',i.id,i.name,money(i.price),G.age<(i.age||18))).join(''), 'Buy one here \u2014 it lives in your things, and you propose with it.');
   const luxItems=ITEMS.filter(i=>['Luxury','Vehicles'].includes(i.cat)&&i.price>=100000);
-  if(luxItems.length)h+=grp('Luxury shopping', luxItems.map(i=>{const veh=i.tags.includes('car')||i.tags.includes('moto');const lock=G.age<(i.age||16)||(veh&&!G.flags.license);return actBtn('buy-item',i.id,i.name,money(i.price),lock);}).join(''));
+  if(luxItems.length)h+=grp('Luxury shopping', luxItems.map(i=>{const nl=(i.tags.includes('car')||i.tags.includes('moto'))?'license':i.tags.includes('boat')?'boat':i.tags.includes('plane')?'pilot':null;const lock=G.age<(i.age||16)||(nl&&!G.flags[nl]);return actBtn('buy-item',i.id,i.name,money(i.price),lock);}).join(''));
   const luxProps=PROPERTIES.filter(p=>p.price>=1000000);
   if(luxProps.length)h+=grp('Prestige property', luxProps.map(p=>actBtn('buy-prop',p.id,p.name,money(p.price),G.age<(p.age||18))).join(''));
   return h;
@@ -1592,8 +1684,8 @@ const CLIQUE_NOTE={populars:'Top of the social heap, and all the pressure that c
 function cliqueName(id){ const c=CLIQUES.find(x=>x.id===id); return c?c.name:id; }
 const SCHOOLSPORTS=['Football','Basketball','Soccer','Track','Swimming','Baseball','Volleyball'];
 
-function schoolStudy(){ if(!G.inSchool){toast('You are not in school right now.');return;} G.gpaSeed=clamp(G.gpaSeed+rnd(3,7)); S.smarts=clamp(S.smarts+rnd(1,2)); S.stress=clamp(S.stress+3); K.intellect=clamp((K.intellect||0)+1); log(`You put in real study time this year \u2014 ${pick(['flashcards taped to the bathroom mirror','a library carrel that became yours by habit','late nights and a highlighter graveyard'])}. Your grades climbed.`,'good'); afterAction(0); }
-function schoolFriend(){ if(!G.inSchool){toast('You are not in school right now.');return;} if(chance(0.72)){ const nm=pick(MALE.concat(FEMALE))+' '+pick(LAST); const fr=addNPC('friend',nm,G.age+rnd(-1,1)); fr.loyalty=rnd(45,65); fr.classmate=true; if(G.school)G.school.popularity=clamp(G.school.popularity+rnd(2,5)); S.happiness=clamp(S.happiness+3); log(`You made a friend at school \u2014 ${nm.split(' ')[0]}. ${pick(['You got assigned the same project and stayed friends long after it was graded.','It started with a shared eye-roll at something a teacher said.','You sat together at lunch one day, and that was that.'])}`,'good'); } else { log(`You tried to click with someone at school and it just did not take. ${pick(['They already had their people.','The conversation died and you both let it.'])}`); } afterAction(0); }
+function schoolStudy(){ if(!spendAct('study'))return; if(!G.inSchool){toast('You are not in school right now.');return;} G.gpaSeed=clamp(G.gpaSeed+rnd(3,7)); S.smarts=clamp(S.smarts+rnd(1,2)); S.stress=clamp(S.stress+3); K.intellect=clamp((K.intellect||0)+1); log(`You put in real study time this year \u2014 ${pick(['flashcards taped to the bathroom mirror','a library carrel that became yours by habit','late nights and a highlighter graveyard'])}. Your grades climbed.`,'good'); afterAction(0); }
+function schoolFriend(){ if(!spendAct('schoolfriend'))return; if(!G.inSchool){toast('You are not in school right now.');return;} if(chance(0.72)){ const nm=pick(MALE.concat(FEMALE))+' '+pick(LAST); const fr=addNPC('friend',nm,G.age+rnd(-1,1)); fr.loyalty=rnd(45,65); fr.classmate=true; if(G.school)G.school.popularity=clamp(G.school.popularity+rnd(2,5)); S.happiness=clamp(S.happiness+3); log(`You made a friend at school \u2014 ${nm.split(' ')[0]}. ${pick(['You got assigned the same project and stayed friends long after it was graded.','It started with a shared eye-roll at something a teacher said.','You sat together at lunch one day, and that was that.'])}`,'good'); } else { log(`You tried to click with someone at school and it just did not take. ${pick(['They already had their people.','The conversation died and you both let it.'])}`); } afterAction(0); }
 function joinClique(){ if(!G.inSchool||G.age<11){toast('Cliques form in middle and high school.');return;} $('modalbox').innerHTML=`<h2>Find your people</h2><p>Every school sorts itself. Where do you fit?</p><div class="opts" id="clq"></div>`; const box=$('clq'); CLIQUES.forEach(c=>{ const b=document.createElement('button'); b.innerHTML=`${c.name}<small>${CLIQUE_NOTE[c.id]}</small>`; b.onclick=()=>{forceClose();setClique(c.id);}; box.appendChild(b); }); openModal(); }
 function setClique(id){ const c=CLIQUES.find(x=>x.id===id); if(!c)return; if(!G.school)G.school={popularity:40,clique:null,team:null}; G.school.clique=id; applyFx(c.fx); if(c.charisma)K.charisma=clamp((K.charisma||0)+c.charisma); if(c.athletics)K.athletics=clamp((K.athletics||0)+c.athletics); if(c.intellect)K.intellect=clamp((K.intellect||0)+c.intellect); if(c.acting)K.acting=clamp((K.acting||0)+c.acting); G.school.popularity=clamp(G.school.popularity+c.pop); log(`You found your way into ${c.name.toLowerCase()}. ${pick(['For the first time, a lunch table felt like yours.','It gave the week a shape, and you a place to stand.','You changed a little to fit, the way everyone does at that age.'])}`,'good'); afterAction(0); }
 function joinSportsTeam(){ if(!G.inSchool||G.age<6){toast('You can try out for a team once you are in school.');return;} $('modalbox').innerHTML=`<h2>Try out for a team</h2><p>Which sport do you want to go out for?</p><div class="opts" id="spt"></div>`; const box=$('spt'); SCHOOLSPORTS.forEach(sp=>{ const b=document.createElement('button'); b.textContent=sp; b.onclick=()=>{forceClose();setSportsTeam(sp);}; box.appendChild(b); }); openModal(); }
@@ -1621,11 +1713,11 @@ function personDetail(n){
   if(st)h+=grp('Status', st);
   return h;
 }
-function npcTalk(id){ const n=npc(id); if(!n)return; n.loyalty=clamp(n.loyalty+rnd(2,5)); S.happiness=clamp(S.happiness+1); log(`You had a real conversation with ${n.name}. ${pick(['Nothing urgent, just the maintenance that keeps people close.','They told you something they had not told anyone.','You disagreed about something small and enjoyed it.'])}`,'good'); afterAction(0); }
-function npcInsult(id){ const n=npc(id); if(!n)return; n.loyalty=clamp(n.loyalty-rnd(5,12)); n.memory.push(`${G.name} insulted me at ${G.age}.`); if(chance(0.4)){ S.happiness=clamp(S.happiness-3); log(`You said something cruel to ${n.name} and they gave it right back, sharper. It stung more than you expected.`,'bad'); } else { S.stress=clamp(S.stress-2); log(`You said something cruel to ${n.name}. It felt good for exactly as long as it took to land, and worse after.`,'bad'); } afterAction(0); }
-function npcPrank(id){ const n=npc(id); if(!n)return; if(chance(0.6)){ n.loyalty=clamp(n.loyalty+rnd(2,5)); S.happiness=clamp(S.happiness+2); log(`You pulled a prank on ${n.name} and, mercifully, they laughed. ${pick(['It became a story you both tell.','They swore cheerful revenge.'])}`,'good'); } else { n.loyalty=clamp(n.loyalty-rnd(4,10)); log(`You pulled a prank on ${n.name} and it did not land. ${pick(['They did not think it was funny. At all.','You crossed a line you did not see until you were over it.'])}`,'bad'); } afterAction(0); }
-function npcConcert(id){ const n=npc(id); if(!n)return; if(!pay(200,true)){toast('You cannot cover the tickets.');return;} n.loyalty=clamp(n.loyalty+rnd(4,8)); S.happiness=clamp(S.happiness+5); S.stress=clamp(S.stress-3); log(`You took ${n.name} to a concert. ${pick(['You both lost your voices and did not care.','The opener was better than the headliner and that became the joke of the year.','You stood in a crowd of thousands and felt like it was just the two of you.'])}`,'good'); afterAction(0); }
-function npcParty(id){ const n=npc(id); if(!n)return; if(G.age<18){toast('Not yet.');return;} if(!pay(300,true)){toast('You cannot cover the night.');return;} n.loyalty=clamp(n.loyalty+rnd(4,9)); S.happiness=clamp(S.happiness+6); S.stress=clamp(S.stress-4); G.addiction.alcohol=clamp(G.addiction.alcohol+4); log(`You went out with ${n.name} and made a night of it. ${pick(['The kind of night that costs you the next morning.','You closed the place down and split a cab and a bad idea for breakfast.','Loud, bright, a little reckless, and exactly what you needed.'])}`,'good'); afterAction(1); }
+function npcTalk(id){ if(!spendAct('talk'))return; const n=npc(id); if(!n)return; n.loyalty=clamp(n.loyalty+rnd(2,5)); S.happiness=clamp(S.happiness+1); log(`You had a real conversation with ${n.name}. ${pick(['Nothing urgent, just the maintenance that keeps people close.','They told you something they had not told anyone.','You disagreed about something small and enjoyed it.'])}`,'good'); afterAction(0); }
+function npcInsult(id){ if(!spendAct())return; const n=npc(id); if(!n)return; n.loyalty=clamp(n.loyalty-rnd(5,12)); n.memory.push(`${G.name} insulted me at ${G.age}.`); if(chance(0.4)){ S.happiness=clamp(S.happiness-3); log(`You said something cruel to ${n.name} and they gave it right back, sharper. It stung more than you expected.`,'bad'); } else { S.stress=clamp(S.stress-2); log(`You said something cruel to ${n.name}. It felt good for exactly as long as it took to land, and worse after.`,'bad'); } afterAction(0); }
+function npcPrank(id){ if(!spendAct('prank'))return; const n=npc(id); if(!n)return; if(chance(0.6)){ n.loyalty=clamp(n.loyalty+rnd(2,5)); S.happiness=clamp(S.happiness+2); log(`You pulled a prank on ${n.name} and, mercifully, they laughed. ${pick(['It became a story you both tell.','They swore cheerful revenge.'])}`,'good'); } else { n.loyalty=clamp(n.loyalty-rnd(4,10)); log(`You pulled a prank on ${n.name} and it did not land. ${pick(['They did not think it was funny. At all.','You crossed a line you did not see until you were over it.'])}`,'bad'); } afterAction(0); }
+function npcConcert(id){ if(!spendAct())return; const n=npc(id); if(!n)return; if(!pay(200,true)){toast('You cannot cover the tickets.');return;} n.loyalty=clamp(n.loyalty+rnd(4,8)); S.happiness=clamp(S.happiness+5); S.stress=clamp(S.stress-3); log(`You took ${n.name} to a concert. ${pick(['You both lost your voices and did not care.','The opener was better than the headliner and that became the joke of the year.','You stood in a crowd of thousands and felt like it was just the two of you.'])}`,'good'); afterAction(0); }
+function npcParty(id){ if(!spendAct())return; const n=npc(id); if(!n)return; if(G.age<18){toast('Not yet.');return;} if(!pay(300,true)){toast('You cannot cover the night.');return;} n.loyalty=clamp(n.loyalty+rnd(4,9)); S.happiness=clamp(S.happiness+6); S.stress=clamp(S.stress-4); G.addiction.alcohol=clamp(G.addiction.alcohol+4); log(`You went out with ${n.name} and made a night of it. ${pick(['The kind of night that costs you the next morning.','You closed the place down and split a cab and a bad idea for breakfast.','Loud, bright, a little reckless, and exactly what you needed.'])}`,'good'); afterAction(1); }
 function npcDeal(id){ const n=npc(id); if(!n)return; if(G.items.length){ const i=rnd(0,G.items.length-1); const inst=G.items[i]; const d=ITEM[inst.id]; const val=Math.round((inst.value??d.price)*((inst.cond??100)/100)*0.9); G.cash+=val; G.items.splice(i,1); n.loyalty=clamp(n.loyalty-rnd(1,4)); log(`You sold your ${d.name.toLowerCase()} to ${n.name} for ${money(val)} \u2014 a better price than a stranger would give, though ${n.name.split(' ')[0]} drove a harder bargain than you expected from a friend.`,'money'); } else { const val=rnd(50,400); G.cash+=val; n.loyalty=clamp(n.loyalty-rnd(1,3)); log(`You talked ${n.name} into buying something off you and cleared ${money(val)}. Money is money; they will forgive you, probably.`,'money'); } afterAction(0); }
 function giftNPC(id){ const n=npc(id); if(!n)return; $('modalbox').innerHTML=`<h2>A gift for ${esc(n.name)}</h2><p>Generosity is rarely wasted. How much?</p><div class="opts"><button onclick="confirmGift('${id}','small')">Something small<small>$50</small></button><button onclick="confirmGift('${id}','nice')">Something nice<small>$500</small></button><button onclick="confirmGift('${id}','lavish')">Something lavish<small>$5,000</small></button></div>`; openModal(); }
 function confirmGift(id,tier){ const n=npc(id); if(!n)return; const T={small:[50,3,7],nice:[500,7,13],lavish:[5000,13,22]}[tier]; if(!T)return; if(!pay(T[0])){toast('You cannot afford that gift.');return;} forceClose(); n.loyalty=clamp(n.loyalty+rnd(T[1],T[2])); S.happiness=clamp(S.happiness+1); log(`You gave ${n.name} ${tier==='lavish'?'an extravagant gift':tier==='nice'?'a thoughtful gift':'a small gift'}. ${pick(['They lit up.','They protested that you should not have, and clearly loved it.','It was the thought that counted, but the thing did not hurt either.'])}`,'good'); afterAction(0); }
@@ -1678,22 +1770,25 @@ function ringName(tier){ const r=RINGS.find(x=>x.id===tier); return r?r.name:'a 
 function lastNameOf(n){ const parts=((n&&n.name)||'').trim().split(/\s+/); return parts.length>1?parts[parts.length-1]:((n&&n.name)||''); }
 function proposeRingModal(id){
   const n=npc(id); if(!n)return;
-  const owned=(G.flags.ring)?`<button onclick="doPropose('${id}','${G.flags.ring.tier}')">Use the ring you already have<small>${esc(ringName(G.flags.ring.tier))}</small></button>`:'';
-  const rows=RINGS.map(r=>`<button onclick="buyRingAndPropose('${id}','${r.id}')">${esc(r.name)}<small>${money(r.price)}</small></button>`).join('');
-  $('modalbox').innerHTML=`<h2>A ring for ${esc(n.name)}</h2><p>You cannot propose empty-handed. The better the ring, the more it says \u2014 and the more it helps your case, and the more it costs.</p><div class="opts">${owned}${rows}</div>`;
+  const rings=G.items.map((it,i)=>({i,d:ITEM[it.id]})).filter(x=>x.d&&x.d.tags&&x.d.tags.includes('ring'));
+  if(!rings.length){ toast('You need a ring first \u2014 buy one under Assets or Luxury.'); return; }
+  const rows=rings.map(x=>`<button onclick="doPropose('${id}',${x.i})">${esc(x.d.name)}<small>propose with this</small></button>`).join('');
+  $('modalbox').innerHTML=`<h2>Propose to ${esc(n.name)}</h2><p>Which ring will you offer? A better ring makes a stronger case \u2014 but how they answer still comes down to how they feel about you.</p><div class="opts">${rows}</div>`;
   openModal();
 }
 function buyRingAndPropose(id,tier){ const r=RINGS.find(x=>x.id===tier); if(!r)return; if(!pay(r.price)){toast('You cannot afford that ring.');return;} G.flags.ring={tier}; forceClose(); doPropose(id,tier); }
-function doPropose(id,tier){
-  const n=npc(id); if(!n){forceClose();return;} const r=RINGS.find(x=>x.id===tier)||RINGS[0];
-  const odds=Math.max(0.02,Math.min(0.98,(n.loyalty-35)/55 + r.bonus));
+function doPropose(id,idx){
+  const n=npc(id); if(!n){forceClose();return;} idx=+idx; const inst=G.items[idx]; const d=inst&&ITEM[inst.id];
+  if(!d||!d.tags||!d.tags.includes('ring')){toast('That is not a ring.');return;}
+  forceClose();
+  const bonus=d.ringBonus||0; const odds=Math.max(0.02,Math.min(0.98,(n.loyalty-35)/55 + bonus));
   if(chance(odds)){
-    n.engaged=true; n.loyalty=clamp(n.loyalty+8); S.happiness=clamp(S.happiness+10); G.flags.ring=null;
-    log(`You got down on one knee and offered ${n.name} ${ringName(r.id).toLowerCase()}. ${pick(['They said yes before you finished the question.','There was a silence that took a year off your life, and then a yes, and then the two of you laughing like fools.','They cried, you cried, and a stranger at the next table applauded.'])} You are engaged.`,'good');
+    n.engaged=true; n.loyalty=clamp(n.loyalty+8); S.happiness=clamp(S.happiness+10); G.items.splice(idx,1);
+    log(`You got down on one knee and offered ${n.name} the ${d.name.toLowerCase()}. ${pick(['They said yes before you finished the question.','There was a silence that took a year off your life, and then a yes, and then the two of you laughing like fools.','They cried, you cried, and a stranger at the next table applauded.'])} You are engaged.`,'good');
     thread('engaged',{npc:n.id});
   } else {
     n.loyalty=clamp(n.loyalty-6); S.happiness=clamp(S.happiness-8);
-    log(`You proposed to ${n.name}, and they said no \u2014 kindly, or not, but no. ${pick(['They were not ready, they said, in the tone that means not with you.','It was too soon, or too late; you would spend a while deciding which.','The ring went back into your pocket, where it would sit for a long time.'])} You kept the ring.`,'bad');
+    log(`You proposed to ${n.name}, and they said no \u2014 kindly, or not, but no. ${pick(['They were not ready, they said, in the tone that means not with you.','It was too soon, or too late; you would spend a while deciding which.','The ring stayed in your pocket, and so, for now, did the question.'])} You kept the ring.`,'bad');
   }
   afterAction(0);
 }
@@ -1734,6 +1829,57 @@ function setWedName(choice){
   log(`You married ${n.name} at ${v.name.toLowerCase()}${honey}. ${pick(['Somebody\u2019s parent cried. There was cake, one bad speech, and one that undid the whole room.','It rained, which everyone insisted was lucky.','You forgot half your vows and it was, somehow, exactly right.'])} ${nameLine}`,'good');
   weddingDraft=null; afterAction(0);
 }
+
+/* ---------------- PROPERTY DETAIL & LANDLORDING (#8) ---------------- */
+function openProperty(i){ i=+i; if(!G.props[i])return; propOpen=i; renderActions(); }
+function propertyDetail(i){ i=+i; const p=G.props[i]; if(!p)return '<div class="note">Gone.</div>'; const d=PROP[p.id];
+  let h=`<div class="grp"><h4>${esc(d.name)}</h4><div class="note">Condition ${Math.round(p.cond??100)}% \u2022 upkeep ${p.maintain?'on':'off'}${p.mortgage?` \u2022 mortgage ${money(p.mortgage.balance)} at ${(p.mortgage.rate*100).toFixed(1)}%`:' \u2022 owned free and clear'}${(p.rented&&p.tenant)?` \u2022 rented to ${esc(p.tenant.name)} for ${money(p.rent)}/yr`:''}</div></div>`;
+  h+=grp('Upkeep & value', actBtn('clean-prop',i,'Clean')+actBtn('toggle-prop',i,p.maintain?'Upkeep off':'Upkeep on')+actBtn('renovate-prop',i,'Renovate')+actBtn('upgrade-prop',i,'Upgrade'));
+  if(p.rented) h+=grp('Your tenant', actBtn('inspect-prop',i,'Inspect the place')+actBtn('evict-prop',i,'Evict tenant'));
+  else h+=grp('Rent it out', actBtn('rentout-prop',i,'Find a tenant'), 'Charge more and you earn more, but attract rougher tenants who leave more damage.');
+  h+=grp('Make it yours', actBtn('party-prop',i,'Throw a party')+actBtn('gift-prop',i,'Gift it to someone'));
+  let fin=actBtn('sell-prop',i,'Sell'); if(p.mortgage)fin+=actBtn('payoff-prop',i,'Pay off mortgage'); h+=grp('The books', fin);
+  return h;
+}
+function renovateProp(i){ i=+i; const p=G.props[i]; if(!p)return; const d=PROP[p.id]; const cost=Math.round(d.price*0.08); if(!pay(cost,true)){toast('You cannot afford the renovation.');return;} p.cond=clamp((p.cond??100)+30,0,100); log(`You put ${money(cost)} into the ${d.name.toLowerCase()} \u2014 fresh paint, fixed everything that groaned. It shows.`,'money'); afterAction(0); }
+function upgradeProp(i){ i=+i; const p=G.props[i]; if(!p)return; const d=PROP[p.id]; const cost=Math.round(d.price*0.25); if(!pay(cost,true)){toast('You cannot afford that upgrade.');return;} p.upgrades=(p.upgrades||0)+1; p.cond=clamp((p.cond??100)+10,0,100); S.happiness=clamp(S.happiness+3); log(`You upgraded the ${d.name.toLowerCase()} \u2014 a wall came down, a kitchen went in, the kind of money that turns up in the appraisal. Worth more now.`,'money'); afterAction(0); }
+function rentOut(i){ i=+i; const p=G.props[i]; if(!p)return; const d=PROP[p.id]; $('modalbox').innerHTML=`<h2>Rent out the ${esc(d.name.toLowerCase())}</h2><p>What will you charge? Higher rent means more income but pickier or rougher tenants and more wear.</p><div class="opts"><button onclick="setRent(${i},'premium')">Premium tenant<small>${money(Math.round(d.price*0.03))}/yr \u2014 dependable, gentle on the place</small></button><button onclick="setRent(${i},'market')">Market rate<small>${money(Math.round(d.price*0.045))}/yr \u2014 the usual mix</small></button><button onclick="setRent(${i},'budget')">Charge top dollar<small>${money(Math.round(d.price*0.06))}/yr \u2014 rougher tenants, more damage</small></button></div>`; openModal(); }
+function setRent(i,level){ i=+i; const p=G.props[i]; if(!p)return; const d=PROP[p.id]; const cfg={premium:[0.03,0.98],market:[0.045,0.9],budget:[0.06,0.72]}[level]; if(!cfg)return; p.rent=Math.round(d.price*cfg[0]); p.rented=true; p.tenant={name:pick(MALE.concat(FEMALE))+' '+pick(LAST),reliability:cfg[1],level}; forceClose(); log(`You found a tenant for the ${d.name.toLowerCase()} \u2014 ${p.tenant.name} \u2014 at ${money(p.rent)} a year. You are a landlord now, for better and for worse.`,'money'); afterAction(0); }
+function inspectProp(i){ i=+i; const p=G.props[i]; if(!p||!p.rented){toast('Nobody is renting that right now.');return;} const c=Math.round(p.cond??100); if(c<55||chance(0.4)){ log(`You did a walkthrough of the ${PROP[p.id].name.toLowerCase()}. ${p.tenant.name} has been ${pick(['harder on it than the lease allows \u2014 scuffs, a cracked tile, a smell you did not ask about.','living like the deposit was a parting gift.'])} You left a firm note.`,'bad'); } else { S.happiness=clamp(S.happiness+1); log(`You inspected the ${PROP[p.id].name.toLowerCase()}. ${p.tenant.name} keeps it better than you would. Some tenants are a gift.`,'good'); } afterAction(0); }
+function evictTenant(i){ i=+i; const p=G.props[i]; if(!p||!p.rented){toast('There is no tenant to evict.');return;} const nm=p.tenant?p.tenant.name:'the tenant'; p.rented=false; p.tenant=null; S.stress=clamp(S.stress+4); log(`You evicted ${nm} from the ${PROP[p.id].name.toLowerCase()}. It was paperwork, then a locksmith, then a strange guilty quiet in the empty rooms.`); afterAction(0); }
+function partyProp(i){ i=+i; const p=G.props[i]; if(!p)return; const d=PROP[p.id]; const cost=rnd(2000,15000); if(!pay(cost,true)){toast('You cannot cover a party like that.');return;} S.happiness=clamp(S.happiness+8); if(S.fame>0||chance(0.3))S.fame=clamp(S.fame+2); if(chance(0.5)){ p.cond=clamp((p.cond??100)-rnd(5,15)); log(`You threw a party at the ${d.name.toLowerCase()}. A great night and a worse morning \u2014 something got broken, something got stained, and it was, on balance, completely worth it.`,'good'); } else { log(`You threw a party at the ${d.name.toLowerCase()}. People still talk about it, and nothing got broken, which felt like its own small miracle.`,'good'); } afterAction(1); }
+function giftProp(i){ i=+i; const p=G.props[i]; if(!p)return; const people=allNPCs(); if(!people.length){toast('You have no one to give it to.');return;} $('modalbox').innerHTML=`<h2>Gift the ${esc(PROP[p.id].name.toLowerCase())}</h2><p>Signing a house over to someone is a large, permanent kind of love. Who gets it?</p><div class="opts" id="giftbox"></div>`; const box=$('giftbox'); people.forEach(n=>{ const b=document.createElement('button'); b.innerHTML=`${esc(n.name)}<small>${capitalize(n.label)}</small>`; b.onclick=()=>doGiftProp(i,n.id); box.appendChild(b); }); openModal(); }
+function doGiftProp(i,npcId){ i=+i; const p=G.props[i]; const n=npc(npcId); if(!p||!n){forceClose();return;} const d=PROP[p.id]; forceClose(); G.props.splice(i,1); propOpen=null; if(!G.props.length&&G.home==='own')G.home='rent'; n.loyalty=clamp(n.loyalty+25); n.memory.push(`${G.name} gave me a house.`); log(`You signed the ${d.name.toLowerCase()} over to ${n.name}. ${pick(['They did not have the words. Neither did you.','It was the most anyone had ever done for them, and they knew it.'])}`,'good'); afterAction(0); }
+function payoffProp(i){ i=+i; const p=G.props[i]; if(!p||!p.mortgage){toast('There is no mortgage on that.');return;} const bal=p.mortgage.balance; if(!pay(bal)){toast(`You need ${money(bal)} to clear it.`);return;} delete p.mortgage; G.creditScore=clamp(G.creditScore+10,300,850); log(`You wrote a single check for ${money(bal)} and killed the mortgage on the ${PROP[p.id].name.toLowerCase()}. It is entirely yours now, in the way almost nothing ever is.`,'money'); afterAction(0); }
+
+/* ---------------- SOCIAL MEDIA DETAIL (#6) ---------------- */
+const VERIFY_THRESHOLD=50000;
+function openSocial(id){ if(!G.social||!G.social[id])return; socialOpen=id; renderActions(); }
+function socialDetail(id){ const x=SOCIALS.find(y=>y.id===id); const a=G.social&&G.social[id]; if(!a)return '<div class="note">Gone.</div>'; const fo=a.followers||0;
+  let h=`<div class="grp"><h4>${x.name}</h4><div class="note">${fo.toLocaleString()} ${x.unit}${a.verified?' \u2022 verified':''}</div></div>`;
+  h+=grp('Grow', actBtn('post',id,'Post something')+actBtn('promote',id,'Promote the account')+actBtn('buysubs',id,'Buy '+x.unit));
+  let biz=''; if(fo>=10000)biz+=actBtn('monetize',id,'Monetize'); if(!a.verified&&fo>=VERIFY_THRESHOLD)biz+=actBtn('verify',id,'Apply for verification'); if(biz)h+=grp('Cash in & clout', biz); else h+=`<div class="note">Monetizing unlocks at 10,000 ${x.unit}; verification at ${VERIFY_THRESHOLD.toLocaleString()}.</div>`;
+  h+=grp('Danger zone', actBtn('delsocial',id,'Delete account'));
+  return h;
+}
+function postMenu(id){ const x=SOCIALS.find(y=>y.id===id); if(!G.social||!G.social[id]){toast('You need an account first.');return;} $('modalbox').innerHTML=`<h2>Post to ${esc(x.name)}</h2><p>What kind of post?</p><div class="opts"><button onclick="doPost('${id}','everyday')">An everyday post<small>steady, low-risk</small></button><button onclick="doPost('${id}','glam')">A glam shot<small>rides on your looks</small></button><button onclick="doPost('${id}','hottake')">A hot take<small>could go viral \u2014 or blow up</small></button><button onclick="doPost('${id}','sponsored')">A sponsored post<small>earns money, costs a little reach</small></button><button onclick="doPost('${id}','collab')">A collab<small>needs some fame; big upside</small></button></div>`; openModal(); }
+function doPost(id,type){ const x=SOCIALS.find(y=>y.id===id); const a=G.social&&G.social[id]; if(!a){forceClose();return;} forceClose(); const base=a.followers||0;
+  if(type==='sponsored'&&base<5000){toast('Brands want at least 5,000 '+x.unit+'.');return;}
+  if(type==='collab'&&(S.fame||0)<15){toast('You need more fame before anyone will collab.');return;}
+  if(!spendAct('post:'+id))return;
+  const reach=1+(K.charisma||0)/40+(S.fame||0)/25; let gain=0,msg='',kind=null;
+  if(type==='everyday'){ gain=Math.round(base*0.03*reach)+rnd(5,80); msg=`You posted on ${x.name}. ${gain>0?gain.toLocaleString()+' new '+x.unit+'.':'It barely registered.'}`; }
+  else if(type==='glam'){ const lf=(S.looks||0)/50; gain=Math.round(base*0.05*reach*lf)+rnd(0,120); if(gain<20&&chance(0.5)){ gain=0; msg=`Your glam shot on ${x.name} flopped \u2014 the lighting, the internet's mood, who knows. Nothing.`; } else { msg=`Your glam shot did numbers on ${x.name} \u2014 ${gain.toLocaleString()} new ${x.unit}.`; kind='good'; } }
+  else if(type==='hottake'){ if(chance(0.4)){ gain=Math.round(base*0.4*reach)+rnd(200,2000); S.fame=clamp(S.fame+rnd(2,6)); msg=`Your hot take on ${x.name} went off \u2014 ${gain.toLocaleString()} new ${x.unit} and a real bump in fame. You are, briefly, The Discourse.`; kind='good'; } else { gain=-Math.round(base*0.08); S.fame=clamp(S.fame-2); S.stress=clamp(S.stress+4); msg=`Your hot take on ${x.name} landed wrong. A quote-tweet dogpile, ${Math.abs(gain).toLocaleString()} ${x.unit} gone, and a day you would like back.`; kind='bad'; } }
+  else if(type==='sponsored'){ const earn=Math.round(base*rnd(2,6)/100); G.cash+=earn; gain=-Math.round(base*0.01); msg=`You ran a sponsored post on ${x.name}. ${money(earn)} in, a few unfollows out \u2014 the cost of selling to your own audience.`; kind='money'; }
+  else if(type==='collab'){ gain=Math.round(base*0.15*reach)+rnd(100,800); S.fame=clamp(S.fame+2); msg=`You collabed with someone bigger than you on ${x.name}. Their audience spilled over \u2014 ${gain.toLocaleString()} new ${x.unit}.`; kind='good'; }
+  a.followers=Math.max(0,base+gain); K.charisma=clamp((K.charisma||0)+1); log(msg,kind); afterAction(0);
+}
+function promoteSocial(id){ const x=SOCIALS.find(y=>y.id===id); const a=G.social&&G.social[id]; if(!a)return; const cost=Math.max(500,Math.round((a.followers||0)*0.5)+500); if(!pay(cost,true)){toast(`A promo push runs about ${money(cost)}.`);return;} const gain=Math.round(((a.followers||0)*0.2)+rnd(200,1500)); a.followers=(a.followers||0)+gain; log(`You paid ${money(cost)} to promote your ${x.name} \u2014 ads, a boosted post, the machinery of attention. ${gain.toLocaleString()} new ${x.unit}, real ones this time.`,'money'); afterAction(0); }
+function buySubsMenu(id){ const x=SOCIALS.find(y=>y.id===id); if(!G.social||!G.social[id])return; $('modalbox').innerHTML=`<h2>Buy ${esc(x.unit)}</h2><p>You can buy a following. It looks real from a distance, does nothing for your fame, and the platform purges the fakes now and then.</p><div class="opts"><button onclick="buySubs('${id}',10000,500)">10,000<small>${money(500)}</small></button><button onclick="buySubs('${id}',100000,4000)">100,000<small>${money(4000)}</small></button><button onclick="buySubs('${id}',1000000,30000)">1,000,000<small>${money(30000)}</small></button></div>`; openModal(); }
+function buySubs(id,amt,cost){ const x=SOCIALS.find(y=>y.id===id); const a=G.social&&G.social[id]; if(!a){forceClose();return;} amt=+amt; cost=+cost; if(!pay(cost,true)){toast('You cannot afford that package.');return;} forceClose(); a.followers=(a.followers||0)+amt; a.fake=(a.fake||0)+amt; log(`You bought ${amt.toLocaleString()} ${x.unit} for ${money(cost)}. The number jumped; the engagement did not. Everyone can tell, a little.`); afterAction(0); }
+function verifySocial(id){ const x=SOCIALS.find(y=>y.id===id); const a=G.social&&G.social[id]; if(!a)return; if(a.verified){toast('Already verified.');return;} if((a.followers||0)<VERIFY_THRESHOLD){toast(`You need ${VERIFY_THRESHOLD.toLocaleString()} ${x.unit} to verify.`);return;} a.verified=true; S.fame=clamp(S.fame+3); log(`Your ${x.name} got the little check. It is a small blue lie that people believe, and it changes how strangers treat you overnight.`,'good'); afterAction(0); }
+function deleteSocial(id){ const x=SOCIALS.find(y=>y.id===id); if(!G.social||!G.social[id])return; delete G.social[id]; socialOpen=null; log(`You deleted your ${x.name}. The silence afterward was enormous and, after a while, a relief.`); afterAction(0); }
 
 /* =====================================================================
    PART 6 — GOD MODE, CHARACTER CREATION, OBITUARY, BOOT
@@ -1912,7 +2058,7 @@ function eulogyLong(){
   return bits.join(' ');
 }
 
-function sanitizeSave(){ if(!G)return; G.items=(G.items||[]).filter(it=>ITEM[it.id]); G.props=(G.props||[]).filter(p=>PROP[p.id]); if(G.job&&!JOB[G.job.id])G.job=null; if(G.special&&!SPECIAL[G.special.type])G.special=null; if(!G.flags)G.flags={}; if(!G.addiction)G.addiction={alcohol:0,drugs:0}; if(!G.social)G.social={}; if(!G.pets)G.pets=[]; if(!G.school)G.school={popularity:40,clique:null,team:null}; if(!G.invest)G.invest={}; if(!G.market)G.market={}; if(!G.marketChg)G.marketChg={}; }
+function sanitizeSave(){ if(!G)return; G.items=(G.items||[]).filter(it=>ITEM[it.id]); G.props=(G.props||[]).filter(p=>PROP[p.id]); if(G.job&&!JOB[G.job.id])G.job=null; if(G.special&&!SPECIAL[G.special.type])G.special=null; if(!G.flags)G.flags={}; if(!G.addiction)G.addiction={alcohol:0,drugs:0}; if(!G.social)G.social={}; if(!G.pets)G.pets=[]; if(!G.school)G.school={popularity:40,clique:null,team:null}; if(!G.invest)G.invest={}; if(!G.market)G.market={}; if(!G.marketChg)G.marketChg={}; if(!G.acts||typeof G.acts!=='object')G.acts={}; }
 function homeLabel(){ const p=G.props[G.props.length-1]; return (p&&PROP[p.id])?PROP[p.id].name:(G.home==='rent'?'Renting':'With parents'); }
 
 /* ---------------- boot ---------------- */
