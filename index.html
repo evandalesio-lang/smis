@@ -126,7 +126,7 @@ button.person .phead{flex:1;margin:0}
 </head>
 <body>
 <header>
-  <h1>SMIS <small>v2.4</small></h1>
+  <h1>SMIS <small>v2.5</small></h1>
   <span class="who" id="who"></span>
   <span class="spacer"></span>
   <div class="tools">
@@ -166,7 +166,7 @@ const MALE=['James','Liam','Noah','Ethan','Mason','Logan','Owen','Caleb','Henry'
 const FEMALE=['Emma','Olivia','Ava','Sophia','Mia','Chloe','Harper','Ella','Grace','Lily','Nora','Zoe','Claire','Ivy','Sadie','Maya','Ruby','Jade','Tessa','Lena','Rachel','Dana','Kim','Nicole','Erin','Jenna','Brooke','Vanessa'];
 const LAST=['Carter','Brooks','Reyes','Nguyen','Kowalski','Fischer','Okafor','Santos','Marino','Hughes','Dalton','Keller','Bennett','Hayes','Morales','Petrov','Lindqvist','Walsh','Barnes','Chen','Dixon','Fleming','Garza','Holt','Ivers','Jensen','Knox','Lowe'];
 const SPORTS=['football','basketball','baseball','soccer','MMA','hockey'];
-const GAME_VERSION='2.4';
+const GAME_VERSION='2.5';
 
 // ---------- DATA: skills ----------
 const SKILLS={acting:'Acting',music:'Music',athletics:'Athletics',fitness:'Fitness',intellect:'Intellect',charisma:'Charisma',discipline:'Discipline',combat:'Combat',cooking:'Cooking',tech:'Tech',writing:'Writing',business:'Business',gardening:'Gardening',stealth:'Stealth',driving:'Driving'};
@@ -263,8 +263,14 @@ const JOBS=[
  J('journalist','Journalist','Media',60000,{skills:{writing:45},gain:{writing:4,charisma:1},next:['editor'],stress:14}),
  J('editor','Editor','Media',98000,{prev:['journalist'],skills:{writing:65},gain:{writing:2,business:2},stress:16}),
  // Part-time (kind:'part')
- J('babysit','Babysitter','Part-time',4000,{age:13,kind:'part',gain:{charisma:1}}),
- J('lawns','Lawn mowing','Part-time',3000,{age:12,kind:'part',gain:{fitness:1,gardening:2}}),
+ J('babysit','Babysitter','Part-time',4000,{age:13,kind:'part',gain:{charisma:1},hidden:true}),
+ J('lawns','Lawn mowing','Part-time',3000,{age:12,kind:'part',gain:{fitness:1,gardening:2},hidden:true}),
+ J('pt_fastfood','Fast-food crew','Part-time',10500,{age:15,kind:'part',gain:{discipline:2,charisma:1}}),
+ J('pt_retail','Retail associate','Part-time',11000,{age:15,kind:'part',gain:{charisma:2,business:1}}),
+ J('pt_grocery','Grocery clerk','Part-time',9800,{age:15,kind:'part',gain:{discipline:2,fitness:1}}),
+ J('pt_cinema','Movie-theater usher','Part-time',9200,{age:15,kind:'part',gain:{charisma:1,discipline:1}}),
+ J('pt_dish','Restaurant dishwasher','Part-time',10800,{age:15,kind:'part',gain:{cooking:1,discipline:2,fitness:1}}),
+ J('pt_reception','Office receptionist','Part-time',13800,{age:16,kind:'part',gain:{charisma:2,business:1}}),
  J('lifeguard','Lifeguard','Part-time',9000,{age:15,kind:'part',skills:{fitness:30},gain:{fitness:2}}),
  J('barista','Barista','Part-time',14000,{age:16,kind:'part',gain:{charisma:1,cooking:1}}),
  J('tutor','Tutor','Part-time',12000,{age:16,kind:'part',skills:{intellect:50},gain:{intellect:1,charisma:1}}),
@@ -306,6 +312,8 @@ const PENSION_RULES={
 
 // ---------- DATA: freelance gigs (one-off, paid by skill) ----------
 const GIGS=[
+ {id:'gig_babysit',name:'Babysit for a neighbor',skill:'charisma',min:0,base:90,gain:{charisma:1,discipline:1},age:13,cap:4},
+ {id:'gig_lawns',name:'Mow a neighbor’s lawn',skill:'fitness',min:0,base:65,gain:{fitness:1,gardening:2},age:12,cap:4},
  {id:'gig_write',name:'Write an article',skill:'writing',min:20,base:400,gain:{writing:2},age:16},
  {id:'gig_code',name:'Build a small website',skill:'tech',min:30,base:1500,gain:{tech:2},age:16},
  {id:'gig_busk',name:'Busk downtown',skill:'music',min:10,base:120,gain:{music:2,charisma:1},age:14},
@@ -482,7 +490,7 @@ const ACTIVITIES=[
  A('gym','Go to the gym','Body',25,{fitness:5,looks:2,health:2,stress:-3},{age:14}),
  A('walk','Go for walks','Body',0,{health:1,stress:-4,happiness:2},{age:5}),
  A('diet','Go on a diet','Body',0,{looks:3,health:2,happiness:-3},{age:14}),
- A('martial','Martial arts','Body',900,{combat:6,discipline:3,fitness:3},{age:6}),
+ A('martial','Martial arts','Body',500,{combat:6,discipline:3,fitness:3},{age:6}),
  A('yoga','Yoga','Body',3,{stress:-6,fitness:2,health:1},{age:12}),
  A('sportstrain','Athletic training','Body',700,{athletics:5,fitness:3},{age:8}),
  A('doctor','Annual checkup','Body',300,{health:4},{age:0}),
@@ -496,6 +504,20 @@ const ACTIVITIES=[
  // Home
  A('garden','Gardening','Home',150,{gardening:5,happiness:3,stress:-4},{age:8,needsYard:true}),
  A('cookhome','Cook at home','Home',0,{cooking:4,health:1},{age:12}),
+ // Fun & social
+ A('movie','Go to the movies','Fun',15,{happiness:4,stress:-3},{age:6}),
+ A('arcade','Visit an arcade','Fun',20,{happiness:5,stress:-3,tech:1},{age:8}),
+ A('museum','Visit a museum','Fun',20,{happiness:2,smarts:2,intellect:2},{age:6}),
+ A('amusement','Visit an amusement park','Fun',75,{happiness:8,stress:-6},{age:8}),
+ A('karaoke','Sing karaoke','Fun',25,{happiness:5,charisma:2,music:2,stress:-3},{age:13}),
+ A('escape','Try an escape room','Fun',40,{happiness:5,intellect:2,charisma:1},{age:10}),
+ A('boardgame','Host a board-game night','Fun',10,{happiness:4,charisma:2,stress:-3},{age:8}),
+ A('pottery','Take a pottery class','Fun',45,{happiness:3,stress:-5,discipline:1},{age:10}),
+ // Outdoors & community
+ A('hike','Go hiking','Outdoors',0,{health:2,fitness:3,happiness:3,stress:-5},{age:8}),
+ A('camping','Go camping','Outdoors',60,{health:1,fitness:2,happiness:5,stress:-7},{age:10}),
+ A('beach','Spend a day at the beach','Outdoors',30,{happiness:6,stress:-6,health:1},{age:6}),
+ A('volunteer','Volunteer in the community','Outdoors',0,{happiness:3,discipline:3,charisma:2},{age:10}),
  // Vices
  A('drink','Drink socially','Vices',150,{happiness:3,stress:-3,health:-1},{age:16,vice:'alcohol',viceAmt:6}),
  A('binge','Get blackout drunk','Vices',300,{happiness:4,stress:-6,health:-3,looks:-1},{age:16,vice:'alcohol',viceAmt:14,risk:0.1,risktext:'You woke up somewhere you didn’t recognize with a phone full of texts you didn’t remember sending.',riskfx:{happiness:-6}}),
@@ -552,7 +574,19 @@ const ACTIVITY_LOGS={
  dance:[`You took a dance class and stopped counting every step once the music took over.`,`You practiced dancing in a room lined with mirrors. By the end, you were moving with more confidence.`],
  modeling:[`You took modeling lessons and learned how much posture, timing, and confidence matter in front of a camera.`,`You practiced posing and runway work until standing still stopped feeling simple.`],
  garden:[`You worked in the garden, got dirt under your nails, and ended the day with something living to show for it.`,`You spent time gardening. The slow work settled your nerves and made the yard feel more like yours.`],
- cookhome:[`You cooked at home and made a proper meal from ingredients that had been waiting in the kitchen.`,`You practiced cooking at home. The result was not perfect, but it was good enough to make again.`]
+ cookhome:[`You cooked at home and made a proper meal from ingredients that had been waiting in the kitchen.`,`You practiced cooking at home. The result was not perfect, but it was good enough to make again.`],
+ movie:[`You went to the movies, bought more snacks than you planned, and forgot about everything outside the theater for two hours.`],
+ arcade:[`You spent an afternoon at an arcade, chased a high score, and left with a handful of tickets worth almost nothing.`],
+ museum:[`You wandered through a museum and stopped longer than expected in front of something you could not stop thinking about.`],
+ amusement:[`You spent the day at an amusement park, waited in unreasonable lines, and screamed on rides you had insisted were not frightening.`],
+ karaoke:[`You sang karaoke in front of a room full of people. The first verse was terrifying; by the chorus, you were enjoying yourself.`],
+ escape:[`You tried an escape room. The clock got uncomfortably low, but your group found the final clue before the door opened for you.`],
+ boardgame:[`You hosted a board-game night that became louder, longer, and far more competitive than anyone had predicted.`],
+ pottery:[`You took a pottery class and made something uneven, unmistakably handmade, and better than you expected.`],
+ hike:[`You went hiking, worked harder on the climb than the map suggested, and understood the view better for having earned it.`],
+ camping:[`You went camping. The fire took too long to start, the ground was not remotely comfortable, and the morning was beautiful.`],
+ beach:[`You spent a day at the beach with sun, cold water, and nowhere important to be.`],
+ volunteer:[`You volunteered in the community and finished the day tired from doing something that clearly helped another person.`]
 };
 
 function quietYearText(){
@@ -992,6 +1026,7 @@ const SAVEKEY='smis_save_v1';
 
 // ---- state constructors ----
 function newSkills(){const o={};for(const k in SKILLS)o[k]=0;return o;}
+function rollFamilyWealth(){const r=Math.random();return r<.42?'modest':r<.76?'comfortable':r<.94?'wealthy':'affluent';}
 function blankLife(cfg){
  const sex=cfg.sex, first=cfg.name||pick(sex==='Male'?MALE:FEMALE), last=cfg.last||pick(LAST);
  const place=cfg.place||pick(PLACES);
@@ -1001,7 +1036,7 @@ function blankLife(cfg){
   age:0, born:2026, alive:true, cause:null,
   stats:{health:cfg.health??rnd(70,100),happiness:cfg.happiness??rnd(70,100),smarts:cfg.smarts??rnd(20,80),looks:cfg.looks??rnd(20,90),fitness:cfg.fitness??20,fame:0,stress:cfg.stress??10},
   skills:newSkills(),
-  edu:0, eduProgram:null, inSchool:true, schoolStage:'elementary', major:null, gpaSeed:rnd(50,95), school:{popularity:rnd(25,55),clique:null,team:null,teamRole:null,seasonYear:null}, invest:{}, market:{}, marketChg:{},
+  edu:0, eduProgram:null, inSchool:true, schoolStage:'elementary', major:null, gpaSeed:rnd(50,95), familyWealth:rollFamilyWealth(), school:{popularity:rnd(25,55),clique:null,team:null,teamRole:null,seasonYear:null,type:'public',name:'Public school',classmateIds:[],facultyIds:[],danceYear:null,promCourt:null,club:null,clubYear:null,schoolEvents:{},schoolChoiceYear:null,recommendation:false}, invest:{}, market:{}, marketChg:{},
   cash:0, debt:0, creditScore:600,
   job:null, special:null, military:null, pensions:[], serviceYears:{}, highSalary:{}, careerHistory:[],
   addiction:{alcohol:0,drugs:0},
@@ -1012,8 +1047,10 @@ function blankLife(cfg){
   year:2026, history:[]
  };
  // parents
- const dad=mkNPC('parent','father',dadFirst+' '+dadL, rnd(24,40));
- const mom=mkNPC('parent','mother',momFirst+' '+pick(LAST), rnd(24,40));
+  const dad=mkNPC('parent','father',dadFirst+' '+dadL, rnd(24,40));
+  const mom=mkNPC('parent','mother',momFirst+' '+pick(LAST), rnd(24,40));
+  const familyIncome={modest:[28000,52000],comfortable:[52000,95000],wealthy:[95000,180000],affluent:[180000,450000]}[g.familyWealth];
+  dad.income=rnd(familyIncome[0],familyIncome[1]);mom.income=rnd(familyIncome[0],familyIncome[1]);
  g.npcs.push(dad,mom);
  // maybe a sibling
  if(chance(0.6)){const ss=chance(0.5)?'Male':'Female';g.npcs.push(mkNPC('sibling',ss==='Male'?'brother':'sister',(ss==='Male'?pick(MALE):pick(FEMALE))+' '+last, rnd(-2,6)+0));}
@@ -1185,11 +1222,34 @@ function ageUp(){
  finishYear();
 }
 
+const SCHOOL_TYPES={
+ public:{name:'Public school',level:0,tuition:0,note:'local, mixed enrollment, and no tuition'},
+ private:{name:'Private coeducational school',level:1,tuition:18000,note:'smaller classes and stronger academic resources'},
+ boys:{name:'All-boys private school',level:2,tuition:28000,note:'single-sex classes, strict traditions, and extensive activities'},
+ girls:{name:'All-girls private school',level:2,tuition:28000,note:'single-sex classes, strict traditions, and extensive activities'}
+};
+const FAMILY_LEVEL={modest:0,comfortable:1,wealthy:2,affluent:3};
+const SCHOOL_CLUBS={science:{name:'Science Club',skill:'intellect'},drama:{name:'Drama Club',skill:'acting'},band:{name:'School Band',skill:'music'},council:{name:'Student Council',skill:'business'},yearbook:{name:'Yearbook Committee',skill:'writing'}};
+function schoolType(){return SCHOOL_TYPES[(G.school&&G.school.type)||'public']||SCHOOL_TYPES.public;}
+function resetSchoolRoster(stage){
+ const sc=G.school;if(!sc)return;const old=new Set([...(sc.classmateIds||[]),...(sc.facultyIds||[])]);
+ G.npcs=G.npcs.filter(n=>!old.has(n.id)||n.schoolFriend);
+ sc.classmateIds=[];sc.facultyIds=[];const sameSex=sc.type==='boys'?'Male':sc.type==='girls'?'Female':null;
+ const used=new Set(G.npcs.map(n=>n.name));
+ for(let i=0;i<7;i++){const sex=sameSex||(chance(.5)?'Male':'Female');let name;do{name=(sex==='Male'?pick(MALE):pick(FEMALE))+' '+pick(LAST);}while(used.has(name));used.add(name);const n=addNPC('classmate',name,G.age+rnd(-1,1));n.label='classmate';n.sex=sex;n.loyalty=rnd(20,55);n.classmate=true;n.schoolFriend=false;n.schoolStats={looks:rnd(25,95),smarts:rnd(25,95),happiness:rnd(30,90),health:rnd(55,100)};sc.classmateIds.push(n.id);}
+ const roles=stage==='elementary'?['Teacher','Teacher aide','Principal']:stage==='middle'?['Homeroom teacher','Guidance counselor','Coach']:['English teacher','Guidance counselor','Coach','Principal'];
+ for(const role of roles){const sex=chance(.5)?'Male':'Female',n=addNPC('faculty',(sex==='Male'?pick(MALE):pick(FEMALE))+' '+pick(LAST),rnd(27,61));n.label=role.toLowerCase();n.sex=sex;n.facultyRole=role;n.career=role;n.loyalty=rnd(35,58);sc.facultyIds.push(n.id);}
+}
+function ensureSchoolRoster(){const sc=G.school;if(!G.inSchool||!sc)return;if(!Array.isArray(sc.classmateIds))sc.classmateIds=[];if(!Array.isArray(sc.facultyIds))sc.facultyIds=[];if(!sc.classmateIds.some(id=>npc(id))||!sc.facultyIds.some(id=>npc(id)))resetSchoolRoster(G.schoolStage||'elementary');}
+function advanceSchoolStage(stage){G.schoolStage=stage;G.school.clique=null;G.school.team=null;G.school.teamRole=null;G.school.club=null;G.school.clubYear=null;G.school.danceYear=null;G.school.schoolEvents={};resetSchoolRoster(stage);}
+
 function handleSchool(){
  if(!G.inSchool)return;
- if(G.age===5){log(`You started school. A backpack too big for you, a lunchbox, and a teacher who smelled like coffee and chalk.`);G.schoolStage='elementary';}
- if(G.age===11){G.schoolStage='middle';log(`Middle school began, which is to say the friendly years ended and the awkward ones started.`);}
- if(G.age===14){G.schoolStage='high';log(`High school. Everything felt enormous and permanent and would, in ten years, feel small and brief.`);}
+ if(G.age===5){advanceSchoolStage('elementary');log(`You started school. A backpack too big for you, a lunchbox, and a teacher who smelled like coffee and chalk.`);}
+ if(G.age===11){advanceSchoolStage('middle');log(`Middle school began: lockers, changing classrooms, new teachers, and the sudden importance of where everyone sat at lunch.`);}
+ if(G.age===14){advanceSchoolStage('high');log(`High school began. The building was larger, the expectations were sharper, and everyone seemed to be trying on a future version of themselves.`);}
+ ensureSchoolRoster();
+ const st=schoolType();if(st.level>0){G.gpaSeed=clamp(G.gpaSeed+1);K.intellect=clamp(K.intellect+1);if(st.level>1)K.discipline=clamp(K.discipline+1);}
  if(G.age===18){
   const gpa=(G.gpaSeed+S.smarts)/2;
   if(gpa>50){G.edu=Math.max(G.edu,1);G.flags.collegePrompt=true;log(`You graduated high school${gpa>85?' near the top of your class':''}. Someone's parent cried. There was cake in a gym.`,'good');S.happiness+=4;}
@@ -1878,7 +1938,7 @@ function afterAction(stress){ if(stress)S.stress=clamp(S.stress+stress);settleAc
    RENDERING — sheet, log, header
    ===================================================================== */
 function openModal(){ const mb=$('modalbox'); if(mb&&!(mb.querySelector&&mb.querySelector('.modalx'))&&!pendingChoice){ mb.insertAdjacentHTML('afterbegin','<button class=\'modalx\' type=\'button\' onclick=\'cancelModal()\' aria-label=\'Close\'>\u2715</button>'); } $('modal').classList.add('open'); }
-function cancelModal(){ if(pendingChoice){toast('This decision has to be resolved.');return;} weddingDraft=null;divorceDraft=null;forceClose(); }
+function cancelModal(){ if(pendingChoice){toast('This decision has to be resolved.');return;} weddingDraft=null;divorceDraft=null;datingCandidateDraft=null;forceClose(); }
 function closeModal(){ if(pendingChoice)return; $('modal').classList.remove('open'); $('modalbox').innerHTML=''; }
 // hard close (used by god/obituary/creation which manage their own state)
 function forceClose(){ $('modal').classList.remove('open'); $('modalbox').innerHTML=''; }
@@ -1987,6 +2047,9 @@ let weddingDraft=null; // holds venue/honeymoon choices mid-wedding-flow
 let divorceDraft=null; // holds legal, custody, property, home, and name decisions
 let propOpen=null;   // owned-property detail index
 let socialOpen=null; // social platform detail id
+let schoolView='overview'; // education subtab
+let schoolOpen=null; // selected classmate or faculty member
+let datingCandidateDraft=null; // profile currently being considered in Love
 const MENU=[
  {id:'people', title:'Relationships', sub:'Family, friends, the people in your life', icon:'💞', body:tabLife},
  {id:'love',   title:'Love',          sub:'Dating, romance, and everything after', icon:'❤️', body:tabLove,        cond:()=>G.age>=13},
@@ -2018,12 +2081,12 @@ function renderActions(){
     if(socialOpen){ const _sx=SOCIALS.find(x=>x.id===socialOpen); if(!_sx||!(G.social&&G.social[socialOpen])){ socialOpen=null; return renderActions(); } wrap.innerHTML=`<button class="back" onclick="socialOpen=null;renderActions()">‹ Back</button><span class="mtitle">${esc(_sx.name)}</span>`; body.innerHTML=socialDetail(socialOpen); body.onclick=onActClick; return; }
     const cat=MENU.find(m=>m.id===menuOpen);
     if(!cat||(cat.cond&&!safeCond(cat.cond))){ menuOpen=null; return renderActions(); }
-    wrap.innerHTML=`<button class="back" onclick="menuOpen=null;personOpen=null;propOpen=null;socialOpen=null;renderActions()">‹ Back</button><span class="mtitle">${cat.icon} ${esc(cat.title)}</span>`;
+    wrap.innerHTML=`<button class="back" onclick="menuOpen=null;personOpen=null;propOpen=null;socialOpen=null;schoolOpen=null;schoolView='overview';renderActions()">‹ Back</button><span class="mtitle">${cat.icon} ${esc(cat.title)}</span>`;
     if(jailed && cat.id!=='people' && cat.id!=='crime'){ body.innerHTML=`<div class="note">You're incarcerated for ${G.jailUntil-G.age} more year(s). Age up to serve your time — there's little to do in here but wait, and get harder.</div>`; body.onclick=null; }
     else { body.innerHTML=cat.body()||'<div class="note">Nothing here right now.</div>'; body.onclick=onActClick; }
   } else {
     wrap.innerHTML=`<span class="mtitle">What do you want to do?</span>`;
-    body.innerHTML=`<div class="menu">${MENU.filter(m=>!m.cond||safeCond(m.cond)).map(m=>`<button class="mrow" onclick="personOpen=null;propOpen=null;socialOpen=null;menuOpen='${m.id}';renderActions()"><span class="mi">${m.icon}</span><span class="mc"><span class="mt">${esc(m.title)}</span><span class="ms">${esc(m.sub)}</span></span><span class="mchev">›</span></button>`).join('')}</div>`;
+    body.innerHTML=`<div class="menu">${MENU.filter(m=>!m.cond||safeCond(m.cond)).map(m=>`<button class="mrow" onclick="personOpen=null;propOpen=null;socialOpen=null;schoolOpen=null;schoolView='overview';menuOpen='${m.id}';renderActions()"><span class="mi">${m.icon}</span><span class="mc"><span class="mt">${esc(m.title)}</span><span class="ms">${esc(m.sub)}</span></span><span class="mchev">›</span></button>`).join('')}</div>`;
     body.onclick=null;
   }
 }
@@ -2043,13 +2106,16 @@ function onActClick(e){
     breakup:npcBreakup, compliment:npcCompliment, enroll:enrollProgram, 'buy-item':buyItem, 'sell-item':sellItem,
     'toggle-item':toggleItemMaintain, 'buy-prop':buyProperty, 'sell-prop':sellProperty,
     'toggle-prop':togglePropMaintain, 'clean-prop':cleanProperty, loan:takeLoan, 'pay-debt':payDebt,
-    dating:datingApp, celebdate:celebDate, onenight:oneNight, 'make-friend':makeFriend,
+    dating:datingApp, 'singles-event':()=>showDatingCandidate('singles'), celebdate:celebDate, onenight:oneNight, 'partner-date':openPartnerDate, 'relationship-talk':relationshipTalk, 'make-friend':makeFriend,
     crime:doCrime, lottery:playLottery, casino:openCasino, drivetest:doDriveTest, license:doLicense,
     fame:doFame, joinsocial:joinSocial, post:postMenu, monetize:monetizeSocial,
     charity:doCharity, society:joinSociety, getpet:getPet, adopt:adoptChild,
     emigrate:emigrate, fertility:fertilityClinic, horses:horseRaces, fightbet:fightBet,
     sweepstakes:sweepstakes, lawsuit:openLawsuit,
     study:schoolStudy, schoolfriend:schoolFriend, clique:joinClique, sports:joinSportsTeam, 'school-season':playSchoolSportsSeason, 'school-dropout':openHighSchoolDropout, dance:schoolDance,
+    'ask-camp':askParentsForCamp, 'private-school':choosePrivateSchool, 'school-club':chooseSchoolClub, 'school-club-attend':attendSchoolClub, 'school-event':openSchoolEvents,
+    'school-person':openSchoolPerson, 'school-talk':schoolPersonTalk, 'school-studywith':schoolStudyWith, 'school-lunch':schoolLunch, 'school-friend-request':schoolAskFriend,
+    'faculty-talk':facultyTalk, 'faculty-help':facultyHelp, 'faculty-recommend':facultyRecommendation,
     'parent-lesson':askParentsForLesson,
     'college-study':collegeStudy, 'college-office':collegeOfficeHours, 'college-party':collegeParty,
     'college-studygroup':collegeStudyGroup, 'college-course':chooseCollegeCourseLoad,
@@ -2184,9 +2250,9 @@ function tabWork(){
     const contacts=workContacts();h+=`<div class="grp"><h4>Your workplace</h4><div class="note">Relationships here affect promotion reviews. Open a person to collaborate, network, become friends, confront misconduct, report it, or take credit.</div><div class="list">${contacts.map(personRow).join('')}</div></div>`;
     if(pension.rule)h+=`<div class="grp"><h4>${esc(pension.rule.name)}</h4><div class="note">${pension.years}/${pension.rule.years} service years • retirement age ${pension.rule.age} • projected benefit ${money(pension.annual)}/yr${pension.claimed?' • already claimed':pension.ready?' • vested and available now':''}</div></div>`;
   } else {
-    const full=JOBS.filter(j=>j.kind==='full'&&(!j.prev||!j.prev.length)&&jobEligible(j));
+    const full=JOBS.filter(j=>!j.hidden&&j.kind==='full'&&(!j.prev||!j.prev.length)&&jobEligible(j));
     h+=grp('Careers open to you', full.length?full.map(j=>actBtn('apply-job',j.id,j.title,money(j.pay))).join(''):'', full.length?'':'Nothing yet — get some schooling or build skills, then check back.');
-    const part=JOBS.filter(j=>j.kind==='part'&&jobEligible(j));
+    const part=JOBS.filter(j=>!j.hidden&&j.kind==='part'&&jobEligible(j));
     if(part.length)h+=grp('Part-time', part.map(j=>actBtn('apply-job',j.id,j.title,money(j.pay))).join(''));
     if(G.age>=16)h+=grp('Chase a dream', Object.keys(SPECIAL).map(t=>actBtn('start-special',t,SPECIAL[t].name)).join(''),'Start at the bottom. No salary safety net. This is how fame actually begins.');
     if(G.age>=17)h+=grp('Service', actBtn('enlist',null,'Join the military'));
@@ -2194,7 +2260,7 @@ function tabWork(){
   }
   // gigs always
   const gigs=GIGS.filter(g=>{const lvl=(g.skill in S)?S[g.skill]:(K[g.skill]||0);return lvl>=g.min && G.age>=(g.age||14);});
-  h+=grp('Freelance & side income', gigs.length?gigs.map(g=>actBtn('gig',g.id,g.name,money(Math.round(g.base*0.8)))).join(''):'', gigs.length?'One-off money. Builds the skill too.':'Build a skill (Learn tab) to unlock freelance work.');
+  h+=grp('Freelance & side income', gigs.length?gigs.map(g=>{const used=(G.flags.gigCounts&&G.flags.gigCounts[g.id])||0;return actBtn('gig',g.id,g.name,g.cap?`${used}/${g.cap} completed • about ${money(Math.round(g.base*0.8))}`:money(Math.round(g.base*0.8)),g.cap&&used>=g.cap);}).join(''):'', gigs.length?'One-off money. Babysitting and lawn mowing can each be completed four times per life.':'Build a skill (Mind & Body) to unlock freelance work.');
   return h;
 }
 function applyJob(id){ const j=JOB[id];if(G.job){toast('Promotions now require a formal review from your current occupation page.');return;}if(!j||!jobEligible(j)){toast("You don't qualify for that.");return;}setJob(id);afterAction(0); }
@@ -2271,7 +2337,13 @@ function openEnlist(){
   if(officer){ const b=document.createElement('button'); b.innerHTML='Enlist instead (not as officer)<small>start at E-1</small>'; b.onclick=()=>{forceClose();enlist(pick(BRANCHES),false);}; box.appendChild(b); }
   openModal();
 }
-function doGig(id){ const g=GIGS.find(x=>x.id===id); if(!g)return; if(G.age<(g.age||14)){toast(`You're too young for that gig (age ${g.age||14}+).`);return;} if(g.needsLicense&&!G.flags.license){toast("That gig needs a driver's license.");return;} const lvl=(g.skill in S)?S[g.skill]:(K[g.skill]||0); if(lvl<g.min){toast("You're not skilled enough for that yet.");return;} if(!spendAct('gig:'+id))return;const pay=Math.round(g.base*(0.6+lvl/100)); G.cash+=pay; applyFx(g.gain); log(`You took a freelance job — ${g.name.toLowerCase()} — and cleared ${money(pay)}.`,'money'); afterAction(1); }
+function doGig(id){
+ const g=GIGS.find(x=>x.id===id);if(!g)return;if(G.age<(g.age||14)){toast(`You're too young for that gig (age ${g.age||14}+).`);return;}
+ if(g.needsLicense&&!G.flags.license){toast("That gig needs a driver's license.");return;}const lvl=(g.skill in S)?S[g.skill]:(K[g.skill]||0);if(lvl<g.min){toast("You're not skilled enough for that yet.");return;}
+ if(!G.flags.gigCounts)G.flags.gigCounts={};const used=G.flags.gigCounts[id]||0;if(g.cap&&used>=g.cap){toast(`You have completed the maximum of ${g.cap} ${g.name.toLowerCase()} gigs.`);return;}
+ if(!spendAct('gig:'+id))return;const earned=Math.round(g.base*(0.6+lvl/100));G.cash+=earned;applyFx(g.gain);G.flags.gigCounts[id]=used+1;
+ const remaining=g.cap?` This was ${G.flags.gigCounts[id]} of ${g.cap}.`:'';log(`You took a one-off job to ${g.name.toLowerCase()} and earned ${money(earned)}.${remaining}`,'money');afterAction(1);
+}
 
 function activityButtons(cats){
   return ACTIVITIES.filter(a=>cats.includes(a.cat)).map(a=>{
@@ -2305,7 +2377,7 @@ const GREEK_HOUSES=[
  {id:'alpha-epsilon',sex:'Female',name:'Alpha Epsilon',focus:'Athletics & social life',dues:1200,skill:'athletics',bonus:4,note:'intramural sports and the busiest social calendar'},
  {id:'gamma-pi',sex:'Female',name:'Gamma Pi',focus:'Arts & media',dues:1000,skill:'acting',bonus:4,note:'creative members, performances, and campus media'}
 ];
-function defaultCampus(id){return {housing:id==='bach'?'dorm':'commute',popularity:35,greek:null,club:null,team:null,teamRole:null,gameYear:null,internships:0,internshipAttempts:0,officeAttempted:false,leader:false,rushYear:null,courseLoad:'standard',studyGroup:false,campusJob:null,careerFairYear:null,campusEventYear:null};}
+function defaultCampus(id){return {housing:id==='bach'?'dorm':'commute',popularity:35,greek:null,club:null,team:null,teamRole:null,gameYear:null,internships:0,internshipAttempts:0,officeAttempted:false,leader:false,rushYear:null,courseLoad:'standard',studyGroup:false,campusJob:null,careerFairYear:null,campusEvents:{}};}
 function collegeClubData(c){if(!c||!c.club)return null;return COLLEGE_CLUBS[c.club]||Object.values(COLLEGE_CLUBS).find(x=>x.name===c.club)||null;}
 function greekHouse(c){if(!c||!c.greek)return null;return GREEK_HOUSES.find(x=>x.id===c.greek||x.name===c.greek)||{id:c.greek,name:c.greek,focus:'Tradition & friendship',dues:1100,skill:'charisma',bonus:3,note:'an established chapter'};}
 
@@ -2314,7 +2386,8 @@ function handleEducation(){
   const ep=G.eduProgram, prog=PROGRAMS.find(p=>p.id===ep.id); if(!prog){G.eduProgram=null;return;}
   const campus=campusState();
   const load=COLLEGE_LOADS[campus.courseLoad]||COLLEGE_LOADS.standard;
-  const tuition=Math.round((prog.cost/prog.years)*(1-(ep.scholarship||0))*load.cost);
+  const tuitionBeforeParents=Math.round((prog.cost/prog.years)*(1-(ep.scholarship||0))*load.cost);
+  const tuition=Math.round(tuitionBeforeParents*(1-(ep.parentShare||0)));
   const housing={dorm:14000,offcampus:10000,commute:3000}[campus.housing]||0;
   const house=greekHouse(campus),dues=house?house.dues:0;
   pay(tuition+housing+dues,true);
@@ -2357,32 +2430,39 @@ function campusState(){
 }
 function offerCollegeChoice(){
   if(G.edu<1||G.eduProgram)return;
-  ask('What comes after high school?',`The diploma is still in its folder when everyone starts asking what comes next. College could open doors and hand you a mountain of debt. Work would start paying now. For the first time, the choice is yours.`,[
+  const aid=G.flags.collegeAidApplied?(G.flags.collegeAward?`${Math.round(G.flags.collegeAward*100)}% scholarship awarded`:'scholarship application denied'):'scholarships not yet requested';
+  const family=G.flags.parentsCollegeAsked?(G.flags.parentsCollegeShare?'parents agreed to cover tuition':'parents declined tuition help'):'parents not yet asked';
+  ask('What comes after high school?',`The diploma is still in its folder when everyone starts asking what comes next. College could open doors and hand you a mountain of debt. Current aid: ${aid}; ${family}.`,[
+    {label:'Apply for scholarships',sub:'Approval depends on grades, recommendations, and chance.',cond:()=>!G.flags.collegeAidApplied,fn:applyCollegeScholarship},
+    {label:'Ask your parents to pay tuition',sub:'They may say yes or no based on family finances.',cond:()=>!G.flags.parentsCollegeAsked&&livingParents().length>0,fn:askParentsPayCollege},
     {label:'Attend a four-year university',sub:'Bachelor’s degree, dorms, campus life, and about $28,000 tuition.',fn:()=>enrollProgram('bach')},
     {label:'Start at community college',sub:'A less expensive two-year degree while commuting.',fn:()=>enrollProgram('assoc')},
     {label:'Learn a trade',sub:'Two practical years and a direct route to skilled work.',fn:()=>enrollProgram('trade')},
     {label:'Take a gap year',sub:'Work, travel, or simply figure it out. Enrollment remains available.',fn:()=>log(`You took a gap year. Everyone called it a plan because that sounded better than admitting you needed time.`)}
   ]);
 }
+function applyCollegeScholarship(){
+ G.flags.collegeAidApplied=true;const gpa=schoolGPA(),recommendation=G.school&&G.school.recommendation,privateBoost=schoolType().level*3,score=gpa+(recommendation?10:0)+privateBoost+rnd(-25,20);let award=0;if(score>=108)award=.75;else if(score>=92)award=.5;else if(score>=78)award=.25;G.flags.collegeAward=award;
+ if(award)log(`You applied for scholarships, collected transcripts and recommendations, and waited. The answer was yes: an award covering ${Math.round(award*100)}% of tuition.`,'good');else log(`You applied for scholarships and received a careful collection of rejection letters. The envelopes were thin enough to understand before you opened them.`,'bad');
+ offerCollegeChoice();
+}
+function askParentsPayCollege(){
+ G.flags.parentsCollegeAsked=true;const parent=pick(livingParents()),first=parent.name.split(' ')[0],yes=chance(familyApprovalOdds(28000));G.flags.parentsCollegeShare=yes?1:0;
+ if(yes)log(`You asked ${first} if your parents would pay your college tuition. There was a long conversation about money, expectations, and finishing what you started. In the end, the answer was yes.`,'good');else log(`You asked ${first} if your parents could pay for college. ${first} listened, looked genuinely sorry, and said no. If you enrolled, scholarships, work, and loans would have to close the gap.`,'bad');
+ offerCollegeChoice();
+}
 function tabLearn(){
   let h='';
   if(G.inSchool && G.age>=5){
-    const sc=G.school||(G.school={popularity:40,clique:null,team:null,teamRole:null,seasonYear:null});
-    h+=`<div class="grp"><h4>${schoolStageName()}</h4><div class="note">Grades ${schoolGPA()}/100 • Popularity ${Math.round(sc.popularity)}/100${sc.clique?' • '+cliqueName(sc.clique):''}${sc.team?' • '+sc.team+' team • '+(sc.teamRole||'Player'):''}</div></div>`;
-    h+=grp('School life', actBtn('study',null,'Study','grades + smarts')+actBtn('schoolfriend',null,'Make a friend at school'));
-    let social='';
-    if(G.age>=6){if(sc.team)social+=actBtn('school-season',null,'Play the season',sc.seasonYear===G.year?'Already played this year':(sc.teamRole||'Player')+' • chance to earn leadership',sc.seasonYear===G.year);social+=actBtn('sports',null,sc.team?'Change sports team':'Join a sports team');}
-    if(G.age>=11){ social+=actBtn('clique',null, sc.clique?'Switch cliques':'Join a clique'); social+=actBtn('dance',null,'Go to a school dance'); }
-    h+=grp('Fitting in', social, G.age<11?'Cliques and school dances start in middle school.':'');
-    if(G.schoolStage==='high')h+=grp('Enrollment',actBtn('school-dropout',null,'Drop out of high school'),'Leaving is permanent and you will not receive a diploma.');
+    h+=schoolEducationPanel();
   }
   if(G.eduProgram){
     const ep=G.eduProgram,prog=PROGRAMS.find(p=>p.id===ep.id),campus=campusState();
-    const load=COLLEGE_LOADS[campus.courseLoad]||COLLEGE_LOADS.standard,house=greekHouse(campus),club=collegeClubData(campus);
-    const tuition=Math.round((prog.cost/prog.years)*(1-(ep.scholarship||0))*load.cost),housing={dorm:14000,offcampus:10000,commute:3000}[campus.housing]||0;
-    h+=`<div class="grp"><h4>Higher education</h4><div class="note">${prog.name}${ep.major?' — '+ep.major:''} • ${ep.creditsEarned||0}/${ep.creditsNeeded||prog.years*30} credits • about ${ep.left} year${ep.left===1?'':'s'} left<br>${collegeLetter(ep.gpa)} average (${Math.round(ep.gpa)}/100)${ep.probation?' • ACADEMIC PROBATION':''} • ${load.name} schedule<br>${capitalize(campus.housing)} housing • about ${money(tuition+housing+(house?house.dues:0))}/yr${ep.scholarship?` • ${Math.round(ep.scholarship*100)}% scholarship`:''}</div></div>`;
+    const load=COLLEGE_LOADS[campus.courseLoad]||COLLEGE_LOADS.standard,house=greekHouse(campus),club=collegeClubData(campus),campusEventCount=Object.values(campus.campusEvents||{}).filter(y=>y===G.year).length;
+    const tuitionBeforeParents=Math.round((prog.cost/prog.years)*(1-(ep.scholarship||0))*load.cost),tuition=Math.round(tuitionBeforeParents*(1-(ep.parentShare||0))),housing={dorm:14000,offcampus:10000,commute:3000}[campus.housing]||0;
+    h+=`<div class="grp"><h4>Higher education</h4><div class="note">${prog.name}${ep.major?' — '+ep.major:''} • ${ep.creditsEarned||0}/${ep.creditsNeeded||prog.years*30} credits • about ${ep.left} year${ep.left===1?'':'s'} left<br>${collegeLetter(ep.gpa)} average (${Math.round(ep.gpa)}/100)${ep.probation?' • ACADEMIC PROBATION':''} • ${load.name} schedule<br>${capitalize(campus.housing)} housing • about ${money(tuition+housing+(house?house.dues:0))}/yr${ep.scholarship?` • ${Math.round(ep.scholarship*100)}% scholarship`:''}${ep.parentShare?` • parents cover ${Math.round(ep.parentShare*100)}% of tuition after aid`:''}</div></div>`;
     h+=grp('Academics',actBtn('college-study',null,'Study at the library','grades + intellect')+actBtn('college-office',null,'Visit office hours','grades + professor connection')+actBtn('college-studygroup',null,campus.studyGroup?'Meet with your study group':'Form a study group',campus.studyGroup?'grades + lower stress':'new friend + academic support')+actBtn('college-course',null,'Choose course load',load.name));
-    h+=grp('Campus life',actBtn('college-party',null,'Go to a campus party','$100')+actBtn('college-club',null,club?'Attend '+club.name:'Choose a student club',club?club.note:'pick the organization that fits you')+actBtn('college-event',null,'Attend a campus event',campus.campusEventYear===G.year?'Already attended this year':'one per year',campus.campusEventYear===G.year)+actBtn('college-housing',null,'Change housing'),`Campus popularity ${Math.round(campus.popularity)}/100${club?' • '+club.name:''}.`);
+    h+=grp('Campus life',actBtn('college-party',null,'Go to a campus party','$100')+actBtn('college-club',null,club?'Attend '+club.name:'Choose a student club',club?club.note:'pick the organization that fits you')+actBtn('college-event',null,'Choose campus events',`${campusEventCount}/4 attended this year`,campusEventCount>=4)+actBtn('college-housing',null,'Change housing'),`Campus popularity ${Math.round(campus.popularity)}/100${club?' • '+club.name:''}. Each campus event is available once per year.`);
     h+=grp('Work & connections',actBtn('college-intern',null,campus.internships>=2?'Internship limit reached':'Find an internship',`${campus.internships||0}/2 completed`,campus.internships>=2)+actBtn('college-careerfair',null,'Attend the career fair',campus.careerFairYear===G.year?'Already attended this year':'network + career skills',campus.careerFairYear===G.year)+actBtn('college-job',null,campus.campusJob?'Work your campus job':'Find a campus job',campus.campusJob?collegeJobName(campus.campusJob):'part-time income'));
     if(ep.id==='bach'){
       const greek=house?actBtn('college-greek',null,'Attend a chapter event',`${house.focus} • ${money(house.dues)}/yr`)+(campus.leader?actBtn('college-lead',null,'Chapter officer','Election won',true):actBtn('college-lead',null,campus.officeAttempted?'Chapter election completed':'Run for chapter office',campus.officeAttempted?'One lifetime attempt used':'one attempt • random outcome',campus.officeAttempted)):actBtn('college-rush',null,G.sex==='Male'?'Choose a fraternity to rush':'Choose a sorority to rush',campus.rushYear===G.year?'Rush already attempted this year':'review every house',campus.rushYear===G.year);
@@ -2394,7 +2474,10 @@ function tabLearn(){
     const open=PROGRAMS.filter(p=>G.edu>=p.req);
     h+=grp('Enroll in school', open.map(p=>actBtn('enroll',p.id,p.name,money(p.cost))).join(''), 'Higher education unlocks whole careers — nursing, law, medicine, the corporate ladder.');
   }
-  if(G.age<=17)h+=grp('Summer camps', activityButtons(['Camps']));
+  if(G.inSchool&&G.age<=17){
+    const camps=ACTIVITIES.filter(a=>a.cat==='Camps'&&G.age>=a.age&&G.age<=a.max);
+    h+=grp('Summer camps',camps.map(a=>actBtn('ask-camp',a.id,`Ask about ${a.name.toLowerCase()}`,`${money(a.cost)} • parent decides`)).join(''),camps.length?'Your parent will either approve the camp and pay for it, or say no.':'More camps become available as you get older.');
+  }
   h+=`<div class="note">Self-improvement classes (acting, instruments, gym, and the rest) live under Mind & Body.</div>`;
   return h;
 }
@@ -2408,9 +2491,9 @@ function enrollProgram(id){
 }
 function startProgram(id,major){
   const prog=PROGRAMS.find(p=>p.id===id);
-  const priorGpa=schoolGPA();const scholarship=(id==='bach'&&priorGpa>=90)?.5:(id==='bach'&&priorGpa>=82)?.25:0;
-  G.eduProgram={id,major,left:prog.years,creditsNeeded:prog.years*30,creditsEarned:0,gpa:clamp(Math.round(priorGpa*.7+S.smarts*.3)),scholarship,campus:defaultCampus(id)};
-  log(`You enrolled in ${prog.name.toLowerCase()}${major?' to study '+major:''}.${scholarship?` Your grades earned a ${Math.round(scholarship*100)}% scholarship.`:''} Orientation was a blur of maps, names, financial-aid forms, and people trying not to look as nervous as they felt.`,'good');
+  const priorGpa=schoolGPA(),firstUndergrad=['bach','assoc','trade'].includes(id)&&!G.flags.collegeAidUsed,scholarship=firstUndergrad?(G.flags.collegeAward||0):0,parentShare=firstUndergrad?(G.flags.parentsCollegeShare||0):0;if(firstUndergrad)G.flags.collegeAidUsed=true;
+  G.eduProgram={id,major,left:prog.years,creditsNeeded:prog.years*30,creditsEarned:0,gpa:clamp(Math.round(priorGpa*.7+S.smarts*.3)),scholarship,parentShare,campus:defaultCampus(id)};
+  log(`You enrolled in ${prog.name.toLowerCase()}${major?' to study '+major:''}.${scholarship?` Your scholarship covers ${Math.round(scholarship*100)}% of tuition.`:''}${parentShare?' Your parents agreed to cover the tuition left after aid.':''} Orientation was a blur of maps, names, financial-aid forms, and people trying not to look as nervous as they felt.`,'good');
   afterAction(0);
 }
 function collegeStudy(){const ep=G.eduProgram;if(!ep)return;if(!spendAct('college-study'))return;ep.gpa=clamp((ep.gpa??65)+rnd(6,11));S.smarts=clamp(S.smarts+2);K.intellect=clamp(K.intellect+2);S.stress=clamp(S.stress+5);log(`You disappeared into the library beneath fluorescent lights and came out knowing the material—and slightly less certain what day it was. Your grades climbed.`,'good');afterAction(0);}
@@ -2422,8 +2505,8 @@ function collegeParty(){const ep=G.eduProgram,c=campusState();if(!ep)return;if(!
 function collegeClub(){const c=campusState();if(!c)return;if(!c.club){$('modalbox').innerHTML=`<h2>Choose a student club</h2><p>One organization can become your regular place on campus. Choose the one that fits the experience you want.</p><div class="opts">${Object.entries(COLLEGE_CLUBS).map(([id,x])=>`<button onclick="joinCollegeClub('${id}')">${x.name}<small>${x.note}</small></button>`).join('')}</div>`;openModal();return;}attendCollegeClub();}
 function joinCollegeClub(id){const c=campusState(),club=COLLEGE_CLUBS[id];if(!c||!club)return;if(!spendAct('college-club'))return;c.club=id;c.popularity=clamp(c.popularity+5);K.charisma=clamp(K.charisma+2);forceClose();log(`You joined ${club.name}. The first meeting gave you a room full of unfamiliar faces; before long, it became one of the places on campus where someone noticed when you were absent.`,'good');afterAction(0);}
 function attendCollegeClub(){const c=campusState(),club=collegeClubData(c);if(!c||!club)return;if(!spendAct('college-club'))return;c.popularity=clamp(c.popularity+4);K[club.skill]=clamp((K[club.skill]||0)+club.gain);K.charisma=clamp(K.charisma+1);const stories={government:`You attended a student-government session and helped negotiate funding for campus organizations. The meeting ran long, but your proposal survived the vote.`,film:`You went to Film Society, watched a student film in a nearly empty auditorium, and stayed afterward to argue about the ending.`,radio:`You took a shift at Campus Radio. You planned a short set, spoke between tracks, and learned to fill dead air without panicking.`,robotics:`You spent the evening with Robotics Club rebuilding a mechanism that had worked perfectly until judges entered the room.`,debate:`You competed with the Debate Team and learned to answer an argument while your pulse was still catching up.`,volunteer:`You joined the Volunteer Coalition for a community project. The work was practical, tiring, and clearly useful.`,theater:`You attended a Theater Guild rehearsal and helped turn a bare stage, a pile of props, and several strong opinions into a scene.`};log(stories[c.club]||`You attended ${club.name} and took an active role in the meeting.`,'good');afterAction(0);}
-function collegeCampusEvent(){const c=campusState();if(!c)return;if(c.campusEventYear===G.year){toast('You have already chosen a major campus event this year.');return;}$('modalbox').innerHTML=`<h2>Campus calendar</h2><p>Classes are only part of college. Where do you spend the evening?</p><div class="opts"><button onclick="attendCampusEvent('lecture')">Guest lecture<small>intellect and a professor connection</small></button><button onclick="attendCampusEvent('concert')">Student concert<small>happiness, music, and new people</small></button><button onclick="attendCampusEvent('game')">Homecoming game<small>school spirit and campus popularity</small></button><button onclick="attendCampusEvent('service')">Day of service<small>discipline and lower stress</small></button></div>`;openModal();}
-function attendCampusEvent(kind){const c=campusState();if(!c||c.campusEventYear===G.year)return;if(!spendAct('college-event'))return;c.campusEventYear=G.year;forceClose();if(kind==='lecture'){K.intellect=clamp(K.intellect+3);G.eduProgram.professor=true;log(`You attended a guest lecture and stayed for the questions afterward. One answer sent you back to your notes with an entirely different way of seeing the subject.`,'good');}else if(kind==='concert'){K.music=clamp(K.music+2);S.happiness=clamp(S.happiness+5);c.popularity=clamp(c.popularity+3);log(`You went to a student concert on the quad. The sound system struggled, the crowd sang anyway, and you ended the night talking with people you had only seen in class.`,'good');}else if(kind==='game'){S.happiness=clamp(S.happiness+4);c.popularity=clamp(c.popularity+5);log(`You joined the homecoming crowd and shouted yourself hoarse under the stadium lights. For one evening, the whole campus seemed to agree on something.`,'good');}else{K.discipline=clamp(K.discipline+3);S.stress=clamp(S.stress-4);log(`You spent the campus service day doing work the community actually needed. You came home tired, dirty, and certain the day had mattered.`,'good');}afterAction(0);}
+function collegeCampusEvent(){const c=campusState();if(!c)return;if(!c.campusEvents)c.campusEvents={};const done=kind=>c.campusEvents[kind]===G.year;$('modalbox').innerHTML=`<h2>Campus calendar</h2><p>Classes are only part of college. You may attend every event once each year.</p><div class="opts"><button ${done('lecture')?'disabled':''} onclick="attendCampusEvent('lecture')">Guest lecture<small>${done('lecture')?'attended this year':'intellect and a professor connection'}</small></button><button ${done('concert')?'disabled':''} onclick="attendCampusEvent('concert')">Student concert<small>${done('concert')?'attended this year':'happiness, music, and new people'}</small></button><button ${done('game')?'disabled':''} onclick="attendCampusEvent('game')">Homecoming game<small>${done('game')?'attended this year':'school spirit and campus popularity'}</small></button><button ${done('service')?'disabled':''} onclick="attendCampusEvent('service')">Day of service<small>${done('service')?'attended this year':'discipline and lower stress'}</small></button></div>`;openModal();}
+function attendCampusEvent(kind){const c=campusState();if(!c)return;if(!c.campusEvents)c.campusEvents={};if(c.campusEvents[kind]===G.year){toast('You already attended that event this year.');return;}if(!['lecture','concert','game','service'].includes(kind))return;if(!spendAct('college-event:'+kind))return;c.campusEvents[kind]=G.year;forceClose();if(kind==='lecture'){K.intellect=clamp(K.intellect+3);G.eduProgram.professor=true;log(`You attended a guest lecture and stayed for the questions afterward. One answer sent you back to your notes with an entirely different way of seeing the subject.`,'good');}else if(kind==='concert'){K.music=clamp(K.music+2);S.happiness=clamp(S.happiness+5);c.popularity=clamp(c.popularity+3);log(`You went to a student concert on the quad. The sound system struggled, the crowd sang anyway, and you ended the night talking with people you had only seen in class.`,'good');}else if(kind==='game'){S.happiness=clamp(S.happiness+4);c.popularity=clamp(c.popularity+5);log(`You joined the homecoming crowd and shouted yourself hoarse under the stadium lights. For one evening, the whole campus seemed to agree on something.`,'good');}else{K.discipline=clamp(K.discipline+3);S.stress=clamp(S.stress-4);log(`You spent the campus service day doing work the community actually needed. You came home tired, dirty, and certain the day had mattered.`,'good');}afterAction(0);}
 function collegeRush(){const ep=G.eduProgram,c=campusState();if(!ep||ep.id!=='bach'||c.greek)return;if(c.rushYear===G.year){toast('You already went through rush this year.');return;}const houses=GREEK_HOUSES.filter(x=>x.sex===G.sex);$('modalbox').innerHTML=`<h2>${G.sex==='Male'?'Fraternity':'Sorority'} rush</h2><p>Each house has its own culture, annual dues, and strengths. Choose where you want to seek a bid.</p><div class="opts">${houses.map(x=>`<button onclick="rushGreekHouse('${x.id}')">${x.name}<small>${x.focus} • ${money(x.dues)}/year • ${x.note}</small></button>`).join('')}</div>`;openModal();}
 function rushGreekHouse(id){const c=campusState(),house=GREEK_HOUSES.find(x=>x.id===id&&x.sex===G.sex);if(!c||!house||c.greek||c.rushYear===G.year)return;if(!spendAct('college-rush'))return;c.rushYear=G.year;forceClose();const odds=clamp(.28+(K.charisma||0)/350+(S.looks||0)/600+c.popularity/700,.18,.82);if(chance(odds)){c.greek=house.id;c.popularity=clamp(c.popularity+10);S.happiness=clamp(S.happiness+5);K[house.skill]=clamp((K[house.skill]||0)+house.bonus);log(`You received a bid from ${house.name} and accepted it. Pledge night gave you letters, traditions, a crowded room of new names, and the uneasy excitement of realizing these people might shape the rest of college.`,'good');}else{S.happiness=clamp(S.happiness-4);log(`${house.name} finished rush without offering you a bid. You told people it was probably for the best, then avoided their pledge-night photographs for the rest of the weekend.`,'bad');}afterAction(0);}
 function collegeGreekEvent(){const c=campusState(),house=greekHouse(c);if(!c||!house)return;if(!spendAct('college-greek'))return;if(!pay(80,true)){cancelSpentAction();return;}c.popularity=clamp(c.popularity+6);K.charisma=clamp(K.charisma+3);K[house.skill]=clamp((K[house.skill]||0)+2);S.happiness=clamp(S.happiness+4);if(house.focus.includes('Athletics')){G.addiction.alcohol=clamp(G.addiction.alcohol+4);log(`You went to a crowded ${house.name} social after an intramural game. The music was loud, the rivalries were ridiculous, and you left with three new contacts and a headache.`,'good');}else if(house.focus.includes('Service'))log(`You joined ${house.name} for a service event, then stayed for the chapter dinner. The work was useful and the friendships felt less performative than rush had.`,'good');else if(house.focus.includes('Arts'))log(`${house.name} hosted a campus showcase. You helped backstage, met performers and student journalists, and watched the house feel briefly like the center of campus.`,'good');else log(`You attended a ${house.name} alumni dinner and learned how quickly an introduction can become an internship lead, a recommendation, or a future favor.`,'good');afterAction(0);}
@@ -2554,13 +2637,16 @@ function payDebt(){ if(G.debt<=0){toast('You owe nothing. Rare and good.');retur
 function tabLove(){
   if(G.age<13) return '<div class="note">Too young for any of this. Give it time.</div>';
   const p=partner(); let h='';
-  if(p){ h+=`<div class="grp"><h4>You're seeing someone</h4><div class="list">${personRow(p)}</div></div>`; }
-  else {
-    let opts=actBtn('dating',null,'Dating app','find someone');
-    if(S.fame>=40)opts+=actBtn('celebdate',null,'Celebrity dating app','date another famous name');
-    h+=grp('Find love', opts, 'Match with someone and see where it goes.');
+  if(p){
+    h+=`<div class="grp"><h4>You're seeing someone</h4><div class="list">${personRow(p)}</div><div class="acts">${actBtn('partner-date',null,'Plan a date','choose where you go')}${actBtn('relationship-talk',null,'Talk about the relationship',G.flags.relationshipTalkYear===G.year?'already had the talk this year':'honest, occasionally risky',G.flags.relationshipTalkYear===G.year)}</div></div>`;
   }
-  if(G.age>=18) h+=grp('No strings', actBtn('onenight',null,'Find a hookup'), 'A one-night thing — low loyalty, real consequences if you\'re attached to someone.');
+  else {
+    let opts=actBtn('dating',null,'Browse a dating profile','see the person before you decide',G.age<16);
+    if(G.age>=18)opts+=actBtn('singles-event',null,'Go to a singles event','meet one person face-to-face');
+    if(S.fame>=40)opts+=actBtn('celebdate',null,'Celebrity dating app','date another famous name');
+    h+=grp('Find love', opts, 'You will see one person at a time. Look them over, then say yes or pass.');
+  }
+  if(G.age>=18) h+=grp('No strings', actBtn('onenight',null,'Browse a hookup profile','see who is interested'), 'A one-night thing — you still get to decide, and there are real consequences if you are attached.');
   if((G.divorceHistory||[]).length){const d=G.divorceHistory[G.divorceHistory.length-1];h+=`<div class="grp"><h4>Marriage history</h4><div class="note">${G.divorceHistory.length} divorce${G.divorceHistory.length===1?'':'s'} • latest: ${esc(d.spouse)}, ${d.year}<br>${esc(DIVORCE_APPROACHES[d.approach]?.name||d.approach)} • estate ${money(d.estate)} • settlement ${money(d.settlement)}${d.custody?` • ${d.custody} custody`:''}</div></div>`;}
   return h;
 }
@@ -2574,17 +2660,60 @@ function tabSocialMedia(){
   if(rest.length)h+=grp('Join a platform', rest.map(x=>actBtn('joinsocial',x.id,x.name)).join(''), 'Every account starts at zero. Some of them stay there.');
   return h;
 }
-function datingApp(){
-  if(G.age<16){toast('Too young for that.');return;}
-  if(partner()){toast("You're already with someone.");return;}
-  if(!spendAct('dating'))return;
-  if(chance(0.7)){ const other=G.sex==='Male'?'Female':'Male'; const nm=other==='Male'?pick(MALE):pick(FEMALE); const p=addNPC('partner',nm+' '+pick(LAST),G.age+rnd(-4,4)); p.loyalty=rnd(45,65); log(`You matched with ${p.name.split(' ')[0]} and, after the usual throat-clearing over text, met for a coffee that turned into dinner. It's early. But it's something, and something is a lot.`,'good'); S.happiness=clamp(S.happiness+4); }
-  else { log(`You swiped for an hour. Two matches: one never replied, the other turned out to be a bot selling supplements. You closed the app feeling slightly worse about the whole species.`); S.happiness=clamp(S.happiness-2); }
-  afterAction(0);
+const DATE_JOBS=['barista','retail associate','line cook','teacher','nurse','designer','mechanic','student','office assistant','musician','software developer','freelancer'];
+function makeDatingCandidate(source){
+  const other=G.sex==='Male'?'Female':'Male';
+  const age=G.age<18?rnd(Math.max(16,G.age-1),17):clamp(G.age+rnd(-6,7),18,80);
+  const income=age<18?rnd(0,4500):rnd(18000,145000);
+  return {source,sex:other,name:(other==='Male'?pick(MALE):pick(FEMALE))+' '+pick(LAST),age,job:age<18?'student':pick(DATE_JOBS),stats:{looks:rnd(20,98),smarts:rnd(20,98),happiness:rnd(20,98),health:rnd(25,100)},netWorth:age<18?rnd(0,2500):rnd(-15000,Math.max(25000,income*3))};
+}
+function datingProfileHtml(c){
+  const context=c.source==='hookup'?'Looking for something casual':c.source==='singles'?'Met at tonight\'s singles event':'Suggested profile';
+  return `<h2>${esc(c.name)}, ${c.age}</h2><div class="note">${esc(context)} • ${esc(capitalize(c.job))} • Net worth ${money(c.netWorth)}</div><div style="margin-top:14px">${miniBar('Looks',c.stats.looks)}${miniBar('Smarts',c.stats.smarts)}${miniBar('Happiness',c.stats.happiness)}${miniBar('Health',c.stats.health)}</div><p>Interested?</p><div class="opts"><button class="primary" onclick="acceptDatingCandidate()">Yes — meet them</button><button onclick="passDatingCandidate()">No — pass</button></div>`;
+}
+function showDatingCandidate(source){
+  source=source||'dating';
+  if(source==='dating'&&G.age<16){toast('Dating profiles unlock at 16.');return;}
+  if(source!=='dating'&&G.age<18){toast('You need to be 18 for that.');return;}
+  if(source!=='hookup'&&partner()){toast("You're already with someone.");return;}
+  datingCandidateDraft=makeDatingCandidate(source);
+  $('modalbox').innerHTML=datingProfileHtml(datingCandidateDraft);openModal();
+}
+function datingApp(){showDatingCandidate('dating');}
+function acceptDatingCandidate(){
+  const c=datingCandidateDraft;if(!c)return;
+  const attached=partner();
+  if(!spendAct('love-profile:'+c.source))return;
+  datingCandidateDraft=null;forceClose();
+  if(c.source==='hookup'){
+    const f=addNPC('fling',c.name,c.age);f.loyalty=rnd(20,38);f.profileStats=c.stats;f.netWorth=c.netWorth;f.career=c.job;
+    S.happiness=clamp(S.happiness+4);log(`You met ${c.name} after seeing their profile. The chemistry was real, the expectations were clear, and morning arrived sooner than either of you expected.`);thread('onenight',{name:c.name});if(attached)thread('cheated',{npc:attached.id,name:c.name});afterAction(2);return;
+  }
+  const p=addNPC('partner',c.name,c.age);p.loyalty=rnd(c.source==='singles'?48:42,68);p.profileStats=c.stats;p.netWorth=c.netWorth;p.career=c.job;
+  S.happiness=clamp(S.happiness+5);K.charisma=clamp(K.charisma+1);
+  log(c.source==='singles'?`You said yes to meeting ${c.name} again after the singles event. The second conversation was easier than the first, which felt like a promising start.`:`You said yes to ${c.name}'s profile. A first meeting stretched past the planned ending, and the two of you decided to see where this might go.`,'good');afterAction(0);
+}
+function passDatingCandidate(){
+  const c=datingCandidateDraft;if(!c)return;if(!spendAct('love-profile:'+c.source))return;datingCandidateDraft=null;forceClose();
+  log(`You passed on ${c.name}. A profile is only a glimpse, but it was enough to know this was not the one.`);afterAction(0);
+}
+function openPartnerDate(){
+  const p=partner();if(!p)return;
+  const dates=[['coffee',15,'Coffee and a long walk'],['dinner',80,'Dinner somewhere nice'],['concert',150,'Concert tickets'],['weekend',650,'A weekend away']];
+  $('modalbox').innerHTML=`<h2>Plan a date with ${esc(p.name)}</h2><p>Time together works best when it feels chosen.</p><div class="opts">${dates.map(d=>`<button onclick="takePartnerDate('${d[0]}',${d[1]})" ${G.cash<d[1]?'disabled':''}>${esc(d[2])}<small>${money(d[1])}</small></button>`).join('')}</div>`;openModal();
+}
+function takePartnerDate(kind,cost){
+  const p=partner();if(!p)return;if(!spendAct('partner-date:'+kind))return;if(!pay(cost)){cancelSpentAction();toast('You cannot afford that date.');return;}forceClose();
+  const gain={coffee:4,dinner:6,concert:7,weekend:10}[kind]||4;p.loyalty=clamp(p.loyalty+gain);S.happiness=clamp(S.happiness+Math.ceil(gain/2));S.stress=clamp(S.stress-Math.ceil(gain/3));
+  const story={coffee:'You found a quiet table, then walked until neither of you remembered whose idea the walk had been.',dinner:'You dressed up, ordered slowly, and talked without checking the time.',concert:'You lost each other in the crowd for half a song, then found each other laughing.',weekend:'You left the routines at home and remembered how the two of you are when nothing else is asking for attention.'}[kind];log(`${story} ${p.name} felt closer afterward.`,'good');afterAction(0);
+}
+function relationshipTalk(){
+  const p=partner();if(!p)return;if(G.flags.relationshipTalkYear===G.year){toast('You already had that conversation this year.');return;}if(!spendAct('relationship-talk'))return;G.flags.relationshipTalkYear=G.year;
+  const good=chance(clamp(.38+p.loyalty/180+K.charisma/500,.3,.9));if(good){p.loyalty=clamp(p.loyalty+rnd(5,10));S.stress=clamp(S.stress-4);log(`You and ${p.name} talked honestly about what was working, what was not, and what each of you wanted next. Nothing was magically solved, but both of you left the conversation feeling chosen.`,'good');}else{p.loyalty=clamp(p.loyalty-rnd(4,9));S.stress=clamp(S.stress+5);log(`You tried to talk with ${p.name} about the relationship. Old complaints arrived before either of you was ready, and the conversation ended colder than it began.`,'bad');}afterAction(0);
 }
 function makeFriend(){ if(G.age<5){toast('Friends come once school starts.');return;}if(!spendAct('make-friend'))return; if(chance(0.65)){ const nm=pick(MALE.concat(FEMALE))+' '+pick(LAST); const f=addNPC('friend',nm,G.age+rnd(-5,5)); f.loyalty=rnd(40,60); log(`You made a new friend — ${nm.split(' ')[0]}. It happened sideways, the way it does after childhood: a shared complaint in a line, a favor, a second conversation that didn't have to happen and did.`,'good'); S.happiness=clamp(S.happiness+3); } else { log(`You tried to put yourself out there. It was awkward, went nowhere, and you replayed it in bed that night. Making friends as an adult is a strange and humbling sport.`); S.happiness=clamp(S.happiness-1); } afterAction(0); }
 function socialMedia(){ const r=Math.random(); if(r<0.06&&(K.charisma>30||S.looks>60||S.fame>20)){ S.fame=clamp(S.fame+rnd(3,8)); K.charisma=clamp(K.charisma+2); log(`Something you posted took off. Strangers you'll never meet decided they knew you. The follower count did a thing that felt like money and wasn't — yet.`,'good'); } else if(r<0.13){ S.happiness=clamp(S.happiness-4); S.stress=clamp(S.stress+4); log(`You posted something and it landed wrong. The replies taught you, again, that the internet is a room full of people waiting to be offended on purpose.`,'bad'); } else { K.charisma=clamp(K.charisma+1); log(`You scrolled and posted and scrolled. An hour vanished. You felt informed and vaguely worse, which is the product working exactly as designed.`); } afterAction(0); }
-function oneNight(){ if(G.age<18){toast('No.');return;}if(!spendAct('onenight'))return; const other=G.sex==='Male'?'Female':'Male'; const nm=other==='Male'?pick(MALE):pick(FEMALE); addNPC('fling',nm,G.age+rnd(-3,6)).loyalty=25; S.happiness=clamp(S.happiness+4); log(`You went home with ${nm}. In the morning came the small negotiation — who leaves first, whether numbers get traded. ${pick(['You didn\'t exchange them.','You did, and never used them.','It was kinder than you expected, and a little sadder.'])}`); thread('onenight',{name:nm}); if(partner())thread('cheated',{npc:partner().id,name:nm}); afterAction(2); }
+function oneNight(){showDatingCandidate('hookup');}
 
 /* ---------------- CRIME ---------------- */
 function tabCrime(){
@@ -2724,6 +2853,8 @@ function tabActivities(){
   let h='';
   const healthNote=healthConditionSummary()||'No diagnosed conditions. Preventive care can uncover hidden illness.';
   h+=grp('Health & body', actBtn('doctor-visit',null,'Visit a doctor',(G.conditions||[]).length?`${G.conditions.length} active concern${G.conditions.length===1?'':'s'}`:'checkup & diagnosis')+actAct('plastic')+((G.addiction.alcohol>25||G.addiction.drugs>25)?actAct('rehab'):''),healthNote);
+  h+=grp('Fun & hobbies',activityButtons(['Fun']),'Small adventures, creative messes, and reasons to leave the house.');
+  h+=grp('Outdoors & community',activityButtons(['Outdoors']),'Fresh air, useful work, and a change of scenery.');
   h+=grp('Family & home', (G.age>=18?actBtn('adopt',null,'Adopt a child'):'')+(G.age>=18&&partner()?actBtn('fertility',null,'Fertility clinic'):'')+actBtn('getpet',null,'Get a pet')+(G.age>=18?actBtn('emigrate',null,'Emigrate'):''), (G.pets&&G.pets.length)?('Your pets: '+G.pets.map(p=>p.name+' the '+p.sp).join(', ')):'');
   h+=grp('Gambling', actBtn('lottery',null,'Lottery ticket','$20')+actBtn('casino',null,'Casino')+(G.age>=18?actBtn('horses',null,'Horse races'):'')+(G.age>=18?actBtn('fightbet',null,'Bet on a fight'):'')+actBtn('sweepstakes',null,'Sweepstakes'), 'The house always wins. That is the whole business model.');
   if(G.age>=18)h+=grp('Legal', actBtn('lawsuit',null,'Sue someone'));
@@ -2745,6 +2876,49 @@ const CLIQUES=[
 const CLIQUE_NOTE={populars:'Top of the social heap, and all the pressure that comes with it.',jocks:'Team sports, letterman energy, gym-class royalty.',nerds:'Robotics, chess, straight As \u2014 popularity later, once it counts.',artsy:'Theater kids and sketchbooks and black turtlenecks in spirit.',skaters:'Ollies, scraped elbows, a healthy disrespect for the bell.',goths:'Eyeliner as armor, and kinder than anyone expects.'};
 function cliqueName(id){ const c=CLIQUES.find(x=>x.id===id); return c?c.name:id; }
 const SCHOOLSPORTS=['Football','Basketball','Soccer','Track','Swimming','Baseball','Volleyball'];
+
+function miniBar(label,value,cls){value=clamp(Math.round(value));return `<div class="bar ${cls||''}"><div class="lbl"><span>${esc(label)}</span><span>${value}</span></div><div class="trk"><div class="fil" style="width:${value}%"></div></div></div>`;}
+function schoolRoster(kind){ensureSchoolRoster();const ids=kind==='faculty'?G.school.facultyIds:G.school.classmateIds;return (ids||[]).map(npc).filter(Boolean);}
+function schoolPersonRow(n){return `<button class="person" data-act="school-person" data-arg="${n.id}"><div class="phead"><div><div class="t">${esc(n.name)}</div><div class="s">${n.facultyRole?esc(n.facultyRole):(n.schoolFriend?'Classmate • friend':'Classmate')}</div></div><div class="rel"><span class="relw">${loyaltyWord(n.loyalty)}</span>${relbar(n.loyalty)}<span class="reln">${Math.round(n.loyalty)} / 100</span></div></div><span class="mchev pchev">›</span></button>`;}
+function schoolPersonDetail(n){
+ let h=`<button class="back" onclick="schoolOpen=null;renderActions()">‹ Back to ${n.facultyRole?'faculty':'classmates'}</button><div class="person" style="display:block;margin-top:10px"><div class="phead"><div><div class="t">${esc(n.name)}</div><div class="s">${esc(n.facultyRole||'Classmate')}${n.schoolFriend?' • friend':''}</div></div><div class="rel"><span class="relw">${loyaltyWord(n.loyalty)}</span>${relbar(n.loyalty)}<span class="reln">${Math.round(n.loyalty)} / 100</span></div></div></div>`;
+ if(n.facultyRole)return h+grp('At school',actBtn('faculty-talk',n.id,'Talk')+actBtn('faculty-help',n.id,'Ask for help')+actBtn('faculty-recommend',n.id,n.recommended?'Recommendation received':'Ask for a recommendation',n.recommended?'Already completed':'helps scholarship applications',n.recommended));
+ const st=n.schoolStats||{looks:50,smarts:50,happiness:50,health:70};h+=`<div style="margin:12px 0">${miniBar('Looks',st.looks,'looks')}${miniBar('Smarts',st.smarts,'smarts')}${miniBar('Happiness',st.happiness,'happy')}${miniBar('Health',st.health,'health')}</div>`;
+ return h+grp('Spend time together',actBtn('school-talk',n.id,'Talk between classes')+actBtn('school-studywith',n.id,'Study together')+actBtn('school-lunch',n.id,'Sit together at lunch')+actBtn('school-friend-request',n.id,n.schoolFriend?'Friends':'Ask to be friends',n.schoolFriend?'You are already friends':'relationship affects the answer',n.schoolFriend));
+}
+function schoolEducationPanel(){
+ ensureSchoolRoster();const sc=G.school,st=schoolType(),classmates=schoolRoster('classmates'),faculty=schoolRoster('faculty');
+ const nav=`<div class="tabs" style="margin-bottom:12px"><button class="${schoolView==='overview'?'on':''}" onclick="schoolView='overview';schoolOpen=null;renderActions()">Overview</button><button class="${schoolView==='classmates'?'on':''}" onclick="schoolView='classmates';schoolOpen=null;renderActions()">Classmates (${classmates.length})</button><button class="${schoolView==='faculty'?'on':''}" onclick="schoolView='faculty';schoolOpen=null;renderActions()">Faculty (${faculty.length})</button></div>`;
+ if(schoolOpen){const n=npc(schoolOpen);if(n)return nav+schoolPersonDetail(n);schoolOpen=null;}
+ if(schoolView==='classmates')return nav+`<div class="grp"><h4>Your classmates</h4><div class="note">These students remain in your school roster. Open someone to talk, study together, share lunch, or ask to become friends.</div><div class="list">${classmates.map(schoolPersonRow).join('')}</div></div>`;
+ if(schoolView==='faculty')return nav+`<div class="grp"><h4>School faculty</h4><div class="note">Teachers, counselors, coaches, and administrators can help with grades and recommendations when the relationship is strong.</div><div class="list">${faculty.map(schoolPersonRow).join('')}</div></div>`;
+ let h=nav+`<div class="grp"><h4>${schoolStageName()}</h4><div class="note">${st.name} • Family finances: ${capitalize(G.familyWealth)}<br>Grades ${schoolGPA()}/100 • Popularity ${Math.round(sc.popularity)}/100${sc.clique?' • '+cliqueName(sc.clique):''}${sc.team?' • '+sc.team+' team • '+(sc.teamRole||'Player'):''}${sc.club?' • '+SCHOOL_CLUBS[sc.club].name:''}</div></div>`;
+ h+=grp('Classes',actBtn('study',null,'Study','grades + smarts')+actBtn('school-club',null,sc.club?'Change school club':'Join a school club')+(sc.club?actBtn('school-club-attend',null,'Attend '+SCHOOL_CLUBS[sc.club].name,sc.clubYear===G.year?'Already attended this year':'once per year',sc.clubYear===G.year):''));
+ let social='';if(G.age>=6){if(sc.team)social+=actBtn('school-season',null,'Play the season',sc.seasonYear===G.year?'Already played this year':(sc.teamRole||'Player')+' • chance to earn leadership',sc.seasonYear===G.year);social+=actBtn('sports',null,sc.team?'Change sports team':'Join a sports team');}
+ if(G.age>=11){social+=actBtn('clique',null,sc.clique?'Switch cliques':'Join a clique');const danceName=G.schoolStage==='high'?(G.age>=16?'Go to prom':'Go to homecoming dance'):'Go to a school dance';social+=actBtn('dance',null,danceName,sc.danceYear===G.year?'Already attended this year':'one dance per year',sc.danceYear===G.year);social+=actBtn('school-event',null,G.schoolStage==='high'?'High-school experiences':'Middle-school experiences');}
+ h+=grp('School life',social,G.age<11?'Clubs, classmates, and faculty are available now; dances and larger school events begin in middle school.':'Choose the parts of school life that matter to you.');
+ const canPrivate=FAMILY_LEVEL[G.familyWealth]>=1;h+=grp('School choice',actBtn('private-school',null,st.level?'Change schools':'Ask about private school',sc.schoolChoiceYear===G.year?'Already discussed this year':st.note,sc.schoolChoiceYear===G.year||(!canPrivate&&st.level===0)),canPrivate?`Your family can consider private-school tuition. The final answer still belongs to your parents.`:'Private tuition is currently beyond your family’s budget.');
+ if(G.schoolStage==='high')h+=grp('Enrollment',actBtn('school-dropout',null,'Drop out of high school'),'Leaving is permanent and you will not receive a diploma.');
+ return h;
+}
+function openSchoolPerson(id){if(!npc(id))return;schoolOpen=id;renderActions();}
+function schoolPersonTalk(id){const n=npc(id);if(!n)return;if(!spendAct('school-talk'))return;n.loyalty=clamp(n.loyalty+rnd(3,7));S.happiness=clamp(S.happiness+1);log(`You caught up with ${n.name} between classes. The conversation began with school and wandered into the things both of you actually cared about.`,'good');afterAction(0);}
+function schoolStudyWith(id){const n=npc(id);if(!n)return;if(!spendAct('school-studywith'))return;n.loyalty=clamp(n.loyalty+rnd(2,5));G.gpaSeed=clamp(G.gpaSeed+rnd(3,6));K.intellect=clamp(K.intellect+2);S.stress=clamp(S.stress+1);log(`You studied with ${n.name}. Between the two of you, the homework made more sense and the time passed faster.`,'good');afterAction(0);}
+function schoolLunch(id){const n=npc(id);if(!n)return;if(!spendAct('school-lunch'))return;n.loyalty=clamp(n.loyalty+rnd(4,8));G.school.popularity=clamp(G.school.popularity+2);S.happiness=clamp(S.happiness+3);log(`You sat with ${n.name} at lunch. It was only one table in one crowded room, but having a place to sit made the whole day easier.`,'good');afterAction(0);}
+function schoolAskFriend(id){const n=npc(id);if(!n||n.schoolFriend)return;if(!spendAct('school-friend-request'))return;const yes=chance(clamp(.25+n.loyalty/120+(K.charisma||0)/300,.2,.9));if(yes){n.schoolFriend=true;n.role='friend';n.label='friend';n.loyalty=clamp(n.loyalty+12);S.happiness=clamp(S.happiness+4);log(`You asked ${n.name} if they wanted to hang out outside school. They said yes, and a classmate became a real friend.`,'good');}else{n.loyalty=clamp(n.loyalty-3);S.happiness=clamp(S.happiness-2);log(`You tried to turn things with ${n.name} into a friendship outside school. They gave you a vague answer, and both of you understood it.`,'bad');}afterAction(0);}
+function facultyTalk(id){const n=npc(id);if(!n)return;if(!spendAct('faculty-talk'))return;n.loyalty=clamp(n.loyalty+rnd(3,7));K.charisma=clamp(K.charisma+1);log(`You stayed after class to talk with ${n.name}, the ${n.facultyRole.toLowerCase()}. They listened without looking at the clock, which made it easier to keep talking.`,'good');afterAction(0);}
+function facultyHelp(id){const n=npc(id);if(!n)return;if(!spendAct('faculty-help'))return;n.loyalty=clamp(n.loyalty+rnd(2,5));G.gpaSeed=clamp(G.gpaSeed+rnd(3,7));if(n.facultyRole.includes('counselor'))S.stress=clamp(S.stress-5);else K.intellect=clamp(K.intellect+2);log(`You asked ${n.name} for help. They took the question seriously, worked through the problem with you, and made the next step feel manageable.`,'good');afterAction(0);}
+function facultyRecommendation(id){const n=npc(id);if(!n||n.recommended)return;if(!spendAct('faculty-recommend'))return;n.recommended=true;const yes=chance(clamp(.25+n.loyalty/120+schoolGPA()/300,.25,.92));if(yes){G.school.recommendation=true;n.loyalty=clamp(n.loyalty+5);log(`${n.name} agreed to write you a recommendation. They asked what you hoped to do next, took notes, and promised not to make it sound generic.`,'good');}else{log(`${n.name} declined to write the recommendation. They were polite, but said they did not know your work well enough to be convincing.`,'bad');}afterAction(0);}
+function familyApprovalOdds(cost){const base={modest:.22,comfortable:.58,wealthy:.82,affluent:.96}[G.familyWealth]||.45;const relationship=livingParents().reduce((s,n)=>s+n.loyalty,0)/Math.max(1,livingParents().length);return clamp(base+relationship/500-cost/100000,.08,.97);}
+function askParentsForCamp(id){const a=ACT[id];if(!a||a.cat!=='Camps'||!G.inSchool)return;if(!canAskParentsForLessons()){doActivity(id);return;}if(!spendAct('parent-camp:'+id))return;const parent=pick(livingParents()),first=parent.name.split(' ')[0],approved=chance(familyApprovalOdds(a.cost));if(approved){applyFx(a.fx);log(`You asked ${first} if you could go to ${a.name.toLowerCase()}. After looking at the cost and the dates, ${first} said yes and paid the ${money(a.cost)} fee. You came home with new skills, tired clothes, and several stories told all at once.`,'good');}else{S.happiness=clamp(S.happiness-2);log(`You asked ${first} if you could go to ${a.name.toLowerCase()}. ${first} looked at the ${money(a.cost)} cost and said no. It was not the answer you wanted, even if you understood why.`,'bad');}afterAction(0);}
+function choosePrivateSchool(){const sc=G.school;if(!G.inSchool||!sc)return;const lvl=FAMILY_LEVEL[G.familyWealth]||0,options=[];if(lvl>=1)options.push('private');if(lvl>=2)options.push(G.sex==='Male'?'boys':'girls');$('modalbox').innerHTML=`<h2>School options</h2><p>Your family finances are ${G.familyWealth}. Private tuition would be paid by your parents, but they still have to agree.</p><div class="opts">${options.map(id=>{const x=SCHOOL_TYPES[id];return `<button ${sc.type===id?'disabled':''} onclick="requestPrivateSchool('${id}')">${x.name}<small>${money(x.tuition)}/year • ${x.note}</small></button>`;}).join('')}${sc.type!=='public'?`<button onclick="requestPrivateSchool('public')">Return to public school<small>no tuition • open enrollment</small></button>`:''}</div>`;openModal();}
+function requestPrivateSchool(id){const sc=G.school,x=SCHOOL_TYPES[id];if(!sc||!x||sc.schoolChoiceYear===G.year)return;if(!spendAct('private-school'))return;sc.schoolChoiceYear=G.year;forceClose();if(id==='public'){sc.type='public';sc.name=x.name;resetSchoolRoster(G.schoolStage);log(`Your family moved you back to public school. New halls, new classmates, and no tuition bill waiting at home.`);afterAction(0);return;}const approved=chance(familyApprovalOdds(x.tuition));if(approved){sc.type=id;sc.name=x.name;resetSchoolRoster(G.schoolStage);G.gpaSeed=clamp(G.gpaSeed+3);log(`You asked your parents about ${x.name.toLowerCase()}. They studied the ${money(x.tuition)} tuition, talked privately, and finally said yes. They would pay for it. You started over with smaller classes, unfamiliar uniforms, and a completely new roster.`,'good');}else{S.happiness=clamp(S.happiness-2);log(`You asked your parents about ${x.name.toLowerCase()}. They discussed the tuition and said no. Whether it was the money or the school itself, the decision was final for this year.`,'bad');}afterAction(0);}
+function chooseSchoolClub(){const sc=G.school;if(!sc)return;$('modalbox').innerHTML=`<h2>School clubs</h2><p>Choose an activity to make part of your school life.</p><div class="opts">${Object.entries(SCHOOL_CLUBS).map(([id,x])=>`<button ${sc.club===id?'disabled':''} onclick="joinSchoolClub('${id}')">${x.name}<small>build ${x.skill}</small></button>`).join('')}</div>`;openModal();}
+function joinSchoolClub(id){const sc=G.school,x=SCHOOL_CLUBS[id];if(!sc||!x)return;if(!spendAct('school-club'))return;sc.club=id;sc.clubYear=null;forceClose();G.school.popularity=clamp(G.school.popularity+3);log(`You joined ${x.name}. The first meeting felt awkward, but it gave the school week a place that belonged to you.`,'good');afterAction(0);}
+function attendSchoolClub(){const sc=G.school,x=SCHOOL_CLUBS[sc.club];if(!x)return;if(sc.clubYear===G.year){toast('You already attended your main club activity this year.');return;}if(!spendAct('school-club-attend'))return;sc.clubYear=G.year;K[x.skill]=clamp((K[x.skill]||0)+4);sc.popularity=clamp(sc.popularity+3);S.happiness=clamp(S.happiness+3);log(`You took an active role in ${x.name}. You stopped feeling like someone who merely showed up and became someone the group counted on.`,'good');afterAction(0);}
+const SCHOOL_EVENTS={middle:[{id:'fieldtrip',name:'Go on a field trip',skill:'intellect',text:'You went on a school field trip. The bus ride was louder than the destination, but something you saw there stayed with you.'},{id:'sciencefair',name:'Enter the science fair',skill:'tech',text:'You entered the science fair with a project that worked perfectly at home and became temperamental under fluorescent lights.'},{id:'talentshow',name:'Enter the talent show',skill:'charisma',text:'You stepped onto the middle-school talent-show stage with dry hands and a racing heart. The applause felt enormous.'}],high:[{id:'collegevisit',name:'Take a college visit',skill:'intellect',text:'You toured a college campus, sat in the back of a lecture, and tried to picture yourself belonging there.'},{id:'studentcouncil',name:'Run for student council',skill:'business',text:'You ran for student council with handmade signs, a short speech, and more nerves than the position seemed to justify.'},{id:'schoolplay',name:'Audition for the school play',skill:'acting',text:'You auditioned for the school play under work lights in an empty auditorium. Reading the lines aloud changed them.'},{id:'seniorskip',name:'Join senior skip day',skill:'charisma',min:17,text:'You joined senior skip day. For several hours, the whole class acted as though graduation had already happened.'}]};
+function openSchoolEvents(){const list=(SCHOOL_EVENTS[G.schoolStage]||[]).filter(x=>!x.min||G.age>=x.min),done=G.school.schoolEvents||{};$('modalbox').innerHTML=`<h2>${schoolStageName()} experiences</h2><p>Each experience can be completed once during this stage of school.</p><div class="opts">${list.map(x=>`<button ${done[G.schoolStage+':'+x.id]?'disabled':''} onclick="doSchoolEvent('${x.id}')">${x.name}<small>${done[G.schoolStage+':'+x.id]?'completed':'one-time experience'}</small></button>`).join('')}</div>`;openModal();}
+function doSchoolEvent(id){const sc=G.school,list=SCHOOL_EVENTS[G.schoolStage]||[],x=list.find(e=>e.id===id),key=G.schoolStage+':'+id;if(!x||sc.schoolEvents[key])return;if(!spendAct('school-event:'+key))return;sc.schoolEvents[key]=true;forceClose();K[x.skill]=clamp((K[x.skill]||0)+4);S.happiness=clamp(S.happiness+3);if(id==='studentcouncil'&&chance(.5+(K.charisma||0)/300)){sc.popularity=clamp(sc.popularity+7);log(`${x.text} You won a seat and discovered that even small school decisions come with meetings, compromises, and people who never read the agenda.`,'good');}else{sc.popularity=clamp(sc.popularity+3);log(x.text,'good');}afterAction(0);}
 
 function schoolStudy(){ if(!G.inSchool){toast('You are not in school right now.');return;}if(!spendAct('study'))return; G.gpaSeed=clamp(G.gpaSeed+rnd(3,7)); S.smarts=clamp(S.smarts+rnd(1,2)); S.stress=clamp(S.stress+3); K.intellect=clamp((K.intellect||0)+1); log(`You put in real study time this year \u2014 ${pick(['flashcards taped to the bathroom mirror','a library carrel that became yours by habit','late nights and a highlighter graveyard'])}. Your grades climbed.`,'good'); afterAction(0); }
 function schoolFriend(){ if(!G.inSchool){toast('You are not in school right now.');return;}if(!spendAct('schoolfriend'))return; if(chance(0.72)){ const nm=pick(MALE.concat(FEMALE))+' '+pick(LAST); const fr=addNPC('friend',nm,G.age+rnd(-1,1)); fr.loyalty=rnd(45,65); fr.classmate=true; if(G.school)G.school.popularity=clamp(G.school.popularity+rnd(2,5)); S.happiness=clamp(S.happiness+3); log(`You made a friend at school \u2014 ${nm.split(' ')[0]}. ${pick(['You got assigned the same project and stayed friends long after it was graded.','It started with a shared eye-roll at something a teacher said.','You sat together at lunch one day, and that was that.'])}`,'good'); } else { log(`You tried to click with someone at school and it just did not take. ${pick(['They already had their people.','The conversation died and you both let it.'])}`); } afterAction(0); }
@@ -2786,7 +2960,20 @@ function confirmHighSchoolDropout(){
  S.happiness=clamp(S.happiness-3);S.stress=clamp(S.stress+5);
  log(`You dropped out of high school at ${G.age}. The last bell rang behind you while everyone else went back to class. At first, the freedom felt enormous; then came the applications that asked whether you had a diploma.`,'bad');afterAction(0);
 }
-function schoolDance(){ if(!G.inSchool||G.age<11){toast('School dances start in middle school.');return;}if(!spendAct('school-dance'))return; if(!G.school)G.school={popularity:40,clique:null,team:null}; G.school.popularity=clamp(G.school.popularity+rnd(2,6)); S.happiness=clamp(S.happiness+rnd(4,8)); S.stress=clamp(S.stress-3); if(chance(0.4)){ const nm=pick(MALE.concat(FEMALE))+' '+pick(LAST); const fr=addNPC('friend',nm,G.age+rnd(-1,1)); fr.loyalty=rnd(45,60); fr.classmate=true; log(`You went to the school dance. ${pick(['Bad punch, good music, a gym transformed by a few hundred dollars of streamers.','You danced badly and laughed hard and stayed until the lights came up.','You spent half of it against the wall and the other half glad you came.'])} You left with a new friend, ${nm.split(' ')[0]}.`,'good'); } else { log(`You went to the school dance. ${pick(['Bad punch, good music, and a story you would tell for years.','You danced in a circle of friends and felt, briefly, completely fine.','The DJ played the one song everyone knew and the whole floor lost it.'])}`,'good'); } afterAction(0); }
+function schoolDance(){
+ if(!G.inSchool||G.age<11){toast('School dances start in middle school.');return;}const sc=G.school;if(sc.danceYear===G.year){toast('You can attend one school dance each year.');return;}if(!spendAct('school-dance'))return;sc.danceYear=G.year;
+ sc.popularity=clamp(sc.popularity+rnd(2,6));S.happiness=clamp(S.happiness+rnd(4,8));S.stress=clamp(S.stress-3);
+ if(G.schoolStage==='high'&&G.age>=16){
+  const roster=schoolRoster('classmates'),boys=roster.filter(n=>n.sex==='Male'),girls=roster.filter(n=>n.sex==='Female');let king=(boys.length?pick(boys).name:pick(MALE)+' '+pick(LAST)),queen=(girls.length?pick(girls).name:pick(FEMALE)+' '+pick(LAST));
+  const crownOdds=clamp(.08+sc.popularity/220+S.looks/500+(K.charisma||0)/500,.08,.72),won=chance(crownOdds);
+  if(won){if(G.sex==='Male')king=G.name;else queen=G.name;sc.popularity=clamp(sc.popularity+12);K.charisma=clamp(K.charisma+4);S.happiness=clamp(S.happiness+8);}
+  sc.promCourt={year:G.year,king,queen};
+  log(`You went to prom. The gym had been hidden beneath lights, fabric, and enough flowers to disguise almost everything familiar. When the music stopped for the announcement, ${king} was named prom king and ${queen} was named prom queen.${won?' Hearing your own name sent the room into a roar, and the plastic crown shook in your hands.':' They took the center of the floor while everyone cheered, and then the music started again.'}`,'good');
+ }else{
+  const label=G.schoolStage==='high'?'homecoming dance':'school dance';log(`You went to the ${label}. ${pick(['The decorations were inexpensive, the music was loud, and almost everyone pretended not to care as much as they did.','You spent the first half near the wall and the second half dancing badly with people you liked.','The DJ played the one song everyone knew, and for three minutes the whole room moved together.'])}`,'good');
+ }
+ afterAction(0);
+}
 
 /* ---------------- PER-PERSON INTERACTIONS ---------------- */
 function openPerson(id){ if(!npc(id))return; personOpen=id; renderActions(); }
@@ -3221,7 +3408,7 @@ function beginLife(){
     const t=rd('talent'); if(t&&t!=='none')cfg.talent=t;
   }
   forceClose();
-  G=blankLife(cfg); S=G.stats; K=G.skills; pendingChoice=null; menuOpen=null;yearUndo=null;
+  G=blankLife(cfg); S=G.stats; K=G.skills; pendingChoice=null; menuOpen=null;personOpen=null;propOpen=null;socialOpen=null;schoolOpen=null;schoolView='overview';datingCandidateDraft=null;yearUndo=null;
   G.history=[]; startYearLog();
   const mom=livingParents().find(p=>p.label==='mother'), dad=livingParents().find(p=>p.label==='father');
   const where=`${G.place}${(G.country&&G.country!=='United States')?', '+G.country:''}`;
@@ -3270,14 +3457,15 @@ function eulogyLong(){
 function sanitizeSave(){
  if(!G)return;
  G.items=(G.items||[]).filter(it=>ITEM[it.id]);G.props=(G.props||[]).filter(p=>PROP[p.id]);
- if(G.job&&!JOB[G.job.id])G.job=null;if(G.special&&!SPECIAL[G.special.type])G.special=null;
- if(!G.flags)G.flags={};if(!G.addiction)G.addiction={alcohol:0,drugs:0};if(!G.social)G.social={};if(!G.pets)G.pets=[];if(!Array.isArray(G.conditions))G.conditions=[];G.conditions=G.conditions.filter(c=>DISEASE[c.id]);
+ if(G.job&&(!JOB[G.job.id]||['babysit','lawns'].includes(G.job.id)))G.job=null;if(G.special&&!SPECIAL[G.special.type])G.special=null;
+ if(!G.flags)G.flags={};if(!G.flags.gigCounts||typeof G.flags.gigCounts!=='object')G.flags.gigCounts={};if(!G.addiction)G.addiction={alcohol:0,drugs:0};if(!G.social)G.social={};if(!G.pets)G.pets=[];if(!Array.isArray(G.conditions))G.conditions=[];G.conditions=G.conditions.filter(c=>DISEASE[c.id]);
  if(!Array.isArray(G.pensions))G.pensions=[];if(!G.serviceYears||typeof G.serviceYears!=='object')G.serviceYears={};if(!G.highSalary||typeof G.highSalary!=='object')G.highSalary={};if(!Array.isArray(G.careerHistory))G.careerHistory=[];if(!Array.isArray(G.supportOrders))G.supportOrders=[];if(!Array.isArray(G.divorceHistory))G.divorceHistory=[];
- if(!G.school)G.school={popularity:40,clique:null,team:null,teamRole:null,seasonYear:null};else{if(G.school.teamRole===undefined)G.school.teamRole=G.school.team?'Player':null;if(G.school.seasonYear===undefined)G.school.seasonYear=null;}if(!G.invest)G.invest={};if(!G.market)G.market={};if(!G.marketChg)G.marketChg={};
+ if(!G.familyWealth){const parentIncome=(G.npcs||[]).filter(n=>n.role==='parent').reduce((sum,n)=>sum+(n.income||0),0);G.familyWealth=parentIncome>=300000?'affluent':parentIncome>=170000?'wealthy':parentIncome>=90000?'comfortable':'modest';}
+ const schoolDefaults={popularity:40,clique:null,team:null,teamRole:null,seasonYear:null,type:'public',name:'Public school',classmateIds:[],facultyIds:[],danceYear:null,promCourt:null,club:null,clubYear:null,schoolEvents:{},schoolChoiceYear:null,recommendation:false};G.school=Object.assign(schoolDefaults,G.school||{});if(G.school.team&&!G.school.teamRole)G.school.teamRole='Player';if(!Array.isArray(G.school.classmateIds))G.school.classmateIds=[];if(!Array.isArray(G.school.facultyIds))G.school.facultyIds=[];if(!G.school.schoolEvents||typeof G.school.schoolEvents!=='object')G.school.schoolEvents={};if(!SCHOOL_TYPES[G.school.type]){G.school.type='public';G.school.name='Public school';}if(G.school.club&&!SCHOOL_CLUBS[G.school.club])G.school.club=null;if(G.inSchool&&!['elementary','middle','high'].includes(G.schoolStage))G.schoolStage=G.age>=14?'high':G.age>=11?'middle':'elementary';if(!G.invest)G.invest={};if(!G.market)G.market={};if(!G.marketChg)G.marketChg={};
  if(!G.threads)G.threads=[];if(!G.arcs)G.arcs=[];if(!G.balance)G.balance={livingCost:0};if(!G.economy)G.economy={cycle:'Expansion',inflation:2.4,rate:4.5,priceIndex:1};if(!G.actionEffects||typeof G.actionEffects!=='object')G.actionEffects={};
- if(G.eduProgram){if(G.eduProgram.gpa==null)G.eduProgram.gpa=clamp(Math.round((G.gpaSeed+S.smarts)/2));if(G.eduProgram.scholarship==null)G.eduProgram.scholarship=0;const cc=campusState();if(cc.leader)cc.officeAttempted=true;}
+ if(G.eduProgram){if(G.eduProgram.gpa==null)G.eduProgram.gpa=clamp(Math.round((G.gpaSeed+S.smarts)/2));if(G.eduProgram.scholarship==null)G.eduProgram.scholarship=0;if(G.eduProgram.parentShare==null)G.eduProgram.parentShare=0;const cc=campusState();if(!cc.campusEvents||typeof cc.campusEvents!=='object')cc.campusEvents={};if(cc.leader)cc.officeAttempted=true;}
  if(G.special){const c=G.special;if(c.form==null)c.form=50;if(c.momentum==null)c.momentum=10;if(c.projects==null)c.projects=0;if(c.awards==null)c.awards=0;if(c.residuals==null)c.residuals=0;if(c.catalog==null)c.catalog=0;if(c.focus==null)c.focus=c.type==='actor'?'Film & television':c.type==='musician'?'Rock & pop':pick(SPORTS);if(c.type==='actor')ensureActorCareer();if(c.type==='musician')ensureMusicianCareer();if(c.type==='athlete')ensureAthleteCareer();}
- G.npcs=G.npcs||[];G.npcs.forEach(n=>{if(n.career===undefined)n.career=null;if(n.income===undefined)n.income=0;if(n.partnerName===undefined)n.partnerName=null;if(n.children===undefined)n.children=0;if(n.location===undefined)n.location=G.place;if(n.education===undefined)n.education=0;if(n.friendOutsideWork===undefined)n.friendOutsideWork=false;if(n.workplaceConflict===undefined)n.workplaceConflict=null;if(!n.memory)n.memory=[];});
+ G.npcs=G.npcs||[];G.npcs.forEach(n=>{if(n.career===undefined)n.career=null;if(n.income===undefined)n.income=0;if(n.partnerName===undefined)n.partnerName=null;if(n.children===undefined)n.children=0;if(n.location===undefined)n.location=G.place;if(n.education===undefined)n.education=0;if(n.friendOutsideWork===undefined)n.friendOutsideWork=false;if(n.workplaceConflict===undefined)n.workplaceConflict=null;if(n.classmate&&!n.schoolStats)n.schoolStats={looks:rnd(25,95),smarts:rnd(25,95),happiness:rnd(25,95),health:rnd(35,100)};if(!n.memory)n.memory=[];});
  if(G.job){ensureWorkplace();const j=JOB[G.job.id];G.serviceYears[j.track]=Math.max(G.serviceYears[j.track]||0,G.job.years||0);G.highSalary[j.track]=Math.max(G.highSalary[j.track]||0,jobAnnualPay());}
  if(G.military){const mpay=(G.military.officer?OFFPAY:MILPAY)[G.military.rank]||0;G.serviceYears.Military=Math.max(G.serviceYears.Military||0,G.military.years||0);G.highSalary.Military=Math.max(G.highSalary.Military||0,mpay);}
  const spouse=G.npcs.find(n=>n.alive&&n.role==='spouse');if(spouse){ensureMarriage(spouse);for(const k of kids())if(!k.otherParentId)k.otherParentId=spouse.id;}else if(G.marriage)G.marriage=null;
