@@ -126,7 +126,7 @@ button.person .phead{flex:1;margin:0}
 </head>
 <body>
 <header>
-  <h1>SMIS <small>v2.2</small></h1>
+  <h1>SMIS <small>v2.3</small></h1>
   <span class="who" id="who"></span>
   <span class="spacer"></span>
   <div class="tools">
@@ -166,7 +166,7 @@ const MALE=['James','Liam','Noah','Ethan','Mason','Logan','Owen','Caleb','Henry'
 const FEMALE=['Emma','Olivia','Ava','Sophia','Mia','Chloe','Harper','Ella','Grace','Lily','Nora','Zoe','Claire','Ivy','Sadie','Maya','Ruby','Jade','Tessa','Lena','Rachel','Dana','Kim','Nicole','Erin','Jenna','Brooke','Vanessa'];
 const LAST=['Carter','Brooks','Reyes','Nguyen','Kowalski','Fischer','Okafor','Santos','Marino','Hughes','Dalton','Keller','Bennett','Hayes','Morales','Petrov','Lindqvist','Walsh','Barnes','Chen','Dixon','Fleming','Garza','Holt','Ivers','Jensen','Knox','Lowe'];
 const SPORTS=['football','basketball','baseball','soccer','MMA','hockey'];
-const GAME_VERSION='2.2';
+const GAME_VERSION='2.3';
 
 // ---------- DATA: skills ----------
 const SKILLS={acting:'Acting',music:'Music',athletics:'Athletics',fitness:'Fitness',intellect:'Intellect',charisma:'Charisma',discipline:'Discipline',combat:'Combat',cooking:'Cooking',tech:'Tech',writing:'Writing',business:'Business',gardening:'Gardening',stealth:'Stealth',driving:'Driving'};
@@ -272,6 +272,37 @@ const JOBS=[
  J('bartender','Bartender','Part-time',26000,{age:21,kind:'part',skills:{charisma:20},gain:{charisma:2}}),
 ];
 const JOB=Object.fromEntries(JOBS.map(j=>[j.id,j]));
+
+// ---------- DATA: workplace ----------
+// Hours affect compensation, visible effort, performance, and stress every year.
+const WORK_SCHEDULES={
+ full:[
+  {hours:32,label:'Reduced schedule',pay:.82,effort:3,perf:-2,stress:-4,note:'More life outside work, but less money and slower advancement.'},
+  {hours:40,label:'Standard week',pay:1,effort:7,perf:0,stress:0,note:'A sustainable full-time schedule.'},
+  {hours:50,label:'Long hours',pay:1.08,effort:12,perf:3,stress:7,note:'More visibility and some extra compensation, with a real stress cost.'},
+  {hours:60,label:'All-in',pay:1.15,effort:17,perf:5,stress:14,note:'Fast career momentum, little room for the rest of your life.'},
+ ],
+ part:[
+  {hours:10,label:'A few shifts',pay:.55,effort:2,perf:-2,stress:-3,note:'Light hours and light income.'},
+  {hours:20,label:'Regular part-time',pay:1,effort:5,perf:0,stress:0,note:'The hours assumed by the posted salary.'},
+  {hours:30,label:'Pick up shifts',pay:1.42,effort:9,perf:3,stress:5,note:'More pay, more notice, and less free time.'},
+  {hours:40,label:'Full schedule',pay:1.82,effort:13,perf:4,stress:9,note:'Full-time hours without a full-time title.'},
+ ]
+};
+const PENSION_RULES={
+ 'Military':{years:20,age:0,rate:.50,name:'military retirement pension'},
+ 'Police':{years:20,age:50,rate:.50,name:'public-safety pension'},
+ 'Education':{years:25,age:55,rate:.45,name:'educator pension'},
+ 'Healthcare':{years:25,age:60,rate:.35,name:'health-system pension'},
+ 'Trades':{years:25,age:58,rate:.40,name:'union trades pension'},
+ 'Corporate':{years:30,age:62,rate:.30,name:'corporate pension'},
+ 'Tech':{years:30,age:62,rate:.28,name:'technology pension'},
+ 'Finance':{years:30,age:62,rate:.30,name:'finance pension'},
+ 'Media':{years:30,age:62,rate:.25,name:'media pension'},
+ 'Culinary':{years:30,age:62,rate:.24,name:'hospitality pension'},
+ 'Food service':{years:30,age:62,rate:.22,name:'service pension'},
+ 'Retail':{years:30,age:62,rate:.22,name:'retail pension'}
+};
 
 // ---------- DATA: freelance gigs (one-off, paid by skill) ----------
 const GIGS=[
@@ -495,6 +526,24 @@ const ACTIVITIES=[
 ];
 const ACT=Object.fromEntries(ACTIVITIES.map(a=>[a.id,a]));
 
+// ---------- DATA: health conditions ----------
+// Conditions begin as symptoms. A doctor identifies them and can cure or
+// control them; untreated conditions continue to affect each passing year.
+function D(id,name,o={}){return Object.assign({id,name,min:0,max:110,weight:1,health:3,stress:2,happy:1,duration:2,cost:800,cure:.8,chronic:false,serious:false,symptom:'You have not felt like yourself lately.'},o);}
+const DISEASES=[
+ D('influenza','Influenza',{weight:5,health:3,stress:1,duration:1,cost:350,cure:.96,symptom:'A fever, deep aches, and a cough flatten you for days.'}),
+ D('pneumonia','Pneumonia',{weight:1.3,health:6,stress:3,duration:2,cost:2200,cure:.88,serious:true,symptom:'Breathing hurts, and the cough has settled somewhere deep in your chest.',cond:()=>S.health<70||G.age>55}),
+ D('migraine','Migraine disorder',{min:12,weight:2.4,health:1,stress:2,duration:3,cost:900,cure:.74,symptom:'Light becomes sharp and a pulsing headache keeps stealing whole afternoons.',cond:()=>S.stress>=55}),
+ D('insomnia','Chronic insomnia',{min:14,weight:2.8,health:1,stress:3,happy:2,duration:3,cost:750,cure:.78,symptom:'Sleep stops arriving when you ask for it; every morning begins already exhausted.',cond:()=>S.stress>=60}),
+ D('ulcer','Stomach ulcer',{min:18,weight:1.8,health:2,stress:2,duration:3,cost:1800,cure:.84,symptom:'A burning pain under your ribs starts showing up whenever the pressure does.',cond:()=>S.stress>=68}),
+ D('anxiety','Anxiety disorder',{min:12,weight:2,health:1,stress:3,happy:3,duration:4,cost:1600,cure:.70,chronic:true,symptom:'Your body keeps sounding an alarm even in rooms where nothing is happening.',cond:()=>S.stress>=72}),
+ D('hypertension','Hypertension',{min:25,weight:1.7,health:2,stress:1,duration:5,cost:1400,cure:.58,chronic:true,symptom:'Headaches and a pounding pulse begin appearing at the edges of stressful days.',cond:()=>S.stress>=65||S.fitness<40}),
+ D('diabetes','Type 2 diabetes',{min:35,weight:.75,health:3,stress:2,duration:6,cost:4200,cure:.42,chronic:true,serious:true,symptom:'You are constantly thirsty, tired, and taking longer to recover from small things.',cond:()=>S.fitness<45||S.health<50}),
+ D('heart','Coronary heart disease',{min:45,weight:.42,health:6,stress:4,duration:8,cost:18000,cure:.38,chronic:true,serious:true,symptom:'Pressure blooms in your chest when you climb stairs or carry too much at once.',cond:()=>S.stress>=72||S.fitness<35}),
+ D('lymphoma','Lymphoma',{min:25,weight:.14,health:8,stress:5,happy:5,duration:5,cost:52000,cure:.62,serious:true,symptom:'The fatigue will not lift, and a painless swelling gives you a reason to stop pretending.'})
+];
+const DISEASE=Object.fromEntries(DISEASES.map(d=>[d.id,d]));
+
 // ---------- DATA: items ----------
 // upkeep = yearly maintenance cost when maintained. dep = yearly value loss (fraction). tags help other systems.
 function I(id,name,cat,price,o={}){return Object.assign({id,name,cat,price,upkeep:Math.round(price*0.03),dep:0.12,tags:[],happy:1,age:16},o);}
@@ -680,9 +729,9 @@ const EVENTS=[
   {label:'Say it out loud',fn:()=>{if(chance(0.5+K.charisma/250)){log(`You said it out loud. It was a terrible conversation and then a long one and then, near midnight, an honest one. Nothing was fixed. But you were in the same room again, actually in it.`,'good');p.loyalty=clamp(p.loyalty+18);p.memory.push(`${G.name} finally talked to me about the distance.`);}else{log(`You said it out loud. ${p.name} said "I know," and that was somehow the end of the conversation. Some things, once named, stop pretending.`,'bad');p.loyalty=clamp(p.loyalty-10);}}},
   {label:'Let it ride',fn:()=>{log(`You let it ride. There's a comfort in not knowing what the other person would say. You told yourself all marriages have seasons. This one had a winter.`);p.loyalty=clamp(p.loyalty-12);p.memory.push(`${G.name} let the silence sit.`);}},
  ]);}},
- {id:'ev_promo_offer',min:22,max:60,w:2,cond:()=>G.job&&JOB[G.job.id].next.length>0&&G.job.perf>70,run:()=>{const nx=JOB[G.job.id].next[0];const nj=JOB[nx];ask('The offer',`Your boss offers you the ${nj.title} job. More money — ${money(nj.pay)} — and more hours, more travel, more of the part of the job you like least. They need an answer by Friday.`,[
-  {label:'Take it',fn:()=>{setJob(nx);log(`You took it. Congratulations came from people who had never spoken to you. The first month you worked every weekend and told everyone you loved it.`,'money');S.stress+=8;}},
-  {label:'Turn it down',fn:()=>{log(`You turned it down. Your boss looked at you like you'd spoken another language. You went home at five for the rest of the year and it was the best year you'd had in a while. Nobody offered again for a long time.`);S.stress-=8;S.happiness+=4;G.job.perf-=15;}},
+ {id:'ev_promo_offer',min:22,max:68,w:2,cond:()=>G.job&&(JOB[G.job.id].next||[]).map(id=>JOB[id]).filter(Boolean).some(n=>promotionReadiness(n).ready),run:()=>{const ready=(JOB[G.job.id].next||[]).map(id=>JOB[id]).filter(n=>n&&promotionReadiness(n).ready),nj=pick(ready),nx=nj.id;ask('The offer',`Your tenure, sustained effort, qualifications, and support inside the office have finally lined up. Your supervisor offers you the ${nj.title} job at ${money(nj.pay)}. More authority, more scrutiny, and a new set of people whose opinions will matter.`,[
+  {label:'Take it',fn:()=>{promoteJob(nx);S.stress=clamp(S.stress+8);}},
+  {label:'Turn it down',fn:()=>{log(`You turned down the ${nj.title} role. Your boss looked surprised, then almost envious. You went home on time and discovered the evening was still there.`);S.stress=clamp(S.stress-8);S.happiness=clamp(S.happiness+4);G.job.lastPromotionReviewYear=G.year;}},
  ]);}},
  {id:'ev_addictbottom',min:16,max:90,w:5,cond:()=>G.addiction.alcohol>60||G.addiction.drugs>60,run:()=>{const which=G.addiction.drugs>G.addiction.alcohol?'drugs':'alcohol';const loss=Math.min(G.cash,rnd(1000,20000));pay(loss);log(`This was a lost year. ${which==='drugs'?'The drugs':'The drinking'} took ${money(loss)} and most of your mornings and at least one relationship you didn't notice ending. You look older than you are. People have stopped saying anything, which is how you know it's bad.`,'bad');S.health-=10;S.looks-=4;S.happiness-=6;if(G.job&&chance(0.4)){log(`You lost the job. There was an incident. Nobody uses the word "fired" to your face.`,'bad');quitJob(true);}allNPCs().forEach(n=>n.loyalty=clamp(n.loyalty-8));}},
  {id:'ev_famous_chance',min:16,max:45,w:2,cond:()=>!G.special&&(K.acting>40||K.music>40||K.athletics>50),run:()=>{const c=K.acting>=K.music&&K.acting>=K.athletics?'actor':K.music>=K.athletics?'musician':'athlete';log(`Someone who matters saw you ${c==='actor'?'in a small show':c==='musician'?'play a set':'play'} and left a card. "Call me," they said. You could hear the shape of a different life in it.`,'good');G.flags.scout=c;}},
@@ -712,10 +761,10 @@ const EVENTS=[
  ])},
  {id:'ev_peprally',min:14,max:17,w:2,cond:()=>G.inSchool,run:()=>{if(chance(0.6)){if(G.school)G.school.popularity=clamp(G.school.popularity+4);S.happiness+=3;log(`The whole school crammed into the gym for a pep rally, and despite yourself you screamed until your voice cracked alongside a thousand kids who would all pretend to be too cool for it by Monday. For one hour you belonged to something loud.`,'good');}else{S.smarts=clamp(S.smarts+1);log(`You spent the pep rally reading in the corner of the bleachers while the gym roared below you. You told yourself you were above it. You were, a little, and lonelier for it.`);}}},
  // ---- work (has a job) ----
- {id:'ev_overtime',min:18,max:65,w:4,cond:()=>G.job,run:()=>{const boss=pick(LAST);ask('The ask',`Your manager, ${boss}, stops by your desk at 4:55 and asks, in the voice that is not really asking, whether you can start putting in some extra hours. Unpaid, of course. For the team.`,[
-  {label:'Put in the hours',fn:()=>{G.job.perf=clamp(G.job.perf+12);S.stress+=10;S.happiness-=3;log(`You said yes and meant it and stayed late for a season, and ${boss} started saying your name in meetings. You told yourself it was an investment. Your dinners went cold on the counter, one after another.`,'good');}},
-  {label:'Draw the line',fn:()=>{G.job.perf=clamp(G.job.perf-8);S.stress=clamp(S.stress-4);log(`You explained, politely, that you had a life outside the building. ${boss} said "of course" with their mouth and something else with their eyes. Your name stopped coming up. You went home at five and were, on balance, happier for it.`);}},
-  {label:'Refuse, and let them have it',fn:()=>{G.job.perf=clamp(G.job.perf-20);S.stress=clamp(S.stress-8);S.happiness+=3;log(`You told ${boss} exactly where to file their unpaid overtime. It felt incredible for eleven seconds. Then you remembered you needed this job, and watched the temperature in the room drop about ten degrees.`,'bad');}},
+ {id:'ev_overtime',min:18,max:65,w:4,cond:()=>G.job,run:()=>{const sup=npc(ensureWorkplace().supervisor),boss=sup?sup.name:pick(LAST);ask('The ask',`Your manager, ${boss}, stops by your desk at 4:55 and asks, in the voice that is not really asking, whether you can start putting in some extra hours. For the team.`,[
+  {label:'Put in the hours',fn:()=>{const options=workSchedules(JOB[G.job.id]),long=options.find(x=>x.hours===(JOB[G.job.id].kind==='part'?30:50));if(long)G.job.hours=long.hours;G.job.perf=clamp(G.job.perf+8);G.job.effort+=10;G.job.recognition=clamp(G.job.recognition+6);if(sup)sup.loyalty=clamp(sup.loyalty+6);S.stress+=10;S.happiness-=3;log(`You said yes and stayed late for a season. Your schedule moved to ${G.job.hours} hours a week, ${boss} started saying your name in meetings, and your dinners went cold on the counter one after another.`,'good');}},
+  {label:'Draw the line',fn:()=>{const options=workSchedules(JOB[G.job.id]),standard=options.find(x=>x.hours===(JOB[G.job.id].kind==='part'?20:40));if(standard)G.job.hours=standard.hours;G.job.perf=clamp(G.job.perf-5);S.stress=clamp(S.stress-4);log(`You explained, politely, that you had a life outside the building. ${boss} said “of course” with their mouth and something else with their eyes. Your schedule stayed at ${G.job.hours} hours. You went home on time and were, on balance, happier for it.`);}},
+  {label:'Refuse, and let them have it',fn:()=>{G.job.perf=clamp(G.job.perf-16);G.job.recognition=clamp(G.job.recognition-8);if(sup){sup.loyalty=clamp(sup.loyalty-15);sup.workplaceConflict='retaliating after you refused extra hours';}S.stress=clamp(S.stress-8);S.happiness+=3;log(`You told ${boss} exactly where to file the extra hours. It felt incredible for eleven seconds. Then you remembered you needed this job and watched the temperature in the room drop.`,'bad');}},
  ]);}},
  {id:'ev_teambuilding',min:18,max:65,w:2,cond:()=>G.job,run:()=>ask('Team building',`The company is sponsoring a team-building outing, an afternoon of forced fun involving, apparently, a ropes course and trust falls. Attendance is "optional."`,[
   {label:'Go along',fn:()=>{G.job.perf=clamp(G.job.perf+6);S.happiness+=2;log(`You went. You fell backward into the arms of people you email but never speak to, and one of them turned out to be genuinely funny, and the whole thing was less terrible than advertised. Your standing quietly rose.`,'good');}},
@@ -841,6 +890,8 @@ const THREADS={
  estranged:{wait:3,p:0.25,fire:t=>{const s=npc(t.npc);if(!s||!s.alive)return;if(chance(.5)){s.loyalty=clamp(s.loyalty+12);log(`${s.name} called after years of careful silence. Neither of you apologized cleanly. Both of you stayed on the line, which was the part that mattered.`,'good');}else{s.loyalty=clamp(s.loyalty-10);log(`A family invitation arrived with ${s.name}'s name on it and yours conspicuously absent. The feud had stopped being an argument and become architecture.`,'bad');}}},
  gang:{wait:2,p:0.24,fire:t=>{if(G.jailUntil>G.age){log(`The crew collected on its protection. A package changed hands. A guard looked the other way. Your sentence did not grow, but the chain around it did.`,'bad');S.stress=clamp(S.stress+8);G.notoriety+=3;}else{log(`Someone from the old prison crew found you outside. They did not threaten you; they did not have to. You paid to make the conversation end.`,'bad');const loss=Math.min(G.cash,rnd(1500,12000));pay(loss);S.stress=clamp(S.stress+10);}}},
  founder_return:{wait:8,p:0.18,fire:t=>{log(`${t.name} called years after the company sale. They were starting again and wanted you in the room—not for your money this time, but because you had stayed when failure was still the likeliest ending.`,'good');K.business=clamp(K.business+4);S.happiness=clamp(S.happiness+4);}},
+ stolen_credit:{wait:1,p:.5,fire:t=>{const colleague=npc(t.npc),sameJob=G.job&&G.job.id===t.job;if(sameJob){const exposed=chance(.72);if(exposed){G.job.perf=clamp(G.job.perf-24);G.job.recognition=clamp(G.job.recognition-22);G.job.hrWarnings=(G.job.hrWarnings||0)+1;S.stress=clamp(S.stress+14);if(colleague){colleague.loyalty=clamp(colleague.loyalty-18);colleague.workplaceConflict='your retaliation after the stolen-credit complaint';}log(`${colleague?colleague.name:t.name} brought version history, drafts, and timestamps into a meeting with HR. The work you claimed was traced back to them. Your performance rating collapsed, your file gained a warning, and every compliment you received for the project became evidence.`,'bad');if(G.job.perf<38&&chance(.45)){const title=JOB[G.job.id].title;log(`The company fired you from your ${title} position for dishonesty. Security waited while you packed.`,'bad');quitJob(true,'fired for taking credit');}}else{G.job.recognition=clamp(G.job.recognition+4);log(`${colleague?colleague.name:t.name} never found enough proof to challenge the credit you took. The promotion committee remembered the presentation. You remembered the silence afterward.`);}}else{S.stress=clamp(S.stress+5);log(`${colleague?colleague.name:t.name}, whose work you once claimed, told the story publicly after you had both moved on. It no longer cost you the job, but it changed how several old colleagues remembered you.`,'bad');}}},
+ divorce_aftershock:{wait:1,p:.42,fire:t=>{const ex=npc(t.npc);if(!ex||!ex.alive)return;const children=kids().filter(k=>k.age<18&&k.otherParentId===ex.id);if(children.length&&ex.loyalty<30){children.forEach(k=>k.loyalty=clamp(k.loyalty-rnd(2,6)));S.stress=clamp(S.stress+8);log(`${ex.name} challenged a holiday handoff and the old marriage came back to life in a courthouse hallway. The children heard more than either parent intended.`,'bad');}else if(children.length){children.forEach(k=>k.loyalty=clamp(k.loyalty+3));ex.loyalty=clamp(ex.loyalty+4);log(`You and ${ex.name} made it through a school event without reopening the divorce. The children moved between you without bracing for impact, which felt like its own small victory.`,'good');}else{S.stress=clamp(S.stress-3);log(`${ex.name} returned the last box of things that had lived in the wrong closet since the divorce. You spoke for ten civil minutes, closed the door, and felt something finally become past tense.`);}}},
  engaged:{wait:2,p:0.4,fire:t=>{const p=npc(t.npc);if(!p||!p.alive||!p.engaged)return;ask('The wedding that has not happened',`${p.name} asks whether the two of you are actually getting married or merely staying engaged forever. The question has been coming for months. Tonight it finally sits between you.`,[
    {label:'Set a date',fn:()=>{p.loyalty=clamp(p.loyalty+8);log(`You picked a season, then a date. The relief on ${p.name}'s face told you how long they had been waiting.`,'good');}},
    {label:'Ask for more time',fn:()=>{p.loyalty=clamp(p.loyalty-14);S.stress=clamp(S.stress+6);log(`You asked for more time. ${p.name} said okay, but the word came back colder than it left.`,'bad');thread('engaged',{npc:p.id});}},
@@ -910,11 +961,11 @@ function blankLife(cfg){
   skills:newSkills(),
   edu:0, eduProgram:null, inSchool:true, schoolStage:'elementary', major:null, gpaSeed:rnd(50,95), school:{popularity:rnd(25,55),clique:null,team:null}, invest:{}, market:{}, marketChg:{},
   cash:0, debt:0, creditScore:600,
-  job:null, special:null, military:null,
+  job:null, special:null, military:null, pensions:[], serviceYears:{}, highSalary:{}, careerHistory:[],
   addiction:{alcohol:0,drugs:0},
   notoriety:0, record:[], jailUntil:0,
   items:[], props:[], home:'parents',
-  npcs:[], threads:[], arcs:[], flags:{}, social:{}, pets:[], actionEffects:{}, godless:!!cfg.godless,
+  npcs:[], threads:[], arcs:[], flags:{}, social:{}, pets:[], conditions:[], supportOrders:[], divorceHistory:[], marriage:null, actionEffects:{}, godless:!!cfg.godless,
   balance:{livingCost:0}, economy:{cycle:'Expansion',inflation:2.4,rate:4.5,priceIndex:1}, version:GAME_VERSION,
   year:2026, history:[]
  };
@@ -1050,7 +1101,7 @@ function ageUp(){
  if(G.jailUntil>G.age){
   log(`You spent the year in prison. The days are identical and the nights are worse. You are ${G.jailUntil-G.age} year(s) from release.`,'bad');
   K.combat=clamp(K.combat+2);K.stealth=clamp(K.stealth+2);S.happiness=clamp(S.happiness-6);
-  handleNPCYear();tickThreads();if(!pendingChoice)tickArcs();handleAgingAndDeath();finishYear();return;
+  handlePensions();handleSupportOrders();handleConditionsYear();handleStressConsequences();handleNPCYear();tickThreads();if(!pendingChoice)tickArcs();handleAgingAndDeath();finishYear();return;
  }
  // schooling
  handleSchool();
@@ -1060,6 +1111,8 @@ function ageUp(){
  // special career progression
  if(G.special)handleSpecialYear();
  if(G.military)handleMilitaryYear();
+ handlePensions();
+ handleSupportOrders();
  // inflation, interest rates, and the business cycle
  handleEconomy();
  // ordinary food, utilities, transportation, and dependent costs
@@ -1073,6 +1126,9 @@ function ageUp(){
  driftStats();
  // addiction pressure
  handleAddiction();
+ // diagnosed and hidden illness, followed by high-stress consequences
+ handleConditionsYear();
+ handleStressConsequences();
  // people keep living whether or not the player calls them
  handleNPCYear();
  // Graduation is a defining choice, so it is offered before a random event can occupy the decision window.
@@ -1101,18 +1157,14 @@ function handleSchool(){
 }
 
 function handleJobYear(){
- if(!G.job)return;const j=JOB[G.job.id];
- let pay=j.pay+(G.job.bonus||0);
- // special careers pay through their own system; regular jobs here
- G.cash+=Math.round(pay*(cfg_tax()));
- // build skills
- for(const s in j.gain)K[s]=clamp(K[s]+j.gain[s]);
- // performance drift toward mid unless acted on
- G.job.perf=clamp((G.job.perf??60)+(chance(0.5)?rnd(-4,6):rnd(-6,4)));
- G.job.years=(G.job.years||0)+1;
- S.stress=clamp(S.stress+Math.round((j.stress-8)/2));
- if(G.age===0){}
- // auto note pay once
+ if(!G.job)return;const j=JOB[G.job.id];ensureWorkplace();const schedule=workSchedule(G.job,j),gross=jobAnnualPay(G.job,j),net=Math.round(gross*cfg_tax());G.cash+=net;
+ if(!G.serviceYears)G.serviceYears={};if(!G.highSalary)G.highSalary={};G.serviceYears[j.track]=(G.serviceYears[j.track]||0)+1;G.highSalary[j.track]=Math.max(G.highSalary[j.track]||0,gross);
+ const growth=Math.max(.55,Math.min(1.3,schedule.hours/40));for(const s in j.gain)K[s]=clamp(K[s]+Math.max(1,Math.round(j.gain[s]*growth)));
+ G.job.perf=clamp((G.job.perf??60)+(chance(.5)?rnd(-4,5):rnd(-6,3))+schedule.perf-(G.conditions||[]).filter(x=>DISEASE[x.id]&&x.diagnosed).length);
+ G.job.effort=(G.job.effort||0)+schedule.effort;G.job.recognition=clamp((G.job.recognition||0)+(schedule.hours>=50?rnd(1,4):schedule.hours<40?-2:0));G.job.years=(G.job.years||0)+1;
+ S.stress=clamp(S.stress+Math.round((j.stress-8)/2)+schedule.stress);
+ if(schedule.hours>=50&&partner()&&chance(.28)){const p=partner();p.loyalty=clamp(p.loyalty-rnd(2,6));log(`Your ${schedule.hours}-hour weeks showed up at home as missed dinners and half-heard conversations. ${p.name} stopped asking what time you would be back.`,'bad');}
+ handleWorkplaceIncident();
 }
 function handleLivingCosts(){
  if(G.age<18)return;
@@ -1138,7 +1190,7 @@ function handleHousingMilestone(){
 }
 function cfg_tax(){const gross=annualIncome();let eff=0.85;if(gross>60000)eff=0.78;if(gross>150000)eff=0.68;if(gross>400000)eff=0.6;return eff*COST_OF_LIVING_factor();}
 function COST_OF_LIVING_factor(){return 1;} // income already net-ish; COL applied to expenses
-function annualIncome(){let t=0;if(G.job){t+=JOB[G.job.id].pay+(G.job.bonus||0);}if(G.special){t+=SPECIAL[G.special.type].pay[G.special.tier];}if(G.military){t+=(G.military.officer?OFFPAY:MILPAY)[G.military.rank];}return t;}
+function annualIncome(){let t=0;if(G.job)t+=jobAnnualPay();if(G.special)t+=SPECIAL[G.special.type].pay[G.special.tier];if(G.military)t+=(G.military.officer?OFFPAY:MILPAY)[G.military.rank];t+=(G.pensions||[]).reduce((n,p)=>n+(p.annual||0),0);return t;}
 
 function handleUpkeep(){
  const col=COST_OF_LIVING[G.place]||1;
@@ -1186,6 +1238,30 @@ function handleAddiction(){
  }
 }
 
+function conditionEligible(d){return G.age>=d.min&&G.age<=d.max&&(!d.cond||safeCond(d.cond))&&!(G.conditions||[]).some(x=>x.id===d.id);}
+function addCondition(id,diagnosed){const d=DISEASE[id];if(!d||!conditionEligible(d))return null;if(!G.conditions)G.conditions=[];const c={id:d.id,diagnosed:!!diagnosed,severity:rnd(1,d.serious?3:2),years:0,controlledUntil:0,lastTreatedYear:null};G.conditions.push(c);log(diagnosed?`A doctor diagnosed ${d.name.toLowerCase()}.`:`${d.symptom} You do not yet know what is causing it.`,d.serious?'bad':null);return c;}
+function maybeDevelopCondition(){
+ if((G.conditions||[]).length>=4)return;const risk=clamp(.012+G.age/3500+Math.max(0,S.stress-55)*.0013+Math.max(0,50-S.health)*.0008+(G.addiction.drugs+G.addiction.alcohol)/3200,.008,.16);if(!chance(risk))return;
+ const eligible=DISEASES.filter(conditionEligible);if(!eligible.length)return;let total=eligible.reduce((n,d)=>n+d.weight,0),roll=Math.random()*total;for(const d of eligible){roll-=d.weight;if(roll<=0){addCondition(d.id,false);return;}}
+}
+function handleConditionsYear(){
+ if(!G.conditions)G.conditions=[];const keep=[];
+ for(const c of G.conditions){const d=DISEASE[c.id];if(!d)continue;c.years=(c.years||0)+1;const controlled=(c.controlledUntil||0)>=G.year,scale=controlled ? .22 : (d.chronic ? .62 : 1),severity=c.severity||1;S.health=clamp(S.health-Math.max(1,Math.round(d.health*scale*(.6+severity*.2))));S.stress=clamp(S.stress+Math.round(d.stress*scale));S.happiness=clamp(S.happiness-Math.round(d.happy*scale));
+  if(!d.chronic&&c.years>=d.duration&&chance(controlled ? .8 : .38)){log(`${c.diagnosed?d.name:'The illness'} finally released its grip. You recovered, weaker for a while and newly grateful for ordinary mornings.`,'good');continue;}
+  if(d.id==='anxiety'&&c.years>=d.duration&&S.stress<55&&chance(.24)){log(`${c.diagnosed?d.name:'The constant alarm'} eased after a long quieter stretch. It may return, but it is no longer organizing every day.`,'good');continue;}
+  if(!controlled&&chance(.12+severity*.04)){c.severity=clamp(severity+1,1,4);if(c.diagnosed)log(`${d.name} worsened without effective treatment. The symptoms began making decisions for you.`,'bad');}
+  keep.push(c);
+ }
+ G.conditions=keep;maybeDevelopCondition();
+}
+function handleStressConsequences(){
+ const stress=S.stress;if(stress<65)return;S.happiness=clamp(S.happiness-(stress>=85?5:2));S.health=clamp(S.health-(stress>=90?4:stress>=75?2:1));
+ if(stress>=75&&chance(.24)){const people=allNPCs().filter(n=>['spouse','partner','friend','parent','sibling','child'].includes(n.role));if(people.length){const n=pick(people),loss=rnd(stress>=90?9:5,stress>=90?17:11);n.loyalty=clamp(n.loyalty-loss);n.memory.push(`${G.name}'s stress became a fight at age ${G.age}.`);log(`The pressure followed you into a conversation with ${n.name}. You snapped over something small, then kept going after it stopped being small. The apology, when it came, did not erase the words.`,'bad');}}
+ if(G.job&&stress>=78){G.job.perf=clamp(G.job.perf-rnd(stress>=92?8:3,stress>=92?16:8));G.job.recognition=clamp(G.job.recognition-rnd(2,6));if(stress>=94&&G.job.perf<52&&chance(.16+(52-G.job.perf)/140)){const title=JOB[G.job.id].title;log(`Stress hollowed out your work until deadlines slipped, tempers broke, and ${title} became a job you used to have. HR called it a performance separation. Your body called it a warning you had ignored.`,'bad');quitJob(true,'dismissed during burnout');S.happiness=clamp(S.happiness-9);}else if(chance(.35))log(`At work, exhaustion became visible: a missed deadline, a sharp reply, a mistake you normally would have caught. Your reputation absorbed it.`,'bad');}
+ if(stress>=88&&!G.conditions.some(x=>['insomnia','ulcer','anxiety','hypertension','heart'].includes(x.id))&&chance(.28)){const eligible=['insomnia','ulcer','anxiety','hypertension','heart'].filter(id=>DISEASE[id]&&conditionEligible(DISEASE[id]));if(eligible.length)addCondition(pick(eligible),false);}
+}
+function healthConditionSummary(){const list=G.conditions||[],known=list.filter(x=>x.diagnosed).map(x=>DISEASE[x.id]&&DISEASE[x.id].name).filter(Boolean),hidden=list.length-known.length;return[known.join(', '),hidden?`${hidden} unexplained symptom${hidden===1?'':'s'}`:''].filter(Boolean).join(' • ');}
+
 function handleAgingAndDeath(){
  if(pendingChoice)return; // don't die with an unanswered question on screen
  // yearly health erosion by age
@@ -1200,7 +1276,7 @@ function handleAgingAndDeath(){
  if(S.health<=0)deathP=1;
  else if(S.health<20)deathP+=0.15;
  deathP+= G.addiction.drugs>70?0.05:0;
- if(chance(deathP)){die(S.health<=0?'health failing':pick(['heart gave out','a sudden illness','an accident','old age, simply']));}
+ if(chance(deathP)){const worst=(G.conditions||[]).filter(c=>DISEASE[c.id]&&DISEASE[c.id].serious).sort((a,b)=>(b.severity||1)-(a.severity||1))[0],illness=worst&&DISEASE[worst.id];die(S.health<=0?(illness?`complications from ${illness.name.toLowerCase()}`:'health failing'):pick(['heart gave out','a sudden illness','an accident','old age, simply']));}
 }
 
 function die(cause){
@@ -1299,13 +1375,100 @@ function rollEvent(){
 function safeCond(fn){ try{return fn();}catch(e){return false;} }
 
 // ---- jobs ----
-function setJob(id){
-  const j=JOB[id]; if(!j)return;
-  const promo = G.job && JOB[G.job.id] && JOB[G.job.id].next.includes(id);
-  G.job={id,perf:promo?70:60,years:0,bonus:0};
-  log(promo?`You were promoted to ${j.title}.`:`You started work as a ${j.title}. ${money(j.pay)} a year, before the government and the landlord take their cut.`, promo?'good':'money');
+function jobDepth(j,seen){
+  if(!j)return 0;seen=seen||new Set();if(seen.has(j.id))return 0;seen.add(j.id);
+  const parent=JOBS.find(x=>x.track===j.track&&(x.next||[]).includes(j.id));
+  return parent?1+jobDepth(parent,seen):0;
 }
-function quitJob(fired){ if(!G.job)return; const j=JOB[G.job.id]; G.job=null; if(!fired)log(`You walked away from the ${j.title} job. It felt enormous for about a week.`); }
+function workSchedules(j){return WORK_SCHEDULES[(j&&j.kind)==='part'?'part':'full'];}
+function workSchedule(job,j){job=job||G.job;j=j||(job&&JOB[job.id]);const list=workSchedules(j),fallback=(j&&j.kind)==='part'?20:40;return list.find(x=>x.hours===(job&&job.hours))||list.find(x=>x.hours===fallback)||list[0];}
+function jobAnnualPay(job,j){job=job||G.job;if(!job)return 0;j=j||JOB[job.id];if(!j)return 0;return Math.round((j.pay+(job.bonus||0))*workSchedule(job,j).pay);}
+function makeWorkContact(kind,j){
+  const first=pick(chance(.5)?MALE:FEMALE),n=addNPC('coworker',first+' '+pick(LAST),Math.max(18,G.age+rnd(kind==='supervisor'?4:-7,kind==='supervisor'?19:12)));
+  n.workRole=kind;n.label=kind==='supervisor'?'supervisor':'coworker';n.career=kind==='supervisor'?`${j.track} supervisor`:j.title;n.income=Math.round(j.pay*rnd(kind==='supervisor'?105:72,kind==='supervisor'?155:112)/100);n.loyalty=rnd(kind==='supervisor'?45:38,kind==='supervisor'?60:62);n.friendOutsideWork=false;n.workplaceConflict=null;return n;
+}
+function ensureWorkplace(){
+  if(!G.job)return null;const j=JOB[G.job.id];if(!j)return null;const x=G.job;
+  if(x.perf==null)x.perf=60;if(x.years==null)x.years=0;if(x.bonus==null)x.bonus=0;if(x.hours==null)x.hours=j.kind==='part'?20:40;if(x.effort==null)x.effort=0;if(x.recognition==null)x.recognition=12;if(x.hrWarnings==null)x.hrWarnings=0;if(x.startYear==null)x.startYear=G.year;
+  if(!x.workplace||typeof x.workplace!=='object')x.workplace={supervisor:null,coworkers:[]};if(!Array.isArray(x.workplace.coworkers))x.workplace.coworkers=[];
+  let sup=npc(x.workplace.supervisor);if(!sup||!sup.alive){sup=makeWorkContact('supervisor',j);x.workplace.supervisor=sup.id;}else{sup.workRole='supervisor';if(!sup.label||sup.label==='coworker')sup.label='supervisor';}
+  x.workplace.coworkers=x.workplace.coworkers.filter(id=>{const n=npc(id);return n&&n.alive&&id!==x.workplace.supervisor;});
+  while(x.workplace.coworkers.length<3){const n=makeWorkContact('coworker',j);x.workplace.coworkers.push(n.id);}
+  return x.workplace;
+}
+function workContacts(){const w=ensureWorkplace();if(!w)return[];return [npc(w.supervisor),...w.coworkers.map(npc)].filter(Boolean);}
+function currentWorkContact(n){if(!G.job||!n)return false;const w=ensureWorkplace();return n.id===w.supervisor||w.coworkers.includes(n.id);}
+function workNetwork(){
+  if(!G.job)return 0;const w=ensureWorkplace(),sup=npc(w.supervisor),peers=w.coworkers.map(npc).filter(Boolean),peerAvg=peers.length?peers.reduce((a,n)=>a+n.loyalty,0)/peers.length:40;
+  return clamp(Math.round((sup?sup.loyalty:40)*.55+peerAvg*.27+(G.job.recognition||0)*.18));
+}
+function archiveJob(reason){if(!G.job)return;const j=JOB[G.job.id];if(!j)return;if(!G.careerHistory)G.careerHistory=[];G.careerHistory.push({id:j.id,title:j.title,track:j.track,startYear:G.job.startYear??G.year,endYear:G.year,years:G.job.years||0,reason:reason||'left'});}
+function leaveWorkplace(){if(!G.job||!G.job.workplace)return;for(const n of workContacts()){n.workRole=null;if(n.friendOutsideWork){n.role='friend';n.label='friend & former coworker';}else{n.label='former coworker';}}}
+function setJob(id){
+  const j=JOB[id];if(!j)return;if(G.job)quitJob(false);
+  G.job={id,perf:60,years:0,bonus:0,hours:j.kind==='part'?20:40,effort:0,recognition:12,hrWarnings:0,startYear:G.year,workplace:null,lastPromotionReviewYear:null,lastRaiseYear:null};ensureWorkplace();
+  log(`You started work as a ${j.title}. ${money(j.pay)} a year at the standard schedule, before the government and the landlord take their cut.`,'money');
+}
+function promoteJob(id){
+  if(!G.job)return false;const old=JOB[G.job.id],next=JOB[id];if(!old||!next||!(old.next||[]).includes(id))return false;archiveJob('promoted');
+  const oldWork=ensureWorkplace(),oldSup=npc(oldWork.supervisor);if(oldSup){oldSup.workRole='coworker';oldSup.label=oldSup.friendOutsideWork?'friend & coworker':'coworker';}
+  const coworkers=[oldWork.supervisor,...oldWork.coworkers].filter(Boolean).slice(0,3);G.job={id,perf:clamp(Math.max(65,G.job.perf-8)),years:0,bonus:Math.round((G.job.bonus||0)*.35),hours:next.kind==='part'?20:Math.max(40,G.job.hours||40),effort:0,recognition:clamp((G.job.recognition||0)-10),hrWarnings:Math.max(0,(G.job.hrWarnings||0)-1),startYear:G.year,workplace:{supervisor:null,coworkers},lastPromotionReviewYear:G.year,lastRaiseYear:null};
+  const sup=makeWorkContact('supervisor',next);G.job.workplace.supervisor=sup.id;G.job.workplace.coworkers=G.job.workplace.coworkers.filter(x=>x!==sup.id).slice(0,3);ensureWorkplace();
+  log(`The promotion became official: ${next.title}, ${money(next.pay)} at the standard schedule. A new title appeared beneath your name, along with a new supervisor, a new set of expectations, and problems whose meetings had meetings.`,'good');return true;
+}
+function quitJob(fired,reason){
+  if(!G.job)return;const j=JOB[G.job.id];archiveJob(reason||(fired?'fired':'resigned'));leaveWorkplace();G.job=null;
+  if(!fired)log(`You walked away from the ${j.title} job. It felt enormous for about a week.`);
+}
+function promotionRequirements(next){
+  const depth=jobDepth(next),skills=Object.entries(next.skills||{}),years=Math.min(4,1+Math.floor((depth+1)/2)),perf=Math.min(88,62+depth*5),effort=12+depth*12,network=Math.min(78,42+depth*7);
+  return{years,perf,effort,network,skills,edu:next.edu||0,major:next.major||null,age:next.age||18};
+}
+function promotionReadiness(next){
+  const r=promotionRequirements(next),majorOK=!r.major||(G.major&&r.major.includes(G.major)),skillsOK=r.skills.every(([k,v])=>(K[k]||0)>=v),criteria=[
+   {name:'Time in current role',value:G.job?G.job.years:0,target:r.years,met:!!G.job&&G.job.years>=r.years,suffix:'y'},
+   {name:'Sustained performance',value:Math.round(G.job?G.job.perf:0),target:r.perf,met:!!G.job&&G.job.perf>=r.perf},
+   {name:'Visible effort',value:Math.round(G.job?G.job.effort:0),target:r.effort,met:!!G.job&&G.job.effort>=r.effort},
+   {name:'Workplace network',value:workNetwork(),target:r.network,met:workNetwork()>=r.network},
+   {name:'Minimum age',value:G.age,target:r.age,met:G.age>=r.age},
+   {name:'Education',value:EDU[G.edu],target:EDU[r.edu],met:G.edu>=r.edu,text:true},
+   {name:'Required skills',value:r.skills.length?r.skills.map(([k,v])=>`${SKILLS[k]||k} ${Math.round(K[k]||0)}/${v}`).join(', '):'No additional threshold',target:'',met:skillsOK,text:true},
+  ];if(r.major)criteria.push({name:'Degree field',value:G.major||'None',target:r.major.join(' / '),met:majorOK,text:true});return{ready:criteria.every(x=>x.met),criteria,requirements:r};
+}
+function requestPromotion(id){
+  if(!G.job)return;const current=JOB[G.job.id],next=JOB[id];if(!next||!(current.next||[]).includes(id)){toast('That role is not on your current career ladder.');return;}const check=promotionReadiness(next);if(!check.ready){toast('You have not met every promotion threshold yet.');return;}if(G.job.lastPromotionReviewYear===G.year){toast('Management has already reviewed you for promotion this year.');return;}if(!spendAct('promotion-review'))return;G.job.lastPromotionReviewYear=G.year;
+  const sup=npc(ensureWorkplace().supervisor),support=sup?sup.loyalty:45,odds=clamp(.48+(G.job.perf-check.requirements.perf)/120+(workNetwork()-check.requirements.network)/140+(G.job.recognition||0)/350+support/500-(G.job.hrWarnings||0)*.08,.18,.94);
+  if(chance(odds)){promoteJob(id);S.happiness=clamp(S.happiness+6);afterAction(2);return;}G.job.perf=clamp(G.job.perf-2);G.job.recognition=clamp(G.job.recognition-3);S.stress=clamp(S.stress+7);log(`You made the case for ${next.title}. The committee agreed that you were qualified, praised your contribution, and chose somebody else. Your supervisor used “next cycle” like it was a promise.`,'bad');afterAction(0);
+}
+function openWorkHours(){
+  if(!G.job)return;const j=JOB[G.job.id],current=workSchedule();$('modalbox').innerHTML=`<h2>Choose your workweek</h2><p>Your schedule takes effect over the next year. Hours change compensation, promotion effort, performance, and stress. You currently work about ${current.hours} hours a week.</p><div class="opts">${workSchedules(j).map(x=>`<button onclick="setWorkHours(${x.hours})">${esc(x.label)} — ${x.hours} hours<small>${Math.round(x.pay*100)}% compensation • ${x.effort} yearly effort • ${x.stress>=0?'+':''}${x.stress} schedule stress • ${esc(x.note)}</small></button>`).join('')}</div>`;openModal();
+}
+function setWorkHours(hours){if(!G.job)return;const j=JOB[G.job.id],s=workSchedules(j).find(x=>x.hours===+hours);if(!s)return;G.job.hours=s.hours;forceClose();log(`You set your schedule at roughly ${s.hours} hours a week. ${s.note}`,'money');afterAction(0);}
+function workInteract(id,kind){
+  const n=npc(id);if(!n||!currentWorkContact(n))return;if(!spendAct('work-'+kind))return;const isBoss=n.id===G.job.workplace.supervisor;
+  if(kind==='collaborate'){n.loyalty=clamp(n.loyalty+rnd(5,10));G.job.perf=clamp(G.job.perf+rnd(3,7));G.job.effort+=rnd(3,6);G.job.recognition=clamp(G.job.recognition+rnd(1,4));K.discipline=clamp(K.discipline+2);log(`You and ${n.name} took on a difficult piece of work together. ${isBoss?'They saw how you handled the pressure up close.':'By the deadline, each of you knew exactly what the other did well.'}`,'good');}
+  else if(kind==='network'){const cost=120;if(!pay(cost,true)){cancelSpentAction();return;}n.loyalty=clamp(n.loyalty+rnd(4,8));G.job.recognition=clamp(G.job.recognition+rnd(isBoss?5:3,isBoss?10:7));K.charisma=clamp(K.charisma+2);log(`You took ${n.name} to lunch and let the conversation wander beyond the work in front of you. ${isBoss?'They began talking about where the department was going—and who might go with it.':'A name became a relationship, which is how networks are actually built.'}`,'good');}
+  else if(kind==='befriend'){n.loyalty=clamp(n.loyalty+rnd(8,14));n.friendOutsideWork=true;n.label=isBoss?'friend & supervisor':'friend & coworker';S.happiness=clamp(S.happiness+3);log(`You and ${n.name} spent time together outside work. The conversation survived the moment nobody could complain about the office anymore, which is how you knew this might be a real friendship.`,'good');}
+  else if(kind==='confront'){if(n.workplaceConflict){const issue=n.workplaceConflict;n.workplaceConflict=null;if(chance(.45+K.charisma/220)){n.loyalty=clamp(n.loyalty+3);G.job.recognition=clamp(G.job.recognition+3);log(`You confronted ${n.name} about ${issue}. The conversation stayed quiet, direct, and uncomfortable. They backed down, and the problem stopped.`,'good');}else{n.loyalty=clamp(n.loyalty-15);S.stress=clamp(S.stress+7);thread('office_war',{name:n.name,npc:n.id});log(`You confronted ${n.name}. Voices rose, doors closed, and the original problem acquired witnesses. Whatever happened next, it would no longer stay between the two of you.`,'bad');}}else{n.loyalty=clamp(n.loyalty-6);log(`You confronted ${n.name} without much to confront them with. They left the conversation confused and less inclined to help you.`,'bad');}}
+  afterAction(0);
+}
+function workTakeCredit(id){
+  const n=npc(id);if(!n||!currentWorkContact(n)||n.id===G.job.workplace.supervisor)return;if(G.job.lastCreditTheftYear===G.year){toast('You have already gambled your reputation this way this year.');return;}if(!spendAct('work-steal-credit'))return;G.job.lastCreditTheftYear=G.year;G.job.perf=clamp(G.job.perf+11);G.job.recognition=clamp(G.job.recognition+9);n.loyalty=clamp(n.loyalty-28);n.workplaceConflict='you taking credit for their work';n.memory.push(`${G.name} took credit for my work at age ${G.age}.`);thread('stolen_credit',{npc:n.id,name:n.name,job:G.job.id});log(`You presented ${n.name}'s work as your own. The room congratulated you; ${n.name} said nothing and watched every person who did. Your performance rating climbed. A receipt began aging in somebody else's desk.`,'money');afterAction(2);
+}
+function workReportHR(id){
+  const n=npc(id);if(!n||!currentWorkContact(n))return;if(n.lastHRReportYear===G.year){toast('HR has already received your complaint about this person this year.');return;}if(!spendAct('work-hr-report'))return;n.lastHRReportYear=G.year;const valid=!!n.workplaceConflict,proof=clamp(.42+K.discipline/250+K.intellect/350+(valid ? .28 : -.18),.08,.92);
+  if(valid&&chance(proof)){const issue=n.workplaceConflict;n.workplaceConflict=null;n.loyalty=clamp(n.loyalty-35);G.job.recognition=clamp(G.job.recognition+4);G.job.perf=clamp(G.job.perf+3);log(`You documented ${issue} and reported ${n.name} to HR. Emails, dates, and witnesses mattered. HR substantiated the complaint and issued discipline. ${n.name} left the meeting looking at you like the story was not over.`,'good');if(chance(.3))thread('office_war',{name:n.name,npc:n.id});}
+  else{n.loyalty=clamp(n.loyalty-30);G.job.hrWarnings=(G.job.hrWarnings||0)+1;G.job.perf=clamp(G.job.perf-9);G.job.recognition=clamp(G.job.recognition-8);S.stress=clamp(S.stress+8);log(valid?`You reported ${n.name}, but HR called the evidence inconclusive. The complaint became “interpersonal conflict,” and both names went into the file.`:`You reported ${n.name} without a documentable violation. HR closed the complaint and warned you about misuse of the process. The office learned anyway.`,'bad');}
+  afterAction(0);
+}
+function handleWorkplaceIncident(){
+  if(!G.job||!chance(.18))return;const w=ensureWorkplace(),people=[npc(w.supervisor),...w.coworkers.map(npc)].filter(Boolean),n=pick(people),boss=n.id===w.supervisor,type=pick(boss?['public criticism','being cut out of an important meeting','an impossible deadline']:['taking credit for your idea','spreading a rumor about you','leaving their mistake under your name']);n.workplaceConflict=type;G.job.perf=clamp(G.job.perf-rnd(2,6));S.stress=clamp(S.stress+rnd(4,8));log(`${n.name}, your ${boss?'supervisor':'coworker'}, crossed you at work by ${type}. You can confront them or take the documentation to HR from their relationship page.`,'bad');
+}
+function pensionEligibility(track){const rule=PENSION_RULES[track],years=(G.serviceYears&&G.serviceYears[track])||0,high=(G.highSalary&&G.highSalary[track])||0,claimed=(G.pensions||[]).some(p=>p.track===track);return{rule,years,high,claimed,ready:!!rule&&!claimed&&G.age>=rule.age&&years>=rule.years,annual:rule?Math.round(high*rule.rate):0};}
+function claimPension(track,silent){const e=pensionEligibility(track);if(!e.ready)return false;if(!G.pensions)G.pensions=[];G.pensions.push({track,name:e.rule.name,annual:e.annual,claimedYear:G.year});if(!silent)log(`You claimed your ${e.rule.name} after ${e.years} years of service. It will pay about ${money(e.annual)} every year for the rest of your life.`,'money');return true;}
+function claimPensionAction(track){if(!claimPension(track)){toast('That pension is not vested or you have not reached its retirement age.');return;}afterAction(0);}
+function retireFromJob(){if(!G.job)return;const j=JOB[G.job.id],e=pensionEligibility(j.track);if(!e.ready){toast(`${e.rule?`${e.rule.name} requires ${e.rule.years} years of service and age ${e.rule.age}`:'This career does not offer a defined pension'}.`);return;}claimPension(j.track,true);archiveJob('retired');leaveWorkplace();G.job=null;G.flags.retired=true;log(`You retired from ${j.title} after ${e.years} years in ${j.track.toLowerCase()}. The farewell cake was too sweet, the speeches were kinder than expected, and your ${e.rule.name} began at ${money(e.annual)} a year.`,'money');afterAction(0);}
+function handlePensions(){const total=(G.pensions||[]).reduce((n,p)=>n+(p.annual||0),0);if(total>0){const net=Math.round(total*cfg_tax());G.cash+=net;log(`Your pension payments deposited ${money(net)} after taxes this year.`,'money');}}
 
 // ---- special careers ----
 function startSpecial(type){
@@ -1524,6 +1687,7 @@ function enlist(branch,officer){
 function handleMilitaryYear(){
   const m=G.military; const pay=(m.officer?OFFPAY:MILPAY)[m.rank];
   G.cash+=Math.round(pay*cfg_tax());
+  if(!G.serviceYears)G.serviceYears={};if(!G.highSalary)G.highSalary={};G.serviceYears.Military=(G.serviceYears.Military||0)+1;G.highSalary.Military=Math.max(G.highSalary.Military||0,pay);
   log(`Service paid ${money(Math.round(pay*cfg_tax()))} this year.`,'money');
   K.combat=clamp(K.combat+2);K.discipline=clamp(K.discipline+3);S.fitness=clamp(S.fitness+3);
   m.years++;
@@ -1535,12 +1699,13 @@ function handleMilitaryYear(){
   }
 }
 function discharge(){
-  const m=G.military; log(`You were discharged from the ${m.branch} after ${m.years} year(s), as ${(m.officer?OFFICER:ENLISTED)[m.rank]}. The world outside felt loud and undisciplined and free.`); G.military=null; afterAction(1);
+  const m=G.military,e=pensionEligibility('Military'),retired=e.ready&&claimPension('Military',true);log(`You were discharged from the ${m.branch} after ${m.years} year(s), as ${(m.officer?OFFICER:ENLISTED)[m.rank]}. The world outside felt loud and undisciplined and free.${retired?` Your ${e.rule.name} began at ${money(e.annual)} a year.`:''}`,'money');G.military=null;afterAction(1);
 }
 
 // ---- relationships ----
 function breakup(p,bad){
   if(!p)return;
+  if(p.role==='spouse'){automaticDivorce(p,bad);return;}
   p.role='ex'; p.married=false; p.engaged=false;
   p.memory.push(`Relationship with ${G.name} ended${bad?' badly':''} at ${G.age}.`);
   log(`It ended with ${p.name}.${bad?' There was no soft way through it, and you both stopped pretending there was.':''}`,'bad');
@@ -1615,7 +1780,7 @@ function actionEffectSnapshot(){
     stats:Object.assign({},G.stats),skills:Object.assign({},G.skills),addiction:Object.assign({},G.addiction),
     creditScore:G.creditScore,gpaSeed:G.gpaSeed,schoolPopularity:G.school&&G.school.popularity,
     eduGpa:G.eduProgram&&G.eduProgram.gpa,campusPopularity:G.eduProgram&&G.eduProgram.campus&&G.eduProgram.campus.popularity,
-    job:G.job?{perf:G.job.perf,bonus:G.job.bonus}:null,
+    job:G.job?{perf:G.job.perf,bonus:G.job.bonus,effort:G.job.effort,recognition:G.job.recognition}:null,
     special:c?{tier:c.tier,prog:c.prog,form:c.form,momentum:c.momentum,catalog:c.catalog,awards:c.awards,fans:c.fans,totalStreams:c.totalStreams,gamePrep:c.gamePrep}:null,specialDraft:G.specialDraft,
     project:p?{quality:p.quality,lines:p.prep&&p.prep.lines,character:p.prep&&p.prep.character,chemistry:p.prep&&p.prep.chemistry,cast:(p.cast||[]).map(x=>({id:x.id,bond:x.bond}))}:null,
     music:c&&c.type==='musician'?{record:m?{id:m.id,quality:m.quality,arrangement:m.prep&&m.prep.arrangement,rehearsal:m.prep&&m.prep.rehearsal,production:m.prep&&m.prep.production}:null,drafts:(c.drafts||[]).map(x=>({id:x.id,quality:x.quality})),band:(c.bandMembers||[]).map(x=>({id:x.id,bond:x.bond})),release:c.lastRelease?{id:c.lastRelease.id,streams:c.lastRelease.streams}:null}:null,
@@ -1650,7 +1815,7 @@ function settleActionEffects(){
   if(G.school&&b.schoolPopularity!=null)blockHigher(G.school,'popularity',b.schoolPopularity);
   if(G.eduProgram&&b.eduGpa!=null)blockHigher(G.eduProgram,'gpa',b.eduGpa);
   if(G.eduProgram&&G.eduProgram.campus&&b.campusPopularity!=null)blockHigher(G.eduProgram.campus,'popularity',b.campusPopularity);
-  if(G.job&&b.job){blockHigher(G.job,'perf',b.job.perf);blockHigher(G.job,'bonus',b.job.bonus);}
+  if(G.job&&b.job){blockHigher(G.job,'perf',b.job.perf);blockHigher(G.job,'bonus',b.job.bonus);blockHigher(G.job,'effort',b.job.effort);blockHigher(G.job,'recognition',b.job.recognition);}
   if(G.special&&b.special){for(const k of ['tier','prog','form','momentum','catalog','awards','fans','totalStreams','gamePrep'])blockHigher(G.special,k,b.special[k]);}
   blockHigher(G,'specialDraft',b.specialDraft);
   const p=G.special&&G.special.currentProject;
@@ -1671,7 +1836,7 @@ function afterAction(stress){ if(stress)S.stress=clamp(S.stress+stress);settleAc
    RENDERING — sheet, log, header
    ===================================================================== */
 function openModal(){ const mb=$('modalbox'); if(mb&&!(mb.querySelector&&mb.querySelector('.modalx'))&&!pendingChoice){ mb.insertAdjacentHTML('afterbegin','<button class=\'modalx\' type=\'button\' onclick=\'cancelModal()\' aria-label=\'Close\'>\u2715</button>'); } $('modal').classList.add('open'); }
-function cancelModal(){ if(pendingChoice){toast('This decision has to be resolved.');return;} weddingDraft=null;forceClose(); }
+function cancelModal(){ if(pendingChoice){toast('This decision has to be resolved.');return;} weddingDraft=null;divorceDraft=null;forceClose(); }
 function closeModal(){ if(pendingChoice)return; $('modal').classList.remove('open'); $('modalbox').innerHTML=''; }
 // hard close (used by god/obituary/creation which manage their own state)
 function forceClose(){ $('modal').classList.remove('open'); $('modalbox').innerHTML=''; }
@@ -1696,6 +1861,7 @@ function statusLine(){
   if(G.military)return `${G.military.branch} — ${(G.military.officer?OFFICER:ENLISTED)[G.military.rank]}`;
   if(G.job)return JOB[G.job.id].title;
   if(G.inSchool)return 'Student';
+  if(G.flags.retired||(G.pensions||[]).length)return 'Retired';
   return 'Unemployed';
 }
 function occupationTitle(){
@@ -1714,6 +1880,7 @@ function occupationTitle(){
     if(G.schoolStage==='middle')return 'Middle School Student';
     return 'High School Student';
   }
+  if(G.flags.retired||(G.pensions||[]).length)return 'Retired';
   return G.age<18?'Child':'Unemployed';
 }
 function relLine(){
@@ -1749,6 +1916,9 @@ function renderSheet(){
     ${G.talent?`<div class="kv"><span>Talent</span><span>${TALENTS[G.talent]?TALENTS[G.talent].name:capitalize(G.talent)}</span></div>`:''}
     ${G.addiction.alcohol>25?`<div class="kv"><span>Drinking</span><span style="color:var(--red)">${G.addiction.alcohol>60?'severe':'a problem'}</span></div>`:''}
     ${G.addiction.drugs>25?`<div class="kv"><span>Drugs</span><span style="color:var(--red)">${G.addiction.drugs>60?'severe':'a problem'}</span></div>`:''}
+    ${(G.conditions||[]).length?`<div class="kv"><span>Medical</span><span style="color:var(--red)">${esc(healthConditionSummary())}</span></div>`:''}
+    ${(G.pensions||[]).length?`<div class="kv"><span>Pensions</span><span>${money((G.pensions||[]).reduce((n,p)=>n+(p.annual||0),0))}/yr</span></div>`:''}
+    ${(G.supportOrders||[]).some(o=>o.active!==false)?`<div class="kv"><span>Family support</span><span>${(G.supportOrders||[]).filter(o=>o.active!==false).length} active order(s)</span></div>`:''}
     ${G.record.length?`<div class="kv"><span>Record</span><span>${G.record.length} offense(s)</span></div>`:''}
     ${G.balance&&G.balance.livingCost?`<div class="kv"><span>Living costs</span><span>~${money(G.balance.livingCost)}/yr</span></div>`:''}
     <h3 class="sec">Skills</h3>
@@ -1772,6 +1942,7 @@ function renderLog(){
 let menuOpen=null; // null = root menu; otherwise a category id
 let personOpen=null; // when set (within a category), show one person's detail
 let weddingDraft=null; // holds venue/honeymoon choices mid-wedding-flow
+let divorceDraft=null; // holds legal, custody, property, home, and name decisions
 let propOpen=null;   // owned-property detail index
 let socialOpen=null; // social platform detail id
 const MENU=[
@@ -1822,7 +1993,9 @@ function onActClick(e){
   const act=b.dataset.act, arg=b.dataset.arg;
   const H={
     activity:doActivity, gig:doGig, 'apply-job':a=>applyJob(a), 'work-harder':workHarder,
-    'ask-raise':askRaise, 'quit-job':()=>{quitJob();afterAction(0);}, 'start-special':startSpecialConfirm,
+    'ask-raise':askRaise, 'work-hours':openWorkHours, 'promotion-review':requestPromotion, 'retire-job':retireFromJob, 'claim-pension':claimPensionAction,
+    'work-collaborate':a=>workInteract(a,'collaborate'), 'work-network':a=>workInteract(a,'network'), 'work-befriend':a=>workInteract(a,'befriend'), 'work-confront':a=>workInteract(a,'confront'), 'work-steal':workTakeCredit, 'work-hr':workReportHR,
+    'quit-job':()=>{quitJob();afterAction(0);}, 'start-special':startSpecialConfirm,
     'special-work':()=>specialWork(), 'special-train':specialTrain, 'career-action':careerAction, 'quit-special':quitSpecial,
     'enlist':openEnlist, 'discharge':discharge, spendtime:npcSpendTime, marry:npcMarry, baby:npcBaby,
     breakup:npcBreakup, compliment:npcCompliment, enroll:enrollProgram, 'buy-item':buyItem, 'sell-item':sellItem,
@@ -1841,7 +2014,7 @@ function onActClick(e){
     'college-team':collegeTeam, 'college-game':collegeGame, 'college-drop':dropOutCollege,
     'actor-cast':actorCastMenu, 'music-bandmate':musicBandMenu, 'athlete-teammate':athleteTeammateMenu,
     person:openPerson, talk:npcTalk, insult:npcInsult, gift:giftNPC, prank:npcPrank, concert:npcConcert,
-    party:npcParty, deal:npcDeal, askout:npcAskOut, hookup:npcHookup, wedding:openWedding,
+    party:npcParty, deal:npcDeal, askout:npcAskOut, hookup:npcHookup, wedding:openWedding, divorce:openDivorce, 'coparent':coParentAction, 'doctor-visit':openDoctor,
     buyasset:buyAsset, sellasset:sellAsset,
     prop:openProperty, 'renovate-prop':renovateProp, 'upgrade-prop':upgradeProp, 'rentout-prop':rentOut, 'inspect-prop':inspectProp, 'evict-prop':evictTenant, 'party-prop':partyProp, 'gift-prop':giftProp, 'payoff-prop':payoffProp,
     social:openSocial, promote:promoteSocial, buysubs:buySubsMenu, verify:verifySocial, delsocial:deleteSocial
@@ -1868,12 +2041,27 @@ function doActivity(id){
   afterAction(0);
 }
 
+function openDoctor(){
+ const conditions=G.conditions||[],known=conditions.filter(x=>x.diagnosed),hidden=conditions.filter(x=>!x.diagnosed);let rows='';
+ if(known.length)rows=known.map(c=>{const d=DISEASE[c.id];if(!d)return'';const treated=c.lastTreatedYear===G.year,cost=G.age<18?0:Math.round(d.cost*(1+(c.severity-1)*.35));return `<button ${treated?'disabled':''} onclick="treatCondition('${d.id}')">Treat ${esc(d.name)}<small>${cost?money(cost):'covered by family care'} • severity ${c.severity}/4${d.chronic?' • may require ongoing management':''}${treated?' • already treated this year':''}</small></button>`;}).join('');
+ $('modalbox').innerHTML=`<h2>Medical care</h2><p>${known.length?`Your chart lists ${known.length} active condition${known.length===1?'':'s'}.`:'No condition has been diagnosed.'} ${hidden.length?`${hidden.length} set of unexplained symptoms still needs a diagnosis.`:'A checkup can still catch trouble before symptoms become obvious.'}</p><div class="opts"><button ${G.flags.checkupYear===G.year?'disabled':''} onclick="doctorCheckup()">Examination and diagnostic workup<small>${G.age<18?'covered by family care':'$300'} • identifies hidden conditions • ${G.flags.checkupYear===G.year?'completed this year':'available now'}</small></button>${rows}</div>`;openModal();
+}
+function doctorCheckup(){
+ if(G.flags.checkupYear===G.year){toast('You already completed a diagnostic checkup this year.');return;}if(!spendAct('doctor-checkup'))return;const bill=G.age<18?0:300;if(bill&&!pay(bill,true)){cancelSpentAction();return;}G.flags.checkupYear=G.year;const hidden=(G.conditions||[]).filter(x=>!x.diagnosed);hidden.forEach(x=>x.diagnosed=true);S.health=clamp(S.health+2);S.stress=clamp(S.stress-(hidden.length?2:5));forceClose();
+ if(hidden.length){const names=hidden.map(x=>DISEASE[x.id]?.name).filter(Boolean);log(`The doctor ordered tests and finally gave the symptoms names: ${names.join(', ')}. A diagnosis did not make you well, but it turned fear into a treatment plan.`,'bad');}else log(`You went in for a full checkup. The examination found no active illness, and for once the phone call after the lab work contained no hidden turn.`,'good');afterAction(0);
+}
+function treatCondition(id){
+ const c=(G.conditions||[]).find(x=>x.id===id),d=DISEASE[id];if(!c||!d||!c.diagnosed)return;if(c.lastTreatedYear===G.year){toast('This condition has already been treated this year.');return;}const cost=G.age<18?0:Math.round(d.cost*(1+(c.severity-1)*.35));if(!spendAct('doctor-treatment:'+id))return;if(cost&&!pay(cost,true)){cancelSpentAction();return;}c.lastTreatedYear=G.year;const odds=clamp(d.cure-(c.severity-1)*.07+(S.health-50)/500,.18,.97),costText=cost?`cost ${money(cost)}`:'was covered by family care';forceClose();
+ if(chance(odds)){G.conditions=G.conditions.filter(x=>x!==c);S.health=clamp(S.health+(d.serious?7:4));S.stress=clamp(S.stress-5);log(`Treatment for ${d.name.toLowerCase()} ${costText} and worked. Follow-up tests came back clear. You walked out carrying a future that had briefly stopped feeling guaranteed.`,'good');}
+ else{c.controlledUntil=G.year+1;c.severity=Math.max(1,c.severity-1);S.health=clamp(S.health+2);log(`You began treatment for ${d.name.toLowerCase()}; it ${costText}. The condition is not gone, but the doctor has it under control for now. You will need follow-up care next year.`,'money');}afterAction(1);
+}
+
 /* ---------------- LIFE ---------------- */
 function loyaltyWord(l){ return l>=88?'devoted':l>=72?'close':l>=58?'warm':l>=44?'neutral':l>=30?'strained':l>=15?'cold':'hostile'; }
 function loyaltyClass(l){ return l>=72?'good':l>=44?'ok':'bad'; }
 function relbar(l){ l=clamp(Math.round(l)); return `<div class="relbar ${loyaltyClass(l)}"><div style="width:${l}%"></div></div>`; }
 function personRow(n){
-  const life=[capitalize(n.label),n.age,n.career,n.location&&n.location!==G.place?n.location:null].filter(Boolean).join(' • ');
+  const life=[capitalize(n.label),n.age,n.career,n.workplaceConflict?'workplace conflict':null,n.location&&n.location!==G.place?n.location:null].filter(Boolean).join(' • ');
   return `<button class="person" data-act="person" data-arg="${n.id}"><div class="phead"><div><div class="t">${esc(n.name)}</div><div class="s">${esc(life)}${n.married?' • married':''}</div></div><div class="rel"><span class="relw">${loyaltyWord(n.loyalty)}</span>${relbar(n.loyalty)}<span class="reln">${Math.round(n.loyalty)} / 100</span></div></div><span class="mchev pchev">›</span></button>`;
 }
 function npcCompliment(id){ if(!spendAct('compliment'))return; const n=npc(id); if(!n)return; if(chance(0.85)){ n.loyalty=clamp(n.loyalty+rnd(3,8)); log(`You told ${n.name} something true and kind. ${pick(['They pretended it was no big deal and clearly kept it.','It landed. You saw it land.','They said it back, and meant it.'])}`,'good'); } else { n.loyalty=clamp(n.loyalty-2); log(`You tried to compliment ${n.name} and it came out sideways. They gave you the polite smile, the one that closes a door softly.`); } afterAction(0); }
@@ -1890,8 +2078,8 @@ function tabLife(){
 }
 function npcSpendTime(id){ if(!spendAct('spendtime'))return; const n=npc(id); if(!n)return; n.loyalty=clamp(n.loyalty+rnd(6,12)); S.happiness=clamp(S.happiness+2); S.stress=clamp(S.stress-2); n.memory.push(`${G.name} spent time with me at ${G.age}.`); log(`You spent real time with ${n.name}. ${pick(['Nothing dramatic — a long meal, a longer conversation.','You laughed about something old.','It was easy, the way it used to be.','You put the phones away.'])} It mattered more than it looked like it did.`,'good'); afterAction(0); }
 function npcMarry(id){ const n=npc(id); if(!n)return; if(n.role==='spouse'){toast('You are already married to them.');return;} if(n.engaged){toast('You are engaged \u2014 plan the wedding from their page.');return;} proposeRingModal(id); }
-function npcBaby(id){ const p=npc(id);if(!p)return;if(G.flags.babyAttemptYear===G.year){toast('You have already tried for a child this year.');return;}if(!spendAct('baby'))return;G.flags.babyAttemptYear=G.year; if(chance(G.flags.fertility?0.82:0.55)){ const sex=chance(0.5)?'Male':'Female'; const k=addNPC('child',(sex==='Male'?pick(MALE):pick(FEMALE))+' '+G.last,0); k.loyalty=70; log(`You and ${p.name} had a baby — ${k.name}. Everything narrowed to one small, furious, sleepless point of light.`,'good'); S.happiness=clamp(S.happiness+8);S.stress=clamp(S.stress+6);pay(4000,true); } else { log(`You and ${p.name} tried for a child this year. Not yet. There's a particular quiet to a month that doesn't take.`); } afterAction(0); }
-function npcBreakup(id){ const n=npc(id); if(!n)return; if(n.role==='friend'||n.role==='fling'){ n.role='ex'; log(`You let ${n.name} drift out of your life. No fight, just fewer replies, then none.`); } else { breakup(n,false); } afterAction(0); }
+function npcBaby(id){ const p=npc(id);if(!p)return;if(G.flags.babyAttemptYear===G.year){toast('You have already tried for a child this year.');return;}if(!spendAct('baby'))return;G.flags.babyAttemptYear=G.year; if(chance(G.flags.fertility?0.82:0.55)){ const sex=chance(0.5)?'Male':'Female'; const k=addNPC('child',(sex==='Male'?pick(MALE):pick(FEMALE))+' '+G.last,0); k.loyalty=70;k.otherParentId=p.id;k.custody='together'; log(`You and ${p.name} had a baby — ${k.name}. Everything narrowed to one small, furious, sleepless point of light.`,'good'); S.happiness=clamp(S.happiness+8);S.stress=clamp(S.stress+6);pay(4000,true); } else { log(`You and ${p.name} tried for a child this year. Not yet. There's a particular quiet to a month that doesn't take.`); } afterAction(0); }
+function npcBreakup(id){ const n=npc(id);if(!n)return;if(n.role==='spouse'){openDivorce(id);return;}if(n.role==='friend'||n.role==='fling'){n.role='ex';log(`You let ${n.name} drift out of your life. No fight, just fewer replies, then none.`);}else{breakup(n,false);}afterAction(0);}
 
 /* ---------------- WORK ---------------- */
 function jobEligible(j){
@@ -1907,15 +2095,15 @@ function tabWork(){
   if(G.special){
     h+=specialCareerPanel();
   } else if(G.military){
-    const m=G.military;
-    h+=`<div class="grp"><h4>${m.branch}</h4><div class="note">${(m.officer?OFFICER:ENLISTED)[m.rank]} • ${G.military.years}y served</div><div class="acts">${actBtn('activity','sportstrain','Train hard','$700')}${actBtn('discharge',null,'Request discharge')}</div></div>`;
+    const m=G.military,mp=pensionEligibility('Military');
+    h+=`<div class="grp"><h4>${m.branch}</h4><div class="note">${(m.officer?OFFICER:ENLISTED)[m.rank]} • ${G.military.years}y served • retirement pension ${mp.years}/${mp.rule.years} years${mp.ready?` • ${money(mp.annual)}/yr vested`:''}</div><div class="acts">${actBtn('activity','sportstrain','Train hard','$700')}${actBtn('discharge',null,mp.ready?'Retire from service':'Request discharge')}</div></div>`;
   } else if(G.job){
-    const j=JOB[G.job.id];
-    h+=`<div class="grp"><h4>${j.title}</h4><div class="note">${money(j.pay+(G.job.bonus||0))}/yr • performance ${Math.round(G.job.perf)} • ${G.job.years}y</div><div class="acts">${actBtn('work-harder',null,'Work harder')}${actBtn('ask-raise',null,'Ask for a raise')}${actBtn('quit-job',null,'Quit')}</div></div>`;
-    const promos=(j.next||[]).map(id=>JOB[id]).filter(nj=>nj&&jobEligible(nj)&&G.job.perf>=60);
-    if(promos.length)h+=grp('Move up',promos.map(nj=>actBtn('apply-job',nj.id,nj.title,money(nj.pay))).join(''),'Your record here is good enough to apply.');
-    const locked=(j.next||[]).map(id=>JOB[id]).filter(nj=>nj&&!promos.includes(nj));
-    if(locked.length)h+=`<div class="note">Next rung: ${locked.map(nj=>nj.title).join(', ')} — needs higher performance or more schooling.</div>`;
+    const j=JOB[G.job.id];ensureWorkplace();const schedule=workSchedule(),network=workNetwork(),pension=pensionEligibility(j.track);
+    h+=`<div class="grp"><h4>${j.title}</h4><div class="note">${money(jobAnnualPay())}/yr • ${schedule.hours} hrs/week • ${G.job.years}y in role<br>Performance ${Math.round(G.job.perf)}/100 • effort ${Math.round(G.job.effort)} • recognition ${Math.round(G.job.recognition)}/100 • network ${network}/100${G.job.hrWarnings?` • HR warnings ${G.job.hrWarnings}`:''}</div><div class="acts">${actBtn('work-harder',null,'Work harder')}${actBtn('work-hours',null,'Choose hours',`${schedule.hours}/week`)}${actBtn('ask-raise',null,'Ask for a raise',G.job.lastRaiseYear===G.year?'reviewed this year':'')}${pension.ready?actBtn('retire-job',null,'Retire',`${money(pension.annual)}/yr pension`):''}${actBtn('quit-job',null,'Quit')}</div></div>`;
+    for(const next of (j.next||[]).map(id=>JOB[id]).filter(Boolean)){const check=promotionReadiness(next),criteria=check.criteria.filter(x=>!(x.name==='Education'&&check.requirements.edu===0)).map(x=>`<div class="kv"><span>${x.met?'✓':'○'} ${esc(x.name)}</span><span>${x.text?`${esc(x.value)}${x.target?` / needs ${esc(x.target)}`:''}`:`${x.value}${x.suffix||''} / ${x.target}${x.suffix||''}`}</span></div>`).join('');h+=`<div class="grp"><h4>Promotion path: ${esc(next.title)}</h4>${criteria}<div class="acts" style="margin-top:8px">${actBtn('promotion-review',next.id,'Request promotion review',check.ready?(G.job.lastPromotionReviewYear===G.year?'already reviewed this year':money(next.pay)):'thresholds not met',!check.ready||G.job.lastPromotionReviewYear===G.year)}</div></div>`;}
+    if(!(j.next||[]).length)h+=`<div class="note">You have reached the top of the ${esc(j.track.toLowerCase())} career ladder. Raises, hours, reputation, and retirement still matter.</div>`;
+    const contacts=workContacts();h+=`<div class="grp"><h4>Your workplace</h4><div class="note">Relationships here affect promotion reviews. Open a person to collaborate, network, become friends, confront misconduct, report it, or take credit.</div><div class="list">${contacts.map(personRow).join('')}</div></div>`;
+    if(pension.rule)h+=`<div class="grp"><h4>${esc(pension.rule.name)}</h4><div class="note">${pension.years}/${pension.rule.years} service years • retirement age ${pension.rule.age} • projected benefit ${money(pension.annual)}/yr${pension.claimed?' • already claimed':pension.ready?' • vested and available now':''}</div></div>`;
   } else {
     const full=JOBS.filter(j=>j.kind==='full'&&(!j.prev||!j.prev.length)&&jobEligible(j));
     h+=grp('Careers open to you', full.length?full.map(j=>actBtn('apply-job',j.id,j.title,money(j.pay))).join(''):'', full.length?'':'Nothing yet — get some schooling or build skills, then check back.');
@@ -1923,15 +2111,16 @@ function tabWork(){
     if(part.length)h+=grp('Part-time', part.map(j=>actBtn('apply-job',j.id,j.title,money(j.pay))).join(''));
     if(G.age>=16)h+=grp('Chase a dream', Object.keys(SPECIAL).map(t=>actBtn('start-special',t,SPECIAL[t].name)).join(''),'Start at the bottom. No salary safety net. This is how fame actually begins.');
     if(G.age>=17)h+=grp('Service', actBtn('enlist',null,'Join the military'));
+    const claims=Object.keys(PENSION_RULES).map(track=>({track,...pensionEligibility(track)})).filter(x=>x.ready);if(claims.length)h+=grp('Vested pensions',claims.map(x=>actBtn('claim-pension',x.track,`Claim ${x.rule.name}`,`${money(x.annual)}/yr`)).join(''),'Past service can keep paying even after the job ends.');
   }
   // gigs always
   const gigs=GIGS.filter(g=>{const lvl=(g.skill in S)?S[g.skill]:(K[g.skill]||0);return lvl>=g.min && G.age>=(g.age||14);});
   h+=grp('Freelance & side income', gigs.length?gigs.map(g=>actBtn('gig',g.id,g.name,money(Math.round(g.base*0.8)))).join(''):'', gigs.length?'One-off money. Builds the skill too.':'Build a skill (Learn tab) to unlock freelance work.');
   return h;
 }
-function applyJob(id){ const j=JOB[id]; if(!j||!jobEligible(j)){toast("You don't qualify for that.");return;} setJob(id); afterAction(0); }
-function workHarder(){ if(!G.job)return;if(!spendAct('work-harder'))return; G.job.perf=clamp((G.job.perf||60)+rnd(6,14)); S.stress=clamp(S.stress+6); const j=JOB[G.job.id]; applyFx(j.gain); log(`You put your head down and worked. Late nights, skipped lunches, the visible kind of effort. Your standing at work climbed.`,'good'); afterAction(0); }
-function askRaise(){ if(!G.job)return;if(!spendAct('ask-raise'))return; const odds=(G.job.perf-40)/100; if(chance(odds)){ const r=Math.round(JOB[G.job.id].pay*rnd(3,9)/100); G.job.bonus=(G.job.bonus||0)+r; log(`You made the case and it landed. ${money(r)} more a year. You floated to your car.`,'money'); } else { log(`You asked for a raise. Your manager talked about "the budget" and "timing" and "revisiting in Q3." The answer was no, dressed up for the occasion.`); S.stress=clamp(S.stress+4); G.job.perf=clamp(G.job.perf-4);} afterAction(0); }
+function applyJob(id){ const j=JOB[id];if(G.job){toast('Promotions now require a formal review from your current occupation page.');return;}if(!j||!jobEligible(j)){toast("You don't qualify for that.");return;}setJob(id);afterAction(0); }
+function workHarder(){if(!G.job)return;if(!spendAct('work-harder'))return;ensureWorkplace();G.job.perf=clamp((G.job.perf||60)+rnd(5,11));G.job.effort=(G.job.effort||0)+rnd(7,12);G.job.recognition=clamp((G.job.recognition||0)+rnd(2,6));S.stress=clamp(S.stress+(G.job.hours>=50?8:6));const j=JOB[G.job.id];applyFx(j.gain);log(`You put your head down and made yourself visible: the hard assignment, the late revision, the problem nobody else volunteered to own. Your effort record and performance climbed, but the hours followed you home.`,'good');afterAction(0);}
+function askRaise(){if(!G.job)return;if(G.job.lastRaiseYear===G.year){toast('You have already had a compensation review this year.');return;}if(!spendAct('ask-raise'))return;G.job.lastRaiseYear=G.year;const odds=clamp(.18+G.job.perf/180+workNetwork()/350+(G.job.recognition||0)/400-(G.job.hrWarnings||0)*.05,.08,.88);if(chance(odds)){const r=Math.round(JOB[G.job.id].pay*rnd(3,9)/100);G.job.bonus=(G.job.bonus||0)+r;G.job.recognition=clamp(G.job.recognition+3);log(`You brought numbers, finished work, and a clear ask into the compensation meeting. It landed: ${money(r)} more a year. You floated to your car.`,'money');}else{log(`You asked for a raise. Your manager praised the work, talked about “the budget” and “timing,” and dressed no up as next quarter.`);S.stress=clamp(S.stress+4);G.job.perf=clamp(G.job.perf-3);}afterAction(0);}
 function startSpecialConfirm(type){
   const choices={actor:['Film & television','Stage','Comedy'],musician:['Rock & pop','Hip-hop','Country','Electronic','Classical'],athlete:['football','basketball','baseball','soccer','MMA','hockey']}[type];
   const sp=SPECIAL[type];$('modalbox').innerHTML=`<h2>Chase a career as ${sp.name.toLowerCase()}</h2><p>Choose the lane you want to enter. It will shape the details of the career, but talent and work decide how far it goes.</p><div class="opts" id="careerfocus"></div>`;const box=$('careerfocus');choices.forEach(f=>{const b=document.createElement('button');b.textContent=f;b.onclick=()=>chooseSpecialCareer(type,f);box.appendChild(b);});openModal();
@@ -2209,6 +2398,8 @@ function doDriveTest(){ if(G.age<16){toast('You can take your driving test at 16
 function tabMoney(){
   let h=`<div class="grp"><h4>Ledger</h4><div class="note">Cash ${money(G.cash)} • Debt ${money(G.debt)} • Credit ${G.creditScore} • Net worth ${money(netWorth())}</div></div>`;
   h+=grp('Borrowing', (G.age>=18?actBtn('loan',null,'Take out a loan'):'')+ (G.debt>0?actBtn('pay-debt',null,'Pay down debt'):''), G.age>=18?'Loans give you cash now and 8%-a-year weather later. Paying debt down lifts your credit.':'You can borrow once you turn 18.');
+  const orders=(G.supportOrders||[]).filter(o=>o.active!==false);if(orders.length)h+=`<div class="grp"><h4>Court-ordered support</h4><div class="list">${orders.map(o=>`<div class="item"><div><div class="t">${esc(capitalize(o.kind))}</div><div class="s">${o.direction==='out'?'Pay':'Receive'} ${money(o.annual)}/yr • ${esc(o.name)}${o.kind==='alimony'?` • ${o.yearsLeft}y remaining`:` • ${(o.childIds||[]).length} minor child${(o.childIds||[]).length===1?'':'ren'}`}</div></div></div>`).join('')}</div></div>`;
+  if((G.pensions||[]).length)h+=`<div class="grp"><h4>Pension income</h4><div class="list">${G.pensions.map(p=>`<div class="item"><div><div class="t">${esc(capitalize(p.name))}</div><div class="s">${money(p.annual)}/yr • claimed ${p.claimedYear}</div></div></div>`).join('')}</div></div>`;
   return h;
 }
 function takeLoan(){
@@ -2231,6 +2422,7 @@ function tabLove(){
     h+=grp('Find love', opts, 'Match with someone and see where it goes.');
   }
   if(G.age>=18) h+=grp('No strings', actBtn('onenight',null,'Find a hookup'), 'A one-night thing — low loyalty, real consequences if you\'re attached to someone.');
+  if((G.divorceHistory||[]).length){const d=G.divorceHistory[G.divorceHistory.length-1];h+=`<div class="grp"><h4>Marriage history</h4><div class="note">${G.divorceHistory.length} divorce${G.divorceHistory.length===1?'':'s'} • latest: ${esc(d.spouse)}, ${d.year}<br>${esc(DIVORCE_APPROACHES[d.approach]?.name||d.approach)} • estate ${money(d.estate)} • settlement ${money(d.settlement)}${d.custody?` • ${d.custody} custody`:''}</div></div>`;}
   return h;
 }
 const SOCIALS=[{id:'facebook',name:'Facebook',unit:'followers'},{id:'instagram',name:'Instagram',unit:'followers'},{id:'tiktok',name:'TikTok',unit:'followers'},{id:'youtube',name:'YouTube',unit:'subscribers'},{id:'twitter',name:'Twitter',unit:'followers'},{id:'twitch',name:'Twitch',unit:'followers'}];
@@ -2353,7 +2545,7 @@ function joinSociety(){ if((S.fame||0)<25&&netWorth()<500000){toast('Secret soci
 const PETSPECIES=['dog','cat','parrot','snake','horse','rabbit'];
 function getPet(){ $('modalbox').innerHTML=`<h2>Get a pet</h2><p>Companionship, on four legs or otherwise.</p><div class="opts" id="petbox"></div>`; const box=$('petbox'); PETSPECIES.forEach(sp=>{ const b=document.createElement('button'); b.textContent='A '+sp; b.onclick=()=>{forceClose();adoptPet(sp);}; box.appendChild(b); }); openModal(); }
 function adoptPet(sp){if(!spendAct('adopt-pet'))return; const nm=pick(MALE.concat(FEMALE)); pay(Math.min(G.cash,rnd(50,800))); if(!G.pets)G.pets=[]; G.pets.push({sp,name:nm,age:0}); S.happiness=clamp(S.happiness+6); S.stress=clamp(S.stress-3); log(`You got a ${sp} and named ${(sp==='dog'||sp==='cat')?'them':'it'} ${nm}. ${pick(['The house is louder and better for it.','You are responsible for a small life now, and it changes how the days feel.','It hates you a little at first. That will change.'])}`,'good'); afterAction(0); }
-function adoptChild(){ if(G.age<18){toast('You must be an adult to adopt.');return;}if(G.flags.adoptionYear===G.year){toast('The adoption process is already in motion this year.');return;}if(!spendAct('adopt'))return;G.flags.adoptionYear=G.year; if(chance(0.7)){ const sex=chance(0.5)?'Male':'Female'; const k=addNPC('child',(sex==='Male'?pick(MALE):pick(FEMALE))+' '+G.last, rnd(0,8)); k.loyalty=60; pay(Math.min(G.cash,rnd(8000,25000))); S.happiness=clamp(S.happiness+8); log(`After a mountain of paperwork and a home visit that made you clean behind the fridge, you adopted ${k.name}, age ${k.age}. They were wary of you for exactly as long as it took to trust you completely.`,'good'); } else { S.happiness=clamp(S.happiness-4); log(`The adoption fell through this year \u2014 a birth parent who changed their mind, an agency that went quiet. It is a particular kind of grief, mourning someone who was never quite yours.`,'bad'); } afterAction(0); }
+function adoptChild(){ if(G.age<18){toast('You must be an adult to adopt.');return;}if(G.flags.adoptionYear===G.year){toast('The adoption process is already in motion this year.');return;}if(!spendAct('adopt'))return;G.flags.adoptionYear=G.year; if(chance(0.7)){ const sex=chance(0.5)?'Male':'Female'; const k=addNPC('child',(sex==='Male'?pick(MALE):pick(FEMALE))+' '+G.last, rnd(0,8)); k.loyalty=60;const p=partner();if(p&&p.role==='spouse'){k.otherParentId=p.id;k.custody='together';} pay(Math.min(G.cash,rnd(8000,25000))); S.happiness=clamp(S.happiness+8); log(`After a mountain of paperwork and a home visit that made you clean behind the fridge, you adopted ${k.name}, age ${k.age}. They were wary of you for exactly as long as it took to trust you completely.`,'good'); } else { S.happiness=clamp(S.happiness-4); log(`The adoption fell through this year \u2014 a birth parent who changed their mind, an agency that went quiet. It is a particular kind of grief, mourning someone who was never quite yours.`,'bad'); } afterAction(0); }
 function pick_n(arr,n){ const a=arr.slice(),out=[]; while(a.length&&out.length<n){ out.push(a.splice(rnd(0,a.length-1),1)[0]); } return out; }
 function emigrate(){ if(G.age<18){toast('You can move abroad on your own at 18.');return;} const opts=Object.keys(COUNTRIES).filter(c=>c!==G.country); $('modalbox').innerHTML=`<h2>Emigrate</h2><p>Pack a life into a few boxes and start again somewhere new. Where to?</p><div class="opts" id="embox"></div>`; const box=$('embox'); pick_n(opts,6).forEach(c=>{ const b=document.createElement('button'); b.textContent=c; b.onclick=()=>{forceClose();doEmigrate(c);}; box.appendChild(b); }); openModal(); }
 function doEmigrate(country){if(!spendAct('emigrate'))return; const cities=Object.keys(COUNTRIES[country]||{}); const city=cities.length?pick(cities):G.place; G.country=country; G.place=city; S.stress=clamp(S.stress+8); S.happiness=clamp(S.happiness+3); K.intellect=clamp((K.intellect||0)+2); log(`You emigrated to ${city}, ${country}. New language on the signs, new coins in your pocket, the specific loneliness of being a stranger everywhere for a while. It gets better. It always gets better, and it always takes longer than you think.`,'good'); afterAction(0); }
@@ -2384,7 +2576,8 @@ function tabLuxury(){
 
 function tabActivities(){
   let h='';
-  h+=grp('Health & body', actAct('doctor')+actAct('plastic')+((G.addiction.alcohol>25||G.addiction.drugs>25)?actAct('rehab'):''));
+  const healthNote=healthConditionSummary()||'No diagnosed conditions. Preventive care can uncover hidden illness.';
+  h+=grp('Health & body', actBtn('doctor-visit',null,'Visit a doctor',(G.conditions||[]).length?`${G.conditions.length} active concern${G.conditions.length===1?'':'s'}`:'checkup & diagnosis')+actAct('plastic')+((G.addiction.alcohol>25||G.addiction.drugs>25)?actAct('rehab'):''),healthNote);
   h+=grp('Family & home', (G.age>=18?actBtn('adopt',null,'Adopt a child'):'')+(G.age>=18&&partner()?actBtn('fertility',null,'Fertility clinic'):'')+actBtn('getpet',null,'Get a pet')+(G.age>=18?actBtn('emigrate',null,'Emigrate'):''), (G.pets&&G.pets.length)?('Your pets: '+G.pets.map(p=>p.name+' the '+p.sp).join(', ')):'');
   h+=grp('Gambling', actBtn('lottery',null,'Lottery ticket','$20')+actBtn('casino',null,'Casino')+(G.age>=18?actBtn('horses',null,'Horse races'):'')+(G.age>=18?actBtn('fightbet',null,'Bet on a fight'):'')+actBtn('sweepstakes',null,'Sweepstakes'), 'The house always wins. That is the whole business model.');
   if(G.age>=18)h+=grp('Legal', actBtn('lawsuit',null,'Sue someone'));
@@ -2428,11 +2621,13 @@ function personDetail(n){
   if(G.age>=18)together+=actBtn('party',n.id,'Party');
   h+=grp('Do something together', together);
   h+=grp('Money', actBtn('gift',n.id,'Give a gift')+(G.age>=13?actBtn('deal',n.id,'Sell them something'):''));
+  if(currentWorkContact(n)){const boss=n.id===G.job.workplace.supervisor;let office=actBtn('work-collaborate',n.id,'Collaborate')+actBtn('work-network',n.id,'Network over lunch','$120')+(!n.friendOutsideWork?actBtn('work-befriend',n.id,'Become friends'):'' )+(n.workplaceConflict?actBtn('work-confront',n.id,'Confront them'):'' )+actBtn('work-hr',n.id,'Report to HR',n.workplaceConflict?'documented issue':'no documented issue')+(!boss?actBtn('work-steal',n.id,"Take credit for their work",G.job.lastCreditTheftYear===G.year?'already done this year':'high risk',G.job.lastCreditTheftYear===G.year):'');h+=grp('At work',office,n.workplaceConflict?`Current conflict: ${n.workplaceConflict}.`:`${boss?'Supervisor':'Coworker'} relationships feed your workplace network and promotion support.`);}
   if(romance){ let r=''; if(n.role==='friend'||n.role==='coworker')r+=actBtn('askout',n.id,'Ask out'); r+=actBtn('hookup',n.id,'Hook up'); if(r)h+=grp('Romance', r); }
   let st='';
   if(n.role==='partner'&&n.engaged){ st=actBtn('wedding',n.id,'Plan the wedding')+actBtn('breakup',n.id,'Call it off'); }
   else if(n.role==='partner'){ st=actBtn('marry',n.id,'Propose')+actBtn('breakup',n.id,'Break up'); }
-  else if(n.role==='spouse'){ st=actBtn('baby',n.id,'Try for a baby')+actBtn('breakup',n.id,'Divorce'); }
+  else if(n.role==='spouse'){ st=actBtn('baby',n.id,'Try for a baby')+actBtn('divorce',n.id,'Divorce'); }
+  else if(n.divorced){ st=actBtn('coparent',n.id,'Co-parent calmly')+actBtn('coparent',n.id+'|court','Return to family court'); }
   else if(n.role==='friend'||n.role==='fling'){ st=actBtn('breakup',n.id,'Cut off'); }
   if(st)h+=grp('Status', st);
   return h;
@@ -2563,11 +2758,18 @@ const HONEYMOONS=[
  {id:'europe', name:'Two weeks across Europe',                  price:45000,  happy:18, fame:1},
  {id:'island', name:'A private island',                         price:300000, happy:30, fame:3},
 ];
-function openWedding(id){ const n=npc(id); if(!n)return; if(n.role!=='partner'||!n.engaged){toast('You need to be engaged first.');return;} weddingDraft={id,venue:null,honeymoon:null}; pickVenue(); }
+const PRENUPS=[
+ {id:'none',name:'No prenuptial agreement',note:'Most property and growth may enter the marital estate.'},
+ {id:'fair',name:'Protect premarital property',note:'What each person brought in stays separate; growth during marriage is shared.'},
+ {id:'separate',name:'Keep finances largely separate',note:'Only a limited portion of growth enters a divorce settlement.'},
+];
+function openWedding(id){ const n=npc(id); if(!n)return; if(n.role!=='partner'||!n.engaged){toast('You need to be engaged first.');return;} weddingDraft={id,venue:null,honeymoon:null,prenup:null}; pickVenue(); }
 function pickVenue(){ const rows=VENUES.map(v=>`<button onclick="setVenue('${v.id}')">${esc(v.name)}<small>${money(v.price)}</small></button>`).join(''); $('modalbox').innerHTML=`<h2>The wedding</h2><p>First: where will you hold it? Every guest, every flower, every folding chair is money you will not see again \u2014 and a day you might not forget.</p><div class="opts">${rows}</div>`; openModal(); }
 function setVenue(vid){ if(!weddingDraft)return; weddingDraft.venue=vid; pickHoneymoon(); }
 function pickHoneymoon(){ const rows=HONEYMOONS.map(h=>`<button onclick="setHoneymoon('${h.id}')">${esc(h.name)}<small>${h.price>0?money(h.price):'free'}</small></button>`).join(''); $('modalbox').innerHTML=`<h2>The honeymoon</h2><p>And afterward? A week or two that belongs only to the two of you, before the ordinary days take back the reins.</p><div class="opts">${rows}</div>`; openModal(); }
-function setHoneymoon(hid){ if(!weddingDraft)return; weddingDraft.honeymoon=hid; pickName(); }
+function setHoneymoon(hid){ if(!weddingDraft)return; weddingDraft.honeymoon=hid; pickPrenup(); }
+function pickPrenup(){const rows=PRENUPS.map(p=>`<button onclick="setPrenup('${p.id}')">${esc(p.name)}<small>${esc(p.note)}</small></button>`).join('');$('modalbox').innerHTML=`<h2>The legal part</h2><p>Before the vows, decide what marriage means for property and debt. Romance does not make the paperwork disappear; it only makes people less eager to read it.</p><div class="opts">${rows}</div>`;openModal();}
+function setPrenup(id){if(!weddingDraft||!PRENUPS.some(x=>x.id===id))return;weddingDraft.prenup=id;const n=npc(weddingDraft.id);if(n&&id==='separate')n.loyalty=clamp(n.loyalty-2);pickName();}
 function pickName(){ const n=npc(weddingDraft.id); if(!n){weddingDraft=null;forceClose();return;} const theirs=lastNameOf(n); $('modalbox').innerHTML=`<h2>The name</h2><p>One last decision, quieter than the rest and longer-lasting. What will your name be?</p><div class="opts"><button onclick="setWedName('keep')">Keep my name<small>${esc(G.last||'')}</small></button><button onclick="setWedName('take')">Take theirs<small>${esc(theirs)}</small></button><button onclick="setWedName('hyphen')">Hyphenate<small>${esc((G.last||'')+'-'+theirs)}</small></button></div>`; openModal(); }
 function setWedName(choice){
   if(!weddingDraft)return; const n=npc(weddingDraft.id); if(!n){weddingDraft=null;forceClose();return;}
@@ -2575,16 +2777,86 @@ function setWedName(choice){
   const h=HONEYMOONS.find(x=>x.id===weddingDraft.honeymoon)||HONEYMOONS[0];
   const cost=v.price+h.price;
   if(!pay(cost,true)){ toast('You cannot cover the wedding right now.'); return; }
-  const theirs=lastNameOf(n); const theirFirst=(n.name||'').trim().split(/\s+/)[0];
+  const originalLast=G.last,theirs=lastNameOf(n); const theirFirst=(n.name||'').trim().split(/\s+/)[0];
   if(choice==='take'){ G.last=theirs; } else if(choice==='hyphen'){ G.last=(G.last||'')+'-'+theirs; }
   G.name=(G.first||'')+' '+(G.last||'');
   n.role='spouse'; n.married=true; n.engaged=false; n.loyalty=clamp(n.loyalty+10);
+  if(!n.career){const [career,income]=pick(NPC_CAREERS);n.career=career;n.income=Math.round(income*rnd(82,118)/100);}
+  G.marriage={spouseId:n.id,startYear:G.year,startAge:G.age,prenup:weddingDraft.prenup||'none',startNetWorth:Math.max(0,netWorth()),originalLast};n.marriageStartYear=G.year;
   S.happiness=clamp(S.happiness+v.happy+h.happy); if(v.fame||h.fame)S.fame=clamp(S.fame+(v.fame||0)+(h.fame||0));
   const nameLine=choice==='keep'?`You kept your name.`:choice==='take'?`You took ${theirFirst}'s name; you are ${G.name} now.`:`You hyphenated it \u2014 the forms will hate it and you do not care. You are ${G.name} now.`;
   const honey=h.id==='none'?`, and skipped the honeymoon for the ordinary life waiting at home`:`, then left for ${h.name.toLowerCase()}`;
   forceClose();
   log(`You married ${n.name} at ${v.name.toLowerCase()}${honey}. ${pick(['Somebody\u2019s parent cried. There was cake, one bad speech, and one that undid the whole room.','It rained, which everyone insisted was lucky.','You forgot half your vows and it was, somehow, exactly right.'])} ${nameLine}`,'good');
   weddingDraft=null; afterAction(0);
+}
+
+/* ---------------- DIVORCE: filing, property, custody, support ---------------- */
+const DIVORCE_APPROACHES={
+ amicable:{name:'Amicable filing',fee:1800,stress:7,note:'Cheapest and least destructive, but both spouses must cooperate.'},
+ mediation:{name:'Mediation',fee:6500,stress:11,note:'A neutral mediator builds a negotiated settlement.'},
+ contested:{name:'Contested litigation',fee:28000,stress:22,note:'Lawyers, discovery, hearings, and an unpredictable judge.'}
+};
+function ensureMarriage(spouse){
+ spouse=spouse||partner();if(!spouse||spouse.role!=='spouse')return null;if(!G.marriage||G.marriage.spouseId!==spouse.id)G.marriage={spouseId:spouse.id,startYear:spouse.marriageStartYear||Math.max(G.born,G.year-1),startAge:Math.max(18,G.age-1),prenup:'none',startNetWorth:0,originalLast:G.last};return G.marriage;
+}
+function marriageYears(){const m=G.marriage;return m?Math.max(1,G.year-m.startYear):1;}
+function divorceChildren(spouse){return kids().filter(k=>k.age<18&&(!k.otherParentId||k.otherParentId===spouse.id));}
+function divorceEstate(){const m=G.marriage||{prenup:'none',startNetWorth:0},now=Math.max(0,netWorth()),growth=Math.max(0,now-Math.max(0,m.startNetWorth||0));if(m.prenup==='separate')return Math.round(growth*.3);if(m.prenup==='fair')return Math.round(growth);return now;}
+function primaryDivorceHome(){return G.props.find(p=>p.owned&&!p.rented)||G.props[0]||null;}
+function openDivorce(id){
+ const spouse=npc(id);if(!spouse||spouse.role!=='spouse'){toast('There is no marriage to dissolve.');return;}ensureMarriage(spouse);divorceDraft={spouseId:spouse.id,approach:null,custody:null,property:null,home:null,name:'keep'};pickDivorceApproach();
+}
+function pickDivorceApproach(){
+ if(!divorceDraft)return;const p=npc(divorceDraft.spouseId),years=marriageYears(),estate=divorceEstate(),children=divorceChildren(p);$('modalbox').innerHTML=`<h2>Ending the marriage</h2><p>You and ${esc(p.name)} have been married for ${years} year${years===1?'':'s'}. About ${money(estate)} is currently exposed to division, with ${children.length} minor child${children.length===1?'':'ren'} affected. How do you begin?</p><div class="opts">${Object.entries(DIVORCE_APPROACHES).map(([id,a])=>`<button onclick="chooseDivorceApproach('${id}')">${esc(a.name)}<small>${money(a.fee)} starting legal cost • ${esc(a.note)}</small></button>`).join('')}</div>`;openModal();
+}
+function chooseDivorceApproach(id){if(!divorceDraft||!DIVORCE_APPROACHES[id])return;divorceDraft.approach=id;const p=npc(divorceDraft.spouseId);if(divorceChildren(p).length)pickDivorceCustody();else pickDivorceProperty();}
+function pickDivorceCustody(){const p=npc(divorceDraft.spouseId),n=divorceChildren(p).length;$('modalbox').innerHTML=`<h2>Parenting after the marriage</h2><p>${n} minor child${n===1?' is':'ren are'} caught inside this decision. Custody changes where they live, their relationship with each parent, and who pays support.</p><div class="opts"><button onclick="chooseDivorceCustody('joint')">Seek shared custody<small>Shared time; support follows the income difference.</small></button><button onclick="chooseDivorceCustody('player')">Seek primary custody<small>The children live with you; ${esc(p.name)} may owe support.</small></button><button onclick="chooseDivorceCustody('spouse')">Let ${esc(p.name)} take primary custody<small>You retain visitation and may owe child support.</small></button></div>`;openModal();}
+function chooseDivorceCustody(id){if(!divorceDraft||!['joint','player','spouse'].includes(id))return;divorceDraft.custody=id;pickDivorceProperty();}
+function pickDivorceProperty(){$('modalbox').innerHTML=`<h2>Dividing the estate</h2><p>A settlement can preserve cooperation, protect what you built, or turn every account into a battlefield. The prenuptial agreement changes what is exposed, but not every argument about it.</p><div class="opts"><button onclick="chooseDivorceProperty('equal')">Offer an equal division<small>Start from an even share of the marital estate.</small></button><button onclick="chooseDivorceProperty('protect')">Protect more of your assets<small>Seek a smaller payout using contributions and the prenup.</small></button><button onclick="chooseDivorceProperty('aggressive')">Fight for nearly everything<small>Potentially cheaper settlement; much greater legal and relationship risk.</small></button></div>`;openModal();}
+function chooseDivorceProperty(id){if(!divorceDraft||!['equal','protect','aggressive'].includes(id))return;divorceDraft.property=id;if(primaryDivorceHome())pickDivorceHome();else pickDivorceName();}
+function pickDivorceHome(){const inst=primaryDivorceHome(),d=inst&&PROP[inst.id];if(!inst||!d){pickDivorceName();return;}const equity=Math.round(d.price*((inst.cond??100)/100)*.9-(inst.mortgage?inst.mortgage.balance:0));$('modalbox').innerHTML=`<h2>The home</h2><p>The ${esc(d.name.toLowerCase())} carries about ${money(equity)} in equity. Decide who keeps the keys—or whether neither of you does.</p><div class="opts"><button onclick="chooseDivorceHome('keep')">Keep it and fund the buyout<small>You retain the property; its value remains part of the settlement.</small></button><button onclick="chooseDivorceHome('sell')">Sell it<small>Pay the mortgage, convert the equity to cash, then divide it.</small></button><button onclick="chooseDivorceHome('spouse')">Let ${esc(npc(divorceDraft.spouseId).name)} keep it<small>The equity counts toward their share of the settlement.</small></button></div>`;openModal();}
+function chooseDivorceHome(id){if(!divorceDraft||!['keep','sell','spouse'].includes(id))return;divorceDraft.home=id;pickDivorceName();}
+function pickDivorceName(){const m=G.marriage||{},canRestore=m.originalLast&&m.originalLast!==G.last;$('modalbox').innerHTML=`<h2>Your name afterward</h2><p>The decree can change the paperwork along with the marriage. What name do you want on the other side?</p><div class="opts"><button onclick="chooseDivorceName('keep')">Keep ${esc(G.last)}<small>Your name remains unchanged.</small></button>${canRestore?`<button onclick="chooseDivorceName('restore')">Restore ${esc(m.originalLast)}<small>Return to the surname you used before this marriage.</small></button>`:''}</div>`;openModal();}
+function chooseDivorceName(id){if(!divorceDraft||!['keep','restore'].includes(id))return;divorceDraft.name=id;reviewDivorce();}
+function reviewDivorce(){
+ const d=divorceDraft,p=npc(d.spouseId),a=DIVORCE_APPROACHES[d.approach],kidsCount=divorceChildren(p).length,estate=divorceEstate(),share={equal:.5,protect:.36,aggressive:.24}[d.property]||.5,estimate=Math.round(estate*share);$('modalbox').innerHTML=`<h2>File the divorce</h2><p>${esc(a.name)} • ${money(a.fee)} starting fees<br>Estimated exposed estate: ${money(estate)} • estimated equalization: about ${money(estimate)}<br>${kidsCount?`Requested custody: ${d.custody==='joint'?'shared':d.custody==='player'?'primary custody with you':`primary custody with ${esc(p.name)}`}. Child support will be calculated from custody and income.`:'No minor-child custody order.'}<br>Home: ${d.home||'not applicable'} • Name: ${d.name==='restore'?'restore premarital surname':'keep current surname'}</p><div class="opts"><button class="danger" onclick="resolveDivorce()">File and finalize<small>A contested result can differ from your request.</small></button><button onclick="cancelModal()">Do not file</button></div>`;openModal();
+}
+function addSupportOrder(kind,direction,annual,spouse,extra){if(annual<100)return null;G.flags.supportSeq=(G.flags.supportSeq||0)+1;const o=Object.assign({id:'support'+G.flags.supportSeq,kind,direction,annual:Math.round(annual),to:spouse.id,name:spouse.name,active:true,startYear:G.year},extra||{});G.supportOrders.push(o);return o;}
+function establishDivorceSupport(spouse,custody,children,duration){
+ const playerIncome=Math.max(0,annualIncome()),spouseIncome=Math.max(0,spouse.income||0),orders=[];
+ if(duration>=5&&Math.max(playerIncome,spouseIncome)>Math.min(playerIncome,spouseIncome)*1.45+10000){const direction=playerIncome>spouseIncome?'out':'in',difference=Math.abs(playerIncome-spouseIncome),years=Math.min(10,Math.max(2,Math.ceil(duration/2))),prenup=G.marriage&&G.marriage.prenup,annual=Math.round(difference*(prenup==='separate' ? .1 : .16));const o=addSupportOrder('alimony',direction,annual,spouse,{yearsLeft:years});if(o)orders.push(o);}
+ if(children.length){let direction,annual=0;if(custody==='spouse'){direction='out';annual=Math.min(playerIncome*.42,playerIncome*.1*children.length);}else if(custody==='player'){direction='in';annual=Math.min(spouseIncome*.42,spouseIncome*.1*children.length);}else if(Math.abs(playerIncome-spouseIncome)>12000){direction=playerIncome>spouseIncome?'out':'in';annual=Math.abs(playerIncome-spouseIncome)*.065*children.length;}const o=addSupportOrder('child support',direction,annual,spouse,{childIds:children.map(k=>k.id)});if(o)orders.push(o);}
+ return orders;
+}
+function resolveDivorce(){if(!divorceDraft)return;const draft=divorceDraft;finalizeDivorce(draft);divorceDraft=null;forceClose();afterAction(2);}
+function finalizeDivorce(draft){
+ const spouse=npc(draft.spouseId);if(!spouse||spouse.role!=='spouse')return false;const marriage=ensureMarriage(spouse),duration=marriageYears(),children=divorceChildren(spouse),requested=draft.custody||'joint';let approach=draft.approach||'mediation',a=DIVORCE_APPROACHES[approach],courtNote='';
+ if(approach==='amicable'&&spouse.loyalty<42&&!chance(.25+spouse.loyalty/180)){approach='contested';a=DIVORCE_APPROACHES.contested;courtNote=` ${spouse.name} rejected the cooperative filing, and the case went to court.`;}
+ let fee=a.fee;if(approach==='contested')fee=Math.round(fee*rnd(85,180)/100);pay(fee,true);
+ const estate=divorceEstate(),home=primaryDivorceHome();let homeCredit=0,homeText='There was no jointly occupied property to divide.';
+ if(home){const def=PROP[home.id],idx=G.props.indexOf(home),equity=Math.round(def.price*((home.cond??100)/100)*.9-(home.mortgage?home.mortgage.balance:0));if(draft.home==='sell'){if(idx>=0)G.props.splice(idx,1);if(equity>=0)G.cash+=equity;else G.debt+=Math.abs(equity);if(!G.props.length&&G.home==='own')G.home='rent';homeText=`The ${def.name.toLowerCase()} was sold, leaving ${money(equity)} after the mortgage.`;}else if(draft.home==='spouse'){if(idx>=0)G.props.splice(idx,1);homeCredit=Math.max(0,equity);if(!G.props.length&&G.home==='own')G.home='rent';homeText=`${spouse.name} kept the ${def.name.toLowerCase()}, receiving ${money(homeCredit)} in equity toward the settlement.`;}else homeText=`You kept the ${def.name.toLowerCase()} and accepted the buyout burden.`;}
+ let share={equal:.5,protect:.36,aggressive:.24}[draft.property]||.5;if(approach==='mediation')share=(share+.5)/2;if(approach==='amicable')share=draft.property==='equal' ? .5 : Math.max(.32,share);if(approach==='contested'){const legalScore=K.intellect*.3+K.business*.3+K.charisma*.15+K.discipline*.15-G.record.length*7-S.stress*.08+rnd(-18,18);if(draft.property==='aggressive'&&legalScore<45){share=.64;courtNote+=` The judge rejected your aggressive property position.`;}else share=clamp(share+rnd(-7,9)/100,.22,.68);}
+ if((spouse.income||0)>annualIncome()*1.5)share=Math.max(.18,share-.08);const debtExposure=Math.round(G.debt*(marriage.prenup==='separate' ? .3 : 1)),debtAssigned=Math.min(G.debt,Math.round(debtExposure*share));G.debt=Math.max(0,G.debt-debtAssigned);const settlement=Math.max(0,Math.round(estate*share)-homeCredit+debtAssigned);pay(settlement,true);
+ let custody=requested;if(children.length&&requested!=='joint'&&approach==='contested'){const fitness=K.discipline*.3+S.health*.22+(100-S.stress)*.12+S.happiness*.08-G.record.length*9+rnd(-15,15);if(requested==='player'&&fitness<45)custody=chance(.55)?'joint':'spouse';}
+ for(const child of children){child.otherParentId=spouse.id;child.custody=custody;if(custody==='spouse')child.location=spouse.location||G.place;else child.location=G.place;child.loyalty=clamp(child.loyalty-(approach==='contested'?8:3));child.memory.push(`My parents divorced when I was ${child.age}. Custody was ${custody}.`);}
+ const orders=establishDivorceSupport(spouse,custody,children,duration);spouse.role='ex';spouse.label='ex-spouse';spouse.married=false;spouse.engaged=false;spouse.divorced=true;spouse.loyalty=clamp(spouse.loyalty-(approach==='contested'?35:approach==='mediation'?20:10));spouse.memory.push(`Divorced ${G.name} after ${duration} year${duration===1?'':'s'} of marriage.`);
+ if(draft.name==='restore'&&marriage.originalLast){G.last=marriage.originalLast;G.name=G.first+' '+G.last;}
+ const supportText=orders.length?orders.map(o=>`${o.direction==='out'?'you pay':'you receive'} ${money(o.annual)}/yr in ${o.kind}`).join('; '):'no ongoing support order';S.happiness=clamp(S.happiness-(approach==='contested'?18:11));S.stress=clamp(S.stress+a.stress);if(S.fame>45&&approach==='contested')S.fame=clamp(S.fame-3);
+ if(!G.divorceHistory)G.divorceHistory=[];G.divorceHistory.push({spouse:spouse.name,spouseId:spouse.id,year:G.year,duration,approach,estate,settlement,fee,debtAssigned,custody:children.length?custody:null,support:orders.map(o=>({kind:o.kind,direction:o.direction,annual:o.annual}))});G.marriage=null;thread('divorce_aftershock',{npc:spouse.id,custody,approach});
+ log(`Your divorce from ${spouse.name} became final after ${duration} year${duration===1?'':'s'} of marriage. ${a.name} cost ${money(fee)} in legal fees, and the property settlement cost ${money(settlement)}.${debtAssigned?` ${spouse.name} assumed ${money(debtAssigned)} of marital debt.`:''} ${homeText}${children.length?` Custody of ${children.length} minor child${children.length===1?'':'ren'} was set as ${custody==='joint'?'shared':custody==='player'?'primary with you':`primary with ${spouse.name}`}.`:''} The order leaves ${supportText}.${courtNote}`,'bad');return true;
+}
+function automaticDivorce(spouse,bad){ensureMarriage(spouse);return finalizeDivorce({spouseId:spouse.id,approach:bad?'contested':'mediation',custody:'joint',property:'equal',home:'keep',name:'keep'});}
+function handleSupportOrders(){
+ if(!G.supportOrders)G.supportOrders=[];let paid=0,received=0;
+ for(const o of G.supportOrders){if(o.active===false)continue;const other=npc(o.to);if(!other||!other.alive){o.active=false;continue;}if(o.kind==='child support'){o.childIds=(o.childIds||[]).filter(id=>{const k=npc(id);return k&&k.alive&&k.age<18;});if(!o.childIds.length){o.active=false;log(`The child-support order connected to ${o.name} ended when the youngest covered child reached adulthood.`);continue;}}else if(o.kind==='alimony'){if((o.yearsLeft||0)<=0){o.active=false;continue;}o.yearsLeft--;}
+  if(o.direction==='out'){pay(o.annual,true);paid+=o.annual;}else{G.cash+=o.annual;received+=o.annual;}if(o.kind==='alimony'&&o.yearsLeft<=0)o.active=false;
+ }
+ if(paid||received)log(`${paid?`Court-ordered family support cost ${money(paid)} this year.`:''}${paid&&received?' ':''}${received?`Support payments brought in ${money(received)}.`:''}`,'money');
+}
+function coParentAction(arg){
+ const parts=String(arg).split('|'),spouse=npc(parts[0]);if(!spouse||!spouse.divorced)return;if(parts[1]==='court'){if(G.flags.familyCourtYear===G.year){toast('Family court has already heard your case this year.');return;}if(!spendAct('family-court'))return;G.flags.familyCourtYear=G.year;const fee=15000;pay(fee,true);const orders=(G.supportOrders||[]).filter(o=>o.active!==false&&o.to===spouse.id),children=kids().filter(k=>k.age<18&&k.otherParentId===spouse.id),win=chance(clamp(.28+K.intellect/300+K.discipline/350+(100-S.stress)/500-G.record.length*.06,.08,.78));if(win){for(const o of orders)o.annual=Math.max(0,Math.round(o.annual*(o.direction==='out' ? .72 : 1.12)));for(const k of children)if(k.custody==='spouse')k.custody='joint';log(`You returned to family court with records, calendars, and ${money(fee)} in legal bills. The judge modified the order in your favor; support and custody were adjusted to the life that exists now.`,'good');}else{spouse.loyalty=clamp(spouse.loyalty-12);S.stress=clamp(S.stress+10);log(`You spent ${money(fee)} returning to family court. The judge left the existing order in place, and ${spouse.name} left the courthouse angrier than before.`,'bad');}afterAction(2);return;}
+ if(!spendAct('coparent'))return;const children=kids().filter(k=>k.age<18&&k.otherParentId===spouse.id);spouse.loyalty=clamp(spouse.loyalty+rnd(4,8));children.forEach(k=>k.loyalty=clamp(k.loyalty+rnd(3,7)));S.stress=clamp(S.stress-4);log(`You and ${spouse.name} handled the calendar, school news, and handoff without turning old injuries into new ones. ${children.length?'The children noticed the absence of a fight.':'Civility felt strange, but useful.'}`,'good');afterAction(0);
 }
 
 /* ---------------- PROPERTY DETAIL & LANDLORDING (#8) ---------------- */
@@ -2693,7 +2965,7 @@ function godApply(){
   renderAll(); saveGame(true); toast('Reality updated.');
 }
 function godMoney(n){ G.cash+=n; renderAll(); saveGame(true); toast(`+${money(n)}`); }
-function godHeal(){ S.health=100; S.stress=clamp(S.stress-40); G.addiction.alcohol=0; G.addiction.drugs=0; renderAll(); toast('Healed.'); }
+function godHeal(){ S.health=100; S.stress=clamp(S.stress-40); G.addiction.alcohol=0; G.addiction.drugs=0; G.conditions=[]; renderAll(); toast('Healed.'); }
 function godImmortal(){ G.flags.immortal=!G.flags.immortal; toast(G.flags.immortal?'You cannot die now.':'Mortality restored.'); openGod(); }
 function godAddItem(){ const id=$('god_item').value; if(!ITEM[id])return; G.items.push({id,cond:100,value:ITEM[id].price,maintain:true}); renderAll(); toast(`${ITEM[id].name} added.`); }
 function godAddProp(){ const id=$('god_prop').value; if(!PROP[id])return; G.props.push({id,cond:100,maintain:true,owned:true}); G.home='own'; renderAll(); toast(`${PROP[id].name} added.`); }
@@ -2819,12 +3091,16 @@ function sanitizeSave(){
  if(!G)return;
  G.items=(G.items||[]).filter(it=>ITEM[it.id]);G.props=(G.props||[]).filter(p=>PROP[p.id]);
  if(G.job&&!JOB[G.job.id])G.job=null;if(G.special&&!SPECIAL[G.special.type])G.special=null;
- if(!G.flags)G.flags={};if(!G.addiction)G.addiction={alcohol:0,drugs:0};if(!G.social)G.social={};if(!G.pets)G.pets=[];
+ if(!G.flags)G.flags={};if(!G.addiction)G.addiction={alcohol:0,drugs:0};if(!G.social)G.social={};if(!G.pets)G.pets=[];if(!Array.isArray(G.conditions))G.conditions=[];G.conditions=G.conditions.filter(c=>DISEASE[c.id]);
+ if(!Array.isArray(G.pensions))G.pensions=[];if(!G.serviceYears||typeof G.serviceYears!=='object')G.serviceYears={};if(!G.highSalary||typeof G.highSalary!=='object')G.highSalary={};if(!Array.isArray(G.careerHistory))G.careerHistory=[];if(!Array.isArray(G.supportOrders))G.supportOrders=[];if(!Array.isArray(G.divorceHistory))G.divorceHistory=[];
  if(!G.school)G.school={popularity:40,clique:null,team:null};if(!G.invest)G.invest={};if(!G.market)G.market={};if(!G.marketChg)G.marketChg={};
  if(!G.threads)G.threads=[];if(!G.arcs)G.arcs=[];if(!G.balance)G.balance={livingCost:0};if(!G.economy)G.economy={cycle:'Expansion',inflation:2.4,rate:4.5,priceIndex:1};if(!G.actionEffects||typeof G.actionEffects!=='object')G.actionEffects={};
  if(G.eduProgram){if(G.eduProgram.gpa==null)G.eduProgram.gpa=clamp(Math.round((G.gpaSeed+S.smarts)/2));if(G.eduProgram.scholarship==null)G.eduProgram.scholarship=0;campusState();}
  if(G.special){const c=G.special;if(c.form==null)c.form=50;if(c.momentum==null)c.momentum=10;if(c.projects==null)c.projects=0;if(c.awards==null)c.awards=0;if(c.residuals==null)c.residuals=0;if(c.catalog==null)c.catalog=0;if(c.focus==null)c.focus=c.type==='actor'?'Film & television':c.type==='musician'?'Rock & pop':pick(SPORTS);if(c.type==='actor')ensureActorCareer();if(c.type==='musician')ensureMusicianCareer();if(c.type==='athlete')ensureAthleteCareer();}
- G.npcs=G.npcs||[];G.npcs.forEach(n=>{if(n.career===undefined)n.career=null;if(n.income===undefined)n.income=0;if(n.partnerName===undefined)n.partnerName=null;if(n.children===undefined)n.children=0;if(n.location===undefined)n.location=G.place;if(n.education===undefined)n.education=0;if(!n.memory)n.memory=[];});
+ G.npcs=G.npcs||[];G.npcs.forEach(n=>{if(n.career===undefined)n.career=null;if(n.income===undefined)n.income=0;if(n.partnerName===undefined)n.partnerName=null;if(n.children===undefined)n.children=0;if(n.location===undefined)n.location=G.place;if(n.education===undefined)n.education=0;if(n.friendOutsideWork===undefined)n.friendOutsideWork=false;if(n.workplaceConflict===undefined)n.workplaceConflict=null;if(!n.memory)n.memory=[];});
+ if(G.job){ensureWorkplace();const j=JOB[G.job.id];G.serviceYears[j.track]=Math.max(G.serviceYears[j.track]||0,G.job.years||0);G.highSalary[j.track]=Math.max(G.highSalary[j.track]||0,jobAnnualPay());}
+ if(G.military){const mpay=(G.military.officer?OFFPAY:MILPAY)[G.military.rank]||0;G.serviceYears.Military=Math.max(G.serviceYears.Military||0,G.military.years||0);G.highSalary.Military=Math.max(G.highSalary.Military||0,mpay);}
+ const spouse=G.npcs.find(n=>n.alive&&n.role==='spouse');if(spouse){ensureMarriage(spouse);for(const k of kids())if(!k.otherParentId)k.otherParentId=spouse.id;}else if(G.marriage)G.marriage=null;
  G.version=GAME_VERSION;
 }
 function homeLabel(){ const p=G.props[G.props.length-1]; return (p&&PROP[p.id])?PROP[p.id].name:(G.home==='rent'?'Renting':'With parents'); }
