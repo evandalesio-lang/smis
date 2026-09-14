@@ -86,6 +86,12 @@ h3.sec{font-family:var(--serif);font-weight:500;font-size:16px;margin:16px 0 6px
 .relbar>div{height:100%;background:var(--green);transition:width .3s}
 .relbar.ok>div{background:var(--gold)}
 .relbar.bad>div{background:var(--red)}
+.traitchips{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0}
+.trait{font-size:11.5px;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:3px 7px}
+.axes{display:grid;grid-template-columns:1fr 1fr;gap:5px 12px;margin:10px 0}
+.axis .lbl{display:flex;justify-content:space-between;color:var(--muted);font-size:11.5px}
+.axis .relbar{margin-top:2px}
+.memory{border-left:2px solid var(--line);padding:4px 0 4px 9px;margin:6px 0;color:var(--muted);font-size:12.5px}
 .person .acts{margin-top:6px}
 button.person{display:flex;align-items:center;gap:8px;width:100%;text-align:left;font:inherit;color:var(--ink);background:transparent;box-sizing:border-box}
 button.person:hover{background:var(--panel2);cursor:pointer}
@@ -126,7 +132,7 @@ button.person .phead{flex:1;margin:0}
 </head>
 <body>
 <header>
-  <h1>SMIS <small>v2.5</small></h1>
+  <h1>SMIS <small>v2.6.1</small></h1>
   <span class="who" id="who"></span>
   <span class="spacer"></span>
   <div class="tools">
@@ -155,9 +161,34 @@ button.person .phead{flex:1;margin:0}
    ===================================================================== */
 
 // ---------- helpers ----------
-const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
-const chance=p=>Math.random()<p;
-const pick=a=>a[Math.floor(Math.random()*a.length)];
+let RNG_SEED=0,RNG_STATE=0;
+function seedNumber(value){
+  if(typeof value==='number'&&Number.isFinite(value))return value>>>0;
+  const text=String(value??'SMIS');let h=2166136261;
+  for(let i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619);}
+  return h>>>0;
+}
+function freshSeed(){
+  try{const a=new Uint32Array(1);crypto.getRandomValues(a);return a[0]>>>0;}
+  catch(e){return (Date.now()^performance.now()*1000)>>>0;}
+}
+function setRandomSeed(seed,state){RNG_SEED=seedNumber(seed)||0x6D2B79F5;RNG_STATE=state==null?RNG_SEED:seedNumber(state);return RNG_SEED;}
+function random(){
+  RNG_STATE=(RNG_STATE+0x6D2B79F5)>>>0;
+  let t=RNG_STATE;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);
+  return ((t^(t>>>14))>>>0)/4294967296;
+}
+function syncRandomState(){if(G)G.rng={seed:RNG_SEED>>>0,state:RNG_STATE>>>0};}
+function restoreRandomState(){
+  const saved=G&&G.rng;
+  if(saved&&Number.isFinite(saved.seed)&&Number.isFinite(saved.state))setRandomSeed(saved.seed,saved.state);
+  else setRandomSeed(seedNumber(`${G&&G.name||'SMIS'}|${G&&G.born||2026}|${G&&G.age||0}`));
+  syncRandomState();
+}
+setRandomSeed(freshSeed());
+const rnd=(a,b)=>Math.floor(random()*(b-a+1))+a;
+const chance=p=>random()<p;
+const pick=a=>a[Math.floor(random()*a.length)];
 const clamp=(v,a=0,b=100)=>Math.max(a,Math.min(b,v));
 const $=id=>document.getElementById(id);
 const money=n=>(n<0?'-':'')+'$'+Math.abs(Math.round(n)).toLocaleString();
@@ -166,7 +197,7 @@ const MALE=['James','Liam','Noah','Ethan','Mason','Logan','Owen','Caleb','Henry'
 const FEMALE=['Emma','Olivia','Ava','Sophia','Mia','Chloe','Harper','Ella','Grace','Lily','Nora','Zoe','Claire','Ivy','Sadie','Maya','Ruby','Jade','Tessa','Lena','Rachel','Dana','Kim','Nicole','Erin','Jenna','Brooke','Vanessa'];
 const LAST=['Carter','Brooks','Reyes','Nguyen','Kowalski','Fischer','Okafor','Santos','Marino','Hughes','Dalton','Keller','Bennett','Hayes','Morales','Petrov','Lindqvist','Walsh','Barnes','Chen','Dixon','Fleming','Garza','Holt','Ivers','Jensen','Knox','Lowe'];
 const SPORTS=['football','basketball','baseball','soccer','MMA','hockey'];
-const GAME_VERSION='2.5';
+const GAME_VERSION='2.6.1';
 
 // ---------- DATA: skills ----------
 const SKILLS={acting:'Acting',music:'Music',athletics:'Athletics',fitness:'Fitness',intellect:'Intellect',charisma:'Charisma',discipline:'Discipline',combat:'Combat',cooking:'Cooking',tech:'Tech',writing:'Writing',business:'Business',gardening:'Gardening',stealth:'Stealth',driving:'Driving'};
@@ -1024,19 +1055,50 @@ let S=null, K=null; // shortcuts into G.stats / G.skills
 let yearUndo=null;  // exact state immediately before the most recent Age up
 const SAVEKEY='smis_save_v1';
 
+// One source of truth for the player's age band and compulsory-school stage.
+// Feature code can read these helpers instead of inventing overlapping age rules.
+function lifeStageForAge(age){
+ age=Math.max(0,Math.floor(Number(age)||0));
+ if(age<=1)return 'baby';
+ if(age<=4)return 'child';
+ if(age<=10)return 'elementary';
+ if(age<=13)return 'middle-school';
+ if(age<=17)return 'high-school';
+ if(age<=25)return 'young-adult';
+ if(age<=64)return 'adult';
+ return 'senior';
+}
+function schoolStageForAge(age){
+ age=Math.floor(Number(age));
+ return age>=5&&age<=10?'elementary':age>=11&&age<=13?'middle':age>=14&&age<=17?'high':null;
+}
+function leftSchoolEarly(){return !!(G&&G.flags&&(G.flags.highSchoolDropout||G.flags.leftSchoolForCareer));}
+function reconcileLifeState(){
+ if(!G)return;
+ G.age=Math.max(0,Math.floor(Number(G.age)||0));
+ if(!Number.isFinite(G.born))G.born=2026;
+ G.born=Math.floor(G.born);
+ G.year=G.born+G.age;
+ G.lifeStage=lifeStageForAge(G.age);
+ const expected=schoolStageForAge(G.age);
+ if(expected&&!leftSchoolEarly()){G.inSchool=true;G.schoolStage=expected;}
+ else{G.inSchool=false;G.schoolStage=null;}
+}
+
 // ---- state constructors ----
 function newSkills(){const o={};for(const k in SKILLS)o[k]=0;return o;}
-function rollFamilyWealth(){const r=Math.random();return r<.42?'modest':r<.76?'comfortable':r<.94?'wealthy':'affluent';}
+function rollFamilyWealth(){const r=random();return r<.42?'modest':r<.76?'comfortable':r<.94?'wealthy':'affluent';}
 function blankLife(cfg){
+ setRandomSeed(cfg.seed==null?freshSeed():cfg.seed);
  const sex=cfg.sex, first=cfg.name||pick(sex==='Male'?MALE:FEMALE), last=cfg.last||pick(LAST);
  const place=cfg.place||pick(PLACES);
  const dadL=last, momFirst=pick(FEMALE), dadFirst=pick(MALE);
  const g={
   name:first+' '+last, first, last, sex, place, country:cfg.country||countryOf(place), talent:cfg.talent||null,
-  age:0, born:2026, alive:true, cause:null,
+  age:0, born:2026, alive:true, cause:null, lifeStage:'baby', rng:{seed:RNG_SEED,state:RNG_STATE},
   stats:{health:cfg.health??rnd(70,100),happiness:cfg.happiness??rnd(70,100),smarts:cfg.smarts??rnd(20,80),looks:cfg.looks??rnd(20,90),fitness:cfg.fitness??20,fame:0,stress:cfg.stress??10},
   skills:newSkills(),
-  edu:0, eduProgram:null, inSchool:true, schoolStage:'elementary', major:null, gpaSeed:rnd(50,95), familyWealth:rollFamilyWealth(), school:{popularity:rnd(25,55),clique:null,team:null,teamRole:null,seasonYear:null,type:'public',name:'Public school',classmateIds:[],facultyIds:[],danceYear:null,promCourt:null,club:null,clubYear:null,schoolEvents:{},schoolChoiceYear:null,recommendation:false}, invest:{}, market:{}, marketChg:{},
+  edu:0, eduProgram:null, inSchool:false, schoolStage:null, major:null, gpaSeed:rnd(50,95), familyWealth:rollFamilyWealth(), school:{popularity:rnd(25,55),clique:null,team:null,teamRole:null,seasonYear:null,type:'public',name:'Public school',classmateIds:[],facultyIds:[],danceYear:null,promAttended:false,promCourt:null,club:null,clubYear:null,schoolEvents:{},schoolChoiceYear:null,recommendation:false}, invest:{}, market:{}, marketChg:{},
   cash:0, debt:0, creditScore:600,
   job:null, special:null, military:null, pensions:[], serviceYears:{}, highSalary:{}, careerHistory:[],
   addiction:{alcohol:0,drugs:0},
@@ -1059,12 +1121,53 @@ function blankLife(cfg){
    if(T.skill && g.skills[T.skill]!==undefined) g.skills[T.skill]=Math.max(g.skills[T.skill], T.start||25);
    if(T.aux){ if(g.stats[T.aux]!==undefined) g.stats[T.aux]=Math.max(g.stats[T.aux], T.start||25);
               else if(g.skills[T.aux]!==undefined) g.skills[T.aux]=Math.max(g.skills[T.aux], Math.round((T.start||25)*0.6)); } }
+ g.rng={seed:RNG_SEED>>>0,state:RNG_STATE>>>0};
  return g;
 }
 let NPCID=1;
-function mkNPC(role,label,name,ageOffset){return {
+const PERSONALITY_TRAITS={
+ kindness:{high:'kind',low:'cold'},volatility:{high:'volatile',low:'even-tempered'},ambition:{high:'ambitious',low:'unhurried'},intelligence:{high:'sharp',low:'simple-minded'},
+ generosity:{high:'generous',low:'tightfisted'},jealousy:{high:'jealous',low:'secure'},attractiveness:{high:'striking',low:'plain'},strictness:{high:'strict',low:'easygoing'},morality:{high:'principled',low:'unscrupulous'}
+};
+const RELATIONSHIP_AXES={connection:'Connection',respect:'Respect',attraction:'Attraction',conflict:'Conflict',familiarity:'Familiarity'};
+function rollPersonality(role){
+ const p={};for(const key of Object.keys(PERSONALITY_TRAITS))p[key]=clamp(rnd(18,82));
+ if(role==='parent'){p.kindness=clamp(p.kindness+rnd(-4,16));p.strictness=clamp(p.strictness+rnd(5,20));p.generosity=clamp(p.generosity+rnd(0,14));}
+ if(role==='faculty'){p.intelligence=clamp(p.intelligence+rnd(8,22));p.strictness=clamp(p.strictness+rnd(4,20));}
+ if(role==='coworker'){p.ambition=clamp(p.ambition+rnd(4,22));}
+ if(role==='child'||role==='grandchild'){p.volatility=clamp(p.volatility+rnd(-6,12));}
+ return p;
+}
+function createRelationship(role,connection){
+ const familyRole=['parent','sibling','child','grandchild'].includes(role),romantic=['partner','spouse','fling','ex'].includes(role);
+ const base=Number.isFinite(connection)?connection:(role==='parent'?70:role==='sibling'?60:50);
+ return {connection:clamp(base),respect:clamp(role==='parent'?65:role==='faculty'?55:role==='coworker'?48:base+rnd(-12,10)),attraction:familyRole||role==='faculty'?0:clamp(romantic?rnd(48,76):rnd(5,42)),conflict:clamp(rnd(2,18)),familiarity:clamp(familyRole?rnd(75,98):romantic?rnd(45,70):rnd(20,48)),_legacyLoyalty:clamp(base)};
+}
+function ensurePersonality(n){if(!n.personality||typeof n.personality!=='object')n.personality=rollPersonality(n.role);for(const key of Object.keys(PERSONALITY_TRAITS))n.personality[key]=clamp(Number.isFinite(n.personality[key])?n.personality[key]:rnd(25,75));return n.personality;}
+function relationshipState(n){
+ if(!n)return null;ensurePersonality(n);
+ if(!n.relationship||typeof n.relationship!=='object')n.relationship=createRelationship(n.role,n.loyalty);
+ const r=n.relationship;for(const key of Object.keys(RELATIONSHIP_AXES))r[key]=clamp(Number.isFinite(r[key])?r[key]:(key==='connection'?n.loyalty||50:key==='attraction'?0:key==='conflict'?10:45));
+ const last=Number.isFinite(r._legacyLoyalty)?r._legacyLoyalty:r.connection;
+ if(Number.isFinite(n.loyalty)&&n.loyalty!==last){const delta=n.loyalty-last;r.connection=clamp(r.connection+delta);if(delta<0){r.conflict=clamp(r.conflict+Math.ceil(Math.abs(delta)*.65));r.respect=clamp(r.respect+Math.floor(delta*.28));}else{r.familiarity=clamp(r.familiarity+Math.ceil(delta*.18));r.conflict=clamp(r.conflict-Math.ceil(delta*.12));}}
+ n.loyalty=Math.round(r.connection);r._legacyLoyalty=n.loyalty;
+ if(!Array.isArray(n.relationshipHistory))n.relationshipHistory=(Array.isArray(n.memory)?n.memory.slice(-5):[]).map(text=>({year:null,age:null,type:'legacy',text,impact:{}}));
+ return r;
+}
+function rememberNPC(n,text,type='moment',impact={}){if(!n)return;if(!Array.isArray(n.memory))n.memory=[];n.memory.push(text);if(n.memory.length>30)n.memory=n.memory.slice(-30);if(!Array.isArray(n.relationshipHistory))n.relationshipHistory=[];n.relationshipHistory.push({year:G?G.year:null,age:G?G.age:null,type,text,impact});if(n.relationshipHistory.length>20)n.relationshipHistory=n.relationshipHistory.slice(-20);}
+function changeRelationship(n,changes,memory,type){
+ const r=relationshipState(n);if(!r)return null;for(const key of Object.keys(changes||{}))if(key in RELATIONSHIP_AXES)r[key]=clamp(r[key]+changes[key]);n.loyalty=Math.round(r.connection);r._legacyLoyalty=n.loyalty;
+ if(memory)rememberNPC(n,memory,type||'interaction',changes);updateRelationshipStatus(n);return r;
+}
+function syncAllRelationships(){if(!G||!Array.isArray(G.npcs))return;G.npcs.forEach(n=>{relationshipState(n);updateRelationshipStatus(n);});}
+function updateRelationshipStatus(n){const r=relationshipState(n),old=n.socialStatus||null;let next=null;if(r.conflict>=70&&r.connection<28)next='enemy';else if(r.conflict>=48&&r.respect<42)next='rival';else if(['parent','sibling','child','grandchild'].includes(n.role)&&r.connection<20)next='estranged';n.socialStatus=next;if(old!==next&&G&&Array.isArray(G._npcNews)){if(next==='enemy')npcNews(n,`${n.name} stopped behaving like somebody merely angry with you. Whatever existed between you had become open hostility.`,'bad');else if(next==='rival')npcNews(n,`${n.name} had become a rival—close enough to watch you, resentful enough to compete.`,'bad');else if(old&&!next)npcNews(n,`The worst of the conflict with ${n.name} finally cooled. Neither of you called it forgiveness, but the hostility loosened.`,'good');}return next;}
+function traitSummary(n,count=3){const p=ensurePersonality(n);return Object.keys(PERSONALITY_TRAITS).map(key=>({key,value:p[key],distance:Math.abs(p[key]-50)})).sort((a,b)=>b.distance-a.distance).slice(0,count).map(x=>x.value>=50?PERSONALITY_TRAITS[x.key].high:PERSONALITY_TRAITS[x.key].low);}
+function personalityHtml(n){return `<div class="traitchips">${traitSummary(n,4).map(x=>`<span class="trait">${esc(x)}</span>`).join('')}</div>`;}
+function relationshipAxesHtml(n){const r=relationshipState(n),hideAttraction=['parent','sibling','child','grandchild','faculty'].includes(n.role);return `<div class="axes">${Object.entries(RELATIONSHIP_AXES).filter(([key])=>key!=='attraction'||!hideAttraction).map(([key,label])=>`<div class="axis"><div class="lbl"><span>${label}</span><span>${Math.round(r[key])}</span></div>${relbar(key==='conflict'?100-r[key]:r[key])}</div>`).join('')}</div>`;}
+function compatibilityWithPlayer(n){const r=relationshipState(n),p=ensurePersonality(n);return clamp(Math.round(r.connection*.26+r.respect*.18+r.attraction*.26+r.familiarity*.12+(100-r.conflict)*.18+(p.kindness-50)*.08+(p.morality-50)*.05-(p.volatility-50)*.05));}
+function mkNPC(role,label,name,ageOffset){const loyalty=role==='parent'?70:role==='sibling'?60:50;return {
  id:'n'+(NPCID++),role,label,name,alive:true,
- loyalty:role==='parent'?70:role==='sibling'?60:50,
+ loyalty,personality:rollPersonality(role),relationship:createRelationship(role,loyalty),relationshipHistory:[],socialStatus:null,
  age:Math.max(0,(ageOffset||0)),memory:[],met:0,married:false,
  career:null,income:0,partnerName:null,children:0,location:null,education:0
 };}
@@ -1087,17 +1190,45 @@ const NPC_CAREERS=[
  ['small business owner',88000],['civil engineer',97000],['social worker',54000],['mechanic',65000]
 ];
 function npcNews(n,text,kind){
- if(!n||n.loyalty<42)return;
+ if(!n||(n.loyalty<42&&!n.socialStatus))return;
  if(!G._npcNews)G._npcNews=[];
  G._npcNews.push({text,kind:kind||null,priority:n.loyalty+(n.role==='child'||n.role==='parent'?20:0)});
+}
+function handleNPCRelationshipYear(n){
+ const r=relationshipState(n),p=ensurePersonality(n),local=n.location===G.place||['partner','spouse','child'].includes(n.role);
+ r.familiarity=clamp(r.familiarity+(local?1:-2));
+ if(r.conflict>0)r.conflict=clamp(r.conflict-(p.volatility>72?1:rnd(1,3)));
+ if(!local&&chance(.3))r.connection=clamp(r.connection-1);
+ if(local&&p.kindness>72&&r.connection<82&&chance(.18))r.connection=clamp(r.connection+1);
+ if((n.role==='partner'||n.role==='spouse')&&p.jealousy>70&&S.fame>35&&chance(.08)){
+  r.conflict=clamp(r.conflict+rnd(5,11));r.respect=clamp(r.respect-rnd(1,4));rememberNPC(n,`${G.name}'s public attention stirred jealousy at age ${G.age}.`,'jealousy',{conflict:8,respect:-2});
+  npcNews(n,`${n.name} tried to laugh off the attention strangers gave you, but the joke sharpened before it ended.`,'bad');
+ }
+ if(n.role==='friend'&&p.kindness>76&&S.stress>68&&chance(.06)){
+  r.connection=clamp(r.connection+3);r.respect=clamp(r.respect+2);S.stress=clamp(S.stress-4);rememberNPC(n,`I noticed ${G.name} was overwhelmed and showed up at age ${G.age}.`,'support',{connection:3,respect:2});
+  npcNews(n,`${n.name} noticed you were overwhelmed before you admitted it. They arrived with food, stayed without demanding conversation, and left the kitchen cleaner than they found it.`,'good');
+ }
+ if(n.role==='parent'&&p.strictness>74&&G.age<=22&&(G.record.length||G.addiction.alcohol>35||G.addiction.drugs>25)&&chance(.08)){
+  r.connection=clamp(r.connection-2);r.respect=clamp(r.respect-3);r.conflict=clamp(r.conflict+7);rememberNPC(n,`I confronted ${G.name} about the direction of their life at age ${G.age}.`,'family-conflict',{connection:-2,respect:-3,conflict:7});
+  npcNews(n,`${n.name} asked you to sit down and then spoke as if the verdict had already been written. Concern and control sounded almost identical in their voice.`,'bad');
+ }
+ if((n.role==='partner'||n.role==='spouse')&&p.generosity>78&&G.debt>12000&&chance(.05)){
+  const help=Math.min(G.debt,rnd(700,2600));G.debt-=help;r.connection=clamp(r.connection+3);r.respect=clamp(r.respect+2);rememberNPC(n,`I helped ${G.name} carry ${money(help)} of debt at age ${G.age}.`,'support',{connection:3,respect:2});
+  npcNews(n,`${n.name} quietly put ${money(help)} toward the debt you had both been pretending was only yours. “We live in the same life,” they said.`,'money');
+ }
+ const workplace=G.job&&G.job.workplace,atWork=!!(workplace&&(n.id===workplace.supervisor||(workplace.coworkers||[]).includes(n.id)));
+ if(atWork&&p.ambition>76&&G.job.recognition>45&&chance(.07)){
+  r.conflict=clamp(r.conflict+rnd(4,9));r.respect=clamp(r.respect+rnd(1,3));n.workplaceConflict=n.workplaceConflict||'quiet competition over the next promotion';
+ }
+ n.loyalty=Math.round(r.connection);r._legacyLoyalty=n.loyalty;updateRelationshipStatus(n);
 }
 function handleNPCYear(){
  G._npcNews=[];
  const people=allNPCs().slice();
  for(const n of people){
-  n.age++;
+ n.age++;
   if(!n.location)n.location=G.place;
-  if(chance(n.location===G.place?0.22:0.38))n.loyalty=clamp(n.loyalty-1);
+  handleNPCRelationshipYear(n);
 
   if(n.age>=18&&!n.career&&chance(0.24)){
    const [title,pay]=pick(NPC_CAREERS);n.career=title;n.income=Math.round(pay*rnd(82,118)/100);n.education=rnd(1,5);
@@ -1172,18 +1303,22 @@ let pendingChoice=null; // when an event needs a decision we pause here
 function ageUp(){
  if(!G.alive)return;
  if(pendingChoice){toast('Resolve the choice first.');return;}
+ syncRandomState();
  yearUndo=JSON.stringify({G,NPCID});
  G.age++; G.year++;
+ G.lifeStage=lifeStageForAge(G.age);
+ if(G.age<18)reconcileLifeState();
  G.actionEffects={};
  startYearLog();
  // jail
  if(G.jailUntil>G.age){
   log(`You spent the year in prison. The days are identical and the nights are worse. You are ${G.jailUntil-G.age} year(s) from release.`,'bad');
   K.combat=clamp(K.combat+2);K.stealth=clamp(K.stealth+2);S.happiness=clamp(S.happiness-6);
-  handlePensions();handleSupportOrders();handleConditionsYear();handleStressConsequences();handleNPCYear();tickThreads();if(!pendingChoice)tickArcs();handleAgingAndDeath();finishYear();return;
+  handlePensions();handleSupportOrders();handleConditionsYear();handleStressConsequences();handleNPCYear();tickThreads();if(!pendingChoice)tickArcs();handleAgingAndDeath();reconcileLifeState();finishYear();return;
  }
  // schooling
  handleSchool();
+ reconcileLifeState();
  handleEducation();
  // job income + growth
  handleJobYear();
@@ -1344,7 +1479,7 @@ function conditionEligible(d){return G.age>=d.min&&G.age<=d.max&&(!d.cond||safeC
 function addCondition(id,diagnosed){const d=DISEASE[id];if(!d||!conditionEligible(d))return null;if(!G.conditions)G.conditions=[];const c={id:d.id,diagnosed:!!diagnosed,severity:rnd(1,d.serious?3:2),years:0,controlledUntil:0,lastTreatedYear:null};G.conditions.push(c);log(diagnosed?`A doctor diagnosed ${d.name.toLowerCase()}.`:`${d.symptom} You do not yet know what is causing it.`,d.serious?'bad':null);return c;}
 function maybeDevelopCondition(){
  if((G.conditions||[]).length>=4)return;const risk=clamp(.012+G.age/3500+Math.max(0,S.stress-55)*.0013+Math.max(0,50-S.health)*.0008+(G.addiction.drugs+G.addiction.alcohol)/3200,.008,.16);if(!chance(risk))return;
- const eligible=DISEASES.filter(conditionEligible);if(!eligible.length)return;let total=eligible.reduce((n,d)=>n+d.weight,0),roll=Math.random()*total;for(const d of eligible){roll-=d.weight;if(roll<=0){addCondition(d.id,false);return;}}
+ const eligible=DISEASES.filter(conditionEligible);if(!eligible.length)return;let total=eligible.reduce((n,d)=>n+d.weight,0),roll=random()*total;for(const d of eligible){roll-=d.weight;if(roll<=0){addCondition(d.id,false);return;}}
 }
 function handleConditionsYear(){
  if(!G.conditions)G.conditions=[];const keep=[];
@@ -1421,7 +1556,9 @@ function toast(msg){
   t.textContent=msg;t.style.opacity='1';
   clearTimeout(t._h);t._h=setTimeout(()=>{t.style.transition='opacity .5s';t.style.opacity='0';},1600);
 }
+function normalizeCoreMeters(){if(!G||!G.stats||!G.skills)return;for(const key of ['health','happiness','smarts','looks','fitness','fame','stress'])G.stats[key]=clamp(Number.isFinite(G.stats[key])?G.stats[key]:50);for(const key of Object.keys(SKILLS))G.skills[key]=clamp(Number.isFinite(G.skills[key])?G.skills[key]:0);}
 function finishYear(){
+  normalizeCoreMeters();
   renderAll();
   // Graduation gets first claim on the decision window.
   if(G.flags.collegePrompt&&!pendingChoice){ G.flags.collegePrompt=false; offerCollegeChoice(); }
@@ -1454,6 +1591,7 @@ function renderModalChoice(){
 function resolveChoice(i){
   const p=pendingChoice; pendingChoice=null; closeModal();
   try{ p.opts[i].fn(); }catch(e){ console.error(e); }
+  normalizeCoreMeters();syncAllRelationships();
   renderAll(); saveGame(true);
   scrollStoryLatest();
   if(!G.alive){ setTimeout(openObituary,300); }
@@ -1471,7 +1609,7 @@ function rollEvent(){
   const cands=EVENTS.filter(e=>G.age>=e.min&&G.age<=e.max&&(!e.cond||safeCond(e.cond)));
   if(!cands.length)return;
   let total=0; for(const e of cands)total+=(e.w||1);
-  let r=Math.random()*total;
+  let r=random()*total;
   for(const e of cands){ r-=(e.w||1); if(r<=0){ try{e.run();}catch(err){console.error('event',e.id,err);} return; } }
 }
 function safeCond(fn){ try{return fn();}catch(e){return false;} }
@@ -1500,9 +1638,10 @@ function ensureWorkplace(){
 }
 function workContacts(){const w=ensureWorkplace();if(!w)return[];return [npc(w.supervisor),...w.coworkers.map(npc)].filter(Boolean);}
 function currentWorkContact(n){if(!G.job||!n)return false;const w=ensureWorkplace();return n.id===w.supervisor||w.coworkers.includes(n.id);}
+function workRelationshipScore(n,boss){if(!n)return 40;const r=relationshipState(n),p=ensurePersonality(n);return clamp(Math.round(r.respect*(boss ? .64 : .46)+r.connection*(boss ? .2 : .32)+(100-r.conflict)*.14+r.familiarity*.08+(p.ambition-50)*.04));}
 function workNetwork(){
-  if(!G.job)return 0;const w=ensureWorkplace(),sup=npc(w.supervisor),peers=w.coworkers.map(npc).filter(Boolean),peerAvg=peers.length?peers.reduce((a,n)=>a+n.loyalty,0)/peers.length:40;
-  return clamp(Math.round((sup?sup.loyalty:40)*.55+peerAvg*.27+(G.job.recognition||0)*.18));
+  if(!G.job)return 0;const w=ensureWorkplace(),sup=npc(w.supervisor),peers=w.coworkers.map(npc).filter(Boolean),peerAvg=peers.length?peers.reduce((a,n)=>a+workRelationshipScore(n,false),0)/peers.length:40;
+  return clamp(Math.round(workRelationshipScore(sup,true)*.55+peerAvg*.27+(G.job.recognition||0)*.18));
 }
 function archiveJob(reason){if(!G.job)return;const j=JOB[G.job.id];if(!j)return;if(!G.careerHistory)G.careerHistory=[];G.careerHistory.push({id:j.id,title:j.title,track:j.track,startYear:G.job.startYear??G.year,endYear:G.year,years:G.job.years||0,reason:reason||'left'});}
 function leaveWorkplace(){if(!G.job||!G.job.workplace)return;for(const n of workContacts()){n.workRole=null;if(n.friendOutsideWork){n.role='friend';n.label='friend & former coworker';}else{n.label='former coworker';}}}
@@ -1539,7 +1678,7 @@ function promotionReadiness(next){
 }
 function requestPromotion(id){
   if(!G.job)return;const current=JOB[G.job.id],next=JOB[id];if(!next||!(current.next||[]).includes(id)){toast('That role is not on your current career ladder.');return;}const check=promotionReadiness(next);if(!check.ready){toast('You have not met every promotion threshold yet.');return;}if(G.job.lastPromotionReviewYear===G.year){toast('Management has already reviewed you for promotion this year.');return;}if(!spendAct('promotion-review'))return;G.job.lastPromotionReviewYear=G.year;
-  const sup=npc(ensureWorkplace().supervisor),support=sup?sup.loyalty:45,odds=clamp(.48+(G.job.perf-check.requirements.perf)/120+(workNetwork()-check.requirements.network)/140+(G.job.recognition||0)/350+support/500-(G.job.hrWarnings||0)*.08,.18,.94);
+  const sup=npc(ensureWorkplace().supervisor),support=workRelationshipScore(sup,true),odds=clamp(.42+(G.job.perf-check.requirements.perf)/120+(workNetwork()-check.requirements.network)/140+(G.job.recognition||0)/350+support/420-(G.job.hrWarnings||0)*.08,.16,.94);
   if(chance(odds)){promoteJob(id);S.happiness=clamp(S.happiness+6);afterAction(2);return;}G.job.perf=clamp(G.job.perf-2);G.job.recognition=clamp(G.job.recognition-3);S.stress=clamp(S.stress+7);log(`You made the case for ${next.title}. The committee agreed that you were qualified, praised your contribution, and chose somebody else. Your supervisor used “next cycle” like it was a promise.`,'bad');afterAction(0);
 }
 function openWorkHours(){
@@ -1548,19 +1687,19 @@ function openWorkHours(){
 function setWorkHours(hours){if(!G.job)return;const j=JOB[G.job.id],s=workSchedules(j).find(x=>x.hours===+hours);if(!s)return;G.job.hours=s.hours;forceClose();log(`You set your schedule at roughly ${s.hours} hours a week. ${s.note}`,'money');afterAction(0);}
 function workInteract(id,kind){
   const n=npc(id);if(!n||!currentWorkContact(n))return;if(!spendAct('work-'+kind))return;const isBoss=n.id===G.job.workplace.supervisor;
-  if(kind==='collaborate'){n.loyalty=clamp(n.loyalty+rnd(5,10));G.job.perf=clamp(G.job.perf+rnd(3,7));G.job.effort+=rnd(3,6);G.job.recognition=clamp(G.job.recognition+rnd(1,4));K.discipline=clamp(K.discipline+2);log(`You and ${n.name} took on a difficult piece of work together. ${isBoss?'They saw how you handled the pressure up close.':'By the deadline, each of you knew exactly what the other did well.'}`,'good');}
-  else if(kind==='network'){const cost=120;if(!pay(cost,true)){cancelSpentAction();return;}n.loyalty=clamp(n.loyalty+rnd(4,8));G.job.recognition=clamp(G.job.recognition+rnd(isBoss?5:3,isBoss?10:7));K.charisma=clamp(K.charisma+2);log(`You took ${n.name} to lunch and let the conversation wander beyond the work in front of you. ${isBoss?'They began talking about where the department was going—and who might go with it.':'A name became a relationship, which is how networks are actually built.'}`,'good');}
-  else if(kind==='befriend'){n.loyalty=clamp(n.loyalty+rnd(8,14));n.friendOutsideWork=true;n.label=isBoss?'friend & supervisor':'friend & coworker';S.happiness=clamp(S.happiness+3);log(`You and ${n.name} spent time together outside work. The conversation survived the moment nobody could complain about the office anymore, which is how you knew this might be a real friendship.`,'good');}
-  else if(kind==='confront'){if(n.workplaceConflict){const issue=n.workplaceConflict;n.workplaceConflict=null;if(chance(.45+K.charisma/220)){n.loyalty=clamp(n.loyalty+3);G.job.recognition=clamp(G.job.recognition+3);log(`You confronted ${n.name} about ${issue}. The conversation stayed quiet, direct, and uncomfortable. They backed down, and the problem stopped.`,'good');}else{n.loyalty=clamp(n.loyalty-15);S.stress=clamp(S.stress+7);thread('office_war',{name:n.name,npc:n.id});log(`You confronted ${n.name}. Voices rose, doors closed, and the original problem acquired witnesses. Whatever happened next, it would no longer stay between the two of you.`,'bad');}}else{n.loyalty=clamp(n.loyalty-6);log(`You confronted ${n.name} without much to confront them with. They left the conversation confused and less inclined to help you.`,'bad');}}
+  if(kind==='collaborate'){changeRelationship(n,{connection:rnd(3,7),respect:rnd(6,11),familiarity:4,conflict:-2},`${G.name} proved dependable on a difficult project at age ${G.age}.`,'work');G.job.perf=clamp(G.job.perf+rnd(3,7));G.job.effort+=rnd(3,6);G.job.recognition=clamp(G.job.recognition+rnd(1,4));K.discipline=clamp(K.discipline+2);log(`You and ${n.name} took on a difficult piece of work together. ${isBoss?'They saw how you handled the pressure up close.':'By the deadline, each of you knew exactly what the other did well.'}`,'good');}
+  else if(kind==='network'){const cost=120;if(!pay(cost,true)){cancelSpentAction();return;}changeRelationship(n,{connection:rnd(4,7),respect:rnd(2,5),familiarity:rnd(4,7),conflict:-1},`${G.name} took me to lunch and built a professional connection at age ${G.age}.`,'work');G.job.recognition=clamp(G.job.recognition+rnd(isBoss?5:3,isBoss?10:7));K.charisma=clamp(K.charisma+2);log(`You took ${n.name} to lunch and let the conversation wander beyond the work in front of you. ${isBoss?'They began talking about where the department was going—and who might go with it.':'A name became a relationship, which is how networks are actually built.'}`,'good');}
+  else if(kind==='befriend'){changeRelationship(n,{connection:rnd(8,13),respect:3,familiarity:8,conflict:-3},`${G.name} became my friend outside work at age ${G.age}.`,'friendship');n.friendOutsideWork=true;n.label=isBoss?'friend & supervisor':'friend & coworker';S.happiness=clamp(S.happiness+3);log(`You and ${n.name} spent time together outside work. The conversation survived the moment nobody could complain about the office anymore, which is how you knew this might be a real friendship.`,'good');}
+  else if(kind==='confront'){if(n.workplaceConflict){const issue=n.workplaceConflict,nr=relationshipState(n),traits=ensurePersonality(n);n.workplaceConflict=null;if(chance(clamp(.28+K.charisma/260+nr.respect/300+(100-nr.conflict)/500-traits.volatility/700,.18,.86))){changeRelationship(n,{connection:2,respect:5,conflict:-rnd(8,15)},`${G.name} confronted me directly and fairly about ${issue}.`,'work-repair');G.job.recognition=clamp(G.job.recognition+3);log(`You confronted ${n.name} about ${issue}. The conversation stayed quiet, direct, and uncomfortable. They backed down, and the problem stopped.`,'good');}else{changeRelationship(n,{connection:-12,respect:-6,conflict:rnd(12,20)},`${G.name} confronted me and the dispute escalated at age ${G.age}.`,'work-conflict');S.stress=clamp(S.stress+7);thread('office_war',{name:n.name,npc:n.id});log(`You confronted ${n.name}. Voices rose, doors closed, and the original problem acquired witnesses. Whatever happened next, it would no longer stay between the two of you.`,'bad');}}else{changeRelationship(n,{connection:-5,respect:-4,conflict:7},`${G.name} confronted me without cause at age ${G.age}.`,'work-conflict');log(`You confronted ${n.name} without much to confront them with. They left the conversation confused and less inclined to help you.`,'bad');}}
   afterAction(0);
 }
 function workTakeCredit(id){
-  const n=npc(id);if(!n||!currentWorkContact(n)||n.id===G.job.workplace.supervisor)return;if(G.job.lastCreditTheftYear===G.year){toast('You have already gambled your reputation this way this year.');return;}if(!spendAct('work-steal-credit'))return;G.job.lastCreditTheftYear=G.year;G.job.perf=clamp(G.job.perf+11);G.job.recognition=clamp(G.job.recognition+9);n.loyalty=clamp(n.loyalty-28);n.workplaceConflict='you taking credit for their work';n.memory.push(`${G.name} took credit for my work at age ${G.age}.`);thread('stolen_credit',{npc:n.id,name:n.name,job:G.job.id});log(`You presented ${n.name}'s work as your own. The room congratulated you; ${n.name} said nothing and watched every person who did. Your performance rating climbed. A receipt began aging in somebody else's desk.`,'money');afterAction(2);
+  const n=npc(id);if(!n||!currentWorkContact(n)||n.id===G.job.workplace.supervisor)return;if(G.job.lastCreditTheftYear===G.year){toast('You have already gambled your reputation this way this year.');return;}if(!spendAct('work-steal-credit'))return;G.job.lastCreditTheftYear=G.year;G.job.perf=clamp(G.job.perf+11);G.job.recognition=clamp(G.job.recognition+9);changeRelationship(n,{connection:-28,respect:-35,conflict:32},`${G.name} took credit for my work at age ${G.age}.`,'betrayal');n.workplaceConflict='you taking credit for their work';thread('stolen_credit',{npc:n.id,name:n.name,job:G.job.id});log(`You presented ${n.name}'s work as your own. The room congratulated you; ${n.name} said nothing and watched every person who did. Your performance rating climbed. A receipt began aging in somebody else's desk.`,'money');afterAction(2);
 }
 function workReportHR(id){
   const n=npc(id);if(!n||!currentWorkContact(n))return;if(n.lastHRReportYear===G.year){toast('HR has already received your complaint about this person this year.');return;}if(!spendAct('work-hr-report'))return;n.lastHRReportYear=G.year;const valid=!!n.workplaceConflict,proof=clamp(.42+K.discipline/250+K.intellect/350+(valid ? .28 : -.18),.08,.92);
-  if(valid&&chance(proof)){const issue=n.workplaceConflict;n.workplaceConflict=null;n.loyalty=clamp(n.loyalty-35);G.job.recognition=clamp(G.job.recognition+4);G.job.perf=clamp(G.job.perf+3);log(`You documented ${issue} and reported ${n.name} to HR. Emails, dates, and witnesses mattered. HR substantiated the complaint and issued discipline. ${n.name} left the meeting looking at you like the story was not over.`,'good');if(chance(.3))thread('office_war',{name:n.name,npc:n.id});}
-  else{n.loyalty=clamp(n.loyalty-30);G.job.hrWarnings=(G.job.hrWarnings||0)+1;G.job.perf=clamp(G.job.perf-9);G.job.recognition=clamp(G.job.recognition-8);S.stress=clamp(S.stress+8);log(valid?`You reported ${n.name}, but HR called the evidence inconclusive. The complaint became “interpersonal conflict,” and both names went into the file.`:`You reported ${n.name} without a documentable violation. HR closed the complaint and warned you about misuse of the process. The office learned anyway.`,'bad');}
+  if(valid&&chance(proof)){const issue=n.workplaceConflict;n.workplaceConflict=null;changeRelationship(n,{connection:-30,respect:-22,conflict:28},`${G.name} reported me to HR at age ${G.age}.`,'work-conflict');G.job.recognition=clamp(G.job.recognition+4);G.job.perf=clamp(G.job.perf+3);log(`You documented ${issue} and reported ${n.name} to HR. Emails, dates, and witnesses mattered. HR substantiated the complaint and issued discipline. ${n.name} left the meeting looking at you like the story was not over.`,'good');if(chance(.3))thread('office_war',{name:n.name,npc:n.id});}
+  else{changeRelationship(n,{connection:-26,respect:-28,conflict:32},`${G.name}'s HR complaint put my name in a file at age ${G.age}.`,'work-conflict');G.job.hrWarnings=(G.job.hrWarnings||0)+1;G.job.perf=clamp(G.job.perf-9);G.job.recognition=clamp(G.job.recognition-8);S.stress=clamp(S.stress+8);log(valid?`You reported ${n.name}, but HR called the evidence inconclusive. The complaint became “interpersonal conflict,” and both names went into the file.`:`You reported ${n.name} without a documentable violation. HR closed the complaint and warned you about misuse of the process. The office learned anyway.`,'bad');}
   afterAction(0);
 }
 function handleWorkplaceIncident(){
@@ -1827,6 +1966,8 @@ function jail(years,crime){
 // ---- save / load / export / import ----
 function saveGame(silent){
   try{
+    syncAllRelationships();
+    syncRandomState();
     localStorage.setItem(SAVEKEY,JSON.stringify({G,NPCID}));
     if(!silent)toast('Saved.');
   }catch(e){ if(!silent)toast('Save blocked here — use Export.'); }
@@ -1834,7 +1975,7 @@ function saveGame(silent){
 function loadGame(){
   try{
     const raw=localStorage.getItem(SAVEKEY); if(!raw)return false;
-    const data=JSON.parse(raw); G=data.G; NPCID=data.NPCID||1; S=G.stats; K=G.skills; sanitizeSave();
+    const data=JSON.parse(raw); G=data.G; NPCID=data.NPCID||1; S=G.stats; K=G.skills; restoreRandomState(); sanitizeSave();
     return true;
   }catch(e){ return false; }
 }
@@ -1848,7 +1989,7 @@ function exportSave(){
 function importSave(input){
   const f=input.files[0]; if(!f)return;
   const r=new FileReader();
-  r.onload=()=>{ try{ const data=JSON.parse(r.result); G=data.G; NPCID=data.NPCID||1; yearUndo=null; S=G.stats; K=G.skills; sanitizeSave(); pendingChoice=null; closeModal(); renderAll(); toast('Life loaded.'); }catch(e){ toast('That file did not read as a save.'); } };
+  r.onload=()=>{ try{ const data=JSON.parse(r.result); G=data.G; NPCID=data.NPCID||1; yearUndo=null; S=G.stats; K=G.skills; restoreRandomState(); sanitizeSave(); pendingChoice=null; closeModal(); renderAll(); toast('Life loaded.'); }catch(e){ toast('That file did not read as a save.'); } };
   r.readAsText(f); input.value='';
 }
 
@@ -1864,7 +2005,7 @@ function confirmUndoYear(){
   if(!yearUndo)return;
   try{
     const data=JSON.parse(yearUndo);G=data.G;NPCID=data.NPCID||1;yearUndo=null;
-    S=G.stats;K=G.skills;pendingChoice=null;menuOpen=null;personOpen=null;propOpen=null;socialOpen=null;
+    S=G.stats;K=G.skills;restoreRandomState();pendingChoice=null;menuOpen=null;personOpen=null;propOpen=null;socialOpen=null;
     forceClose();sanitizeSave();renderAll();saveGame(true);toast(`Returned to age ${G.age}.`);
   }catch(e){yearUndo=null;forceClose();toast('That year could not be restored.');renderAll();}
 }
@@ -1987,7 +2128,7 @@ function occupationTitle(){
 }
 function relLine(){
   const p=partner(); if(!p)return 'Single';
-  return `${p.role==='spouse'?'Married to':p.engaged?'Engaged to':'With'} ${p.name} (${loyaltyWord(p.loyalty)})`;
+  const r=relationshipState(p),tone=r.conflict>=65?'high conflict':r.attraction>=72?'strong chemistry':r.respect>=72?'deep respect':loyaltyWord(r.connection);return `${p.role==='spouse'?'Married to':p.engaged?'Engaged to':'With'} ${p.name} (${tone})`;
 }
 function renderSheet(){
   const income=annualIncome();
@@ -2124,7 +2265,7 @@ function onActClick(e){
     'college-careerfair':collegeCareerFair, 'college-job':collegeCampusJob,
     'college-team':collegeTeam, 'college-game':collegeGame, 'college-drop':dropOutCollege,
     'actor-cast':actorCastMenu, 'music-bandmate':musicBandMenu, 'athlete-teammate':athleteTeammateMenu,
-    person:openPerson, talk:npcTalk, insult:npcInsult, gift:giftNPC, prank:npcPrank, concert:npcConcert,
+    person:openPerson, talk:npcTalk, insult:npcInsult, apologize:npcApologize, gift:giftNPC, prank:npcPrank, concert:npcConcert,
     party:npcParty, deal:npcDeal, askout:npcAskOut, hookup:npcHookup, wedding:openWedding, divorce:openDivorce, 'coparent':coParentAction, 'doctor-visit':openDoctor,
     buyasset:buyAsset, sellasset:sellAsset,
     prop:openProperty, 'renovate-prop':renovateProp, 'upgrade-prop':upgradeProp, 'rentout-prop':rentOut, 'inspect-prop':inspectProp, 'evict-prop':evictTenant, 'party-prop':partyProp, 'gift-prop':giftProp, 'payoff-prop':payoffProp,
@@ -2206,22 +2347,24 @@ function loyaltyWord(l){ return l>=88?'devoted':l>=72?'close':l>=58?'warm':l>=44
 function loyaltyClass(l){ return l>=72?'good':l>=44?'ok':'bad'; }
 function relbar(l){ l=clamp(Math.round(l)); return `<div class="relbar ${loyaltyClass(l)}"><div style="width:${l}%"></div></div>`; }
 function personRow(n){
-  const life=[capitalize(n.label),n.age,n.career,n.workplaceConflict?'workplace conflict':null,n.location&&n.location!==G.place?n.location:null].filter(Boolean).join(' • ');
-  return `<button class="person" data-act="person" data-arg="${n.id}"><div class="phead"><div><div class="t">${esc(n.name)}</div><div class="s">${esc(life)}${n.married?' • married':''}</div></div><div class="rel"><span class="relw">${loyaltyWord(n.loyalty)}</span>${relbar(n.loyalty)}<span class="reln">${Math.round(n.loyalty)} / 100</span></div></div><span class="mchev pchev">›</span></button>`;
+  const r=relationshipState(n),life=[capitalize(n.label),n.age,n.socialStatus?capitalize(n.socialStatus):null,n.career,n.workplaceConflict?'workplace conflict':null,n.location&&n.location!==G.place?n.location:null].filter(Boolean).join(' • '),traits=traitSummary(n,2).join(', ');
+  return `<button class="person" data-act="person" data-arg="${n.id}"><div class="phead"><div><div class="t">${esc(n.name)}</div><div class="s">${esc(life)}${n.married?' • married':''}<br>${esc(traits)} • respect ${Math.round(r.respect)} • conflict ${Math.round(r.conflict)}</div></div><div class="rel"><span class="relw">${loyaltyWord(r.connection)}</span>${relbar(r.connection)}<span class="reln">${Math.round(r.connection)} / 100</span></div></div><span class="mchev pchev">›</span></button>`;
 }
-function npcCompliment(id){ if(!spendAct('compliment'))return; const n=npc(id); if(!n)return; if(chance(0.85)){ n.loyalty=clamp(n.loyalty+rnd(3,8)); log(`You told ${n.name} something true and kind. ${pick(['They pretended it was no big deal and clearly kept it.','It landed. You saw it land.','They said it back, and meant it.'])}`,'good'); } else { n.loyalty=clamp(n.loyalty-2); log(`You tried to compliment ${n.name} and it came out sideways. They gave you the polite smile, the one that closes a door softly.`); } afterAction(0); }
+function npcCompliment(id){ if(!spendAct('compliment'))return; const n=npc(id); if(!n)return;const p=ensurePersonality(n),works=chance(clamp(.72+p.kindness/500-p.volatility/900,.55,.94)); if(works){changeRelationship(n,{connection:rnd(3,7),respect:rnd(1,3),familiarity:1,conflict:-2},`${G.name} offered a sincere compliment at age ${G.age}.`,'kindness');log(`You told ${n.name} something true and kind. ${pick(['They pretended it was no big deal and clearly kept it.','It landed. You saw it land.','They said it back, and meant it.'])}`,'good'); } else {changeRelationship(n,{connection:-2,conflict:2},`${G.name}'s compliment felt awkward or insincere at age ${G.age}.`,'misunderstanding');log(`You tried to compliment ${n.name} and it came out sideways. They gave you the polite smile, the one that closes a door softly.`); } afterAction(0); }
 function tabLife(){
-  const core=allNPCs().filter(n=>['parent','sibling','spouse','partner','child','grandchild'].includes(n.role));
-  const fr=allNPCs().filter(n=>['friend','fling','coworker'].includes(n.role));
-  const ex=allNPCs().filter(n=>n.role==='ex');
+  syncAllRelationships();const hostile=allNPCs().filter(n=>['enemy','rival'].includes(n.socialStatus));
+  const core=allNPCs().filter(n=>!hostile.includes(n)&&['parent','sibling','spouse','partner','child','grandchild'].includes(n.role));
+  const fr=allNPCs().filter(n=>!hostile.includes(n)&&['friend','fling','coworker'].includes(n.role));
+  const ex=allNPCs().filter(n=>!hostile.includes(n)&&n.role==='ex');
   let h='';
   h+=grp('Meet people', G.age>=5?actBtn('make-friend',null,'Try to make a friend'):'', G.age<5?'Friends come once school starts.':'');
   h+=`<div class="grp"><h4>Your people</h4><div class="list">${core.length?core.map(personRow).join(''):'<div class="note">It\'s just you right now.</div>'}</div></div>`;
   if(fr.length)h+=`<div class="grp"><h4>Friends & others</h4><div class="list">${fr.map(personRow).join('')}</div></div>`;
+  if(hostile.length)h+=`<div class="grp"><h4>Rivals & enemies</h4><div class="note">Conflict can cool, but it does not disappear merely because time passes.</div><div class="list">${hostile.map(personRow).join('')}</div></div>`;
   if(ex.length)h+=`<div class="grp"><h4>The past</h4><div class="list">${ex.map(personRow).join('')}</div></div>`;
   return h;
 }
-function npcSpendTime(id){ if(!spendAct('spendtime'))return; const n=npc(id); if(!n)return; n.loyalty=clamp(n.loyalty+rnd(6,12)); S.happiness=clamp(S.happiness+2); S.stress=clamp(S.stress-2); n.memory.push(`${G.name} spent time with me at ${G.age}.`); log(`You spent real time with ${n.name}. ${pick(['Nothing dramatic — a long meal, a longer conversation.','You laughed about something old.','It was easy, the way it used to be.','You put the phones away.'])} It mattered more than it looked like it did.`,'good'); afterAction(0); }
+function npcSpendTime(id){ if(!spendAct('spendtime'))return; const n=npc(id); if(!n)return;const p=ensurePersonality(n),gain=rnd(5,10)+(p.kindness>70?2:0);changeRelationship(n,{connection:gain,respect:2,familiarity:rnd(5,9),conflict:-rnd(1,4)},`${G.name} made time for me at age ${G.age}.`,'quality-time');S.happiness=clamp(S.happiness+2); S.stress=clamp(S.stress-2);log(`You spent real time with ${n.name}. ${pick(['Nothing dramatic — a long meal, a longer conversation.','You laughed about something old.','It was easy, the way it used to be.','You put the phones away.'])} It mattered more than it looked like it did.`,'good'); afterAction(0); }
 function npcMarry(id){ const n=npc(id); if(!n)return; if(n.role==='spouse'){toast('You are already married to them.');return;} if(n.engaged){toast('You are engaged \u2014 plan the wedding from their page.');return;} proposeRingModal(id); }
 function npcBaby(id){ const p=npc(id);if(!p)return;if(G.flags.babyAttemptYear===G.year){toast('You have already tried for a child this year.');return;}if(!spendAct('baby'))return;G.flags.babyAttemptYear=G.year; if(chance(G.flags.fertility?0.82:0.55)){ const sex=chance(0.5)?'Male':'Female'; const k=addNPC('child',(sex==='Male'?pick(MALE):pick(FEMALE))+' '+G.last,0); k.loyalty=70;k.otherParentId=p.id;k.custody='together'; log(`You and ${p.name} had a baby — ${k.name}. Everything narrowed to one small, furious, sleepless point of light.`,'good'); S.happiness=clamp(S.happiness+8);S.stress=clamp(S.stress+6);pay(4000,true); } else { log(`You and ${p.name} tried for a child this year. Not yet. There's a particular quiet to a month that doesn't take.`); } afterAction(0); }
 function npcBreakup(id){ const n=npc(id);if(!n)return;if(n.role==='spouse'){openDivorce(id);return;}if(n.role==='friend'||n.role==='fling'){n.role='ex';log(`You let ${n.name} drift out of your life. No fight, just fewer replies, then none.`);}else{breakup(n,false);}afterAction(0);}
@@ -2282,7 +2425,7 @@ function chooseSpecialCareer(type,focus){
 function commitSpecialCareer(type,focus){
   const ep=G.eduProgram&&PROGRAMS.find(x=>x.id===G.eduProgram.id);
   if(G.eduProgram){log(`You withdrew from ${ep?ep.name.toLowerCase():'school'} before finishing. The incomplete degree disappeared from the plan; the bills and the memories did not.`,'bad');G.eduProgram=null;}
-  if(G.inSchool){log(`You left ${G.schoolStage==='high'?'high school':'school'} to chase the opportunity full-time. Classmates kept moving toward graduation while your life veered somewhere less certain.`,'bad');G.inSchool=false;}
+  if(G.inSchool){log(`You left ${G.schoolStage==='high'?'high school':'school'} to chase the opportunity full-time. Classmates kept moving toward graduation while your life veered somewhere less certain.`,'bad');G.inSchool=false;G.schoolStage=null;G.flags.leftSchoolForCareer=true;}
   forceClose();startSpecial(type);G.special.focus=focus;if(type==='athlete')ensureAthleteCareer();afterAction(0);
 }
 function specialCareerPanel(){
@@ -2534,7 +2677,7 @@ function playLottery(){
   if(!afford(20)){toast('Not even for a ticket.');return;}
   if(!spendAct('lottery'))return;
   pay(20);
-  const r=Math.random(); let win=0;
+  const r=random(); let win=0;
   if(r<0.000001)win=10000000; else if(r<0.00002)win=100000; else if(r<0.0005)win=5000; else if(r<0.02)win=100;
   if(win)log(`You bought a lottery ticket and — impossibly — won ${money(win)}. ${win>=100000?'You checked the numbers until the paper went soft in your hands.':'A small, stupid, real joy.'}`,'money'),G.cash+=win;
   else log(`You bought a lottery ticket. The numbers were not your numbers. They never are, but the dollar buys a few minutes of a different life.`);
@@ -2553,7 +2696,7 @@ function casinoPlay(game){
   if(!afford(bet)){$('casino_out').textContent="You don't have that to lose.";return;}
   if(!spendAct('casino'))return;
   pay(bet); let win=0,msg='';
-  if(game==='slots'){ const r=Math.random(); if(r<0.02)win=bet*20; else if(r<0.10)win=bet*3; else if(r<0.26)win=bet; msg=win?`The reels caught. +${money(win)}.`:`Nothing. The reels don't know you're there.`; }
+  if(game==='slots'){ const r=random(); if(r<0.02)win=bet*20; else if(r<0.10)win=bet*3; else if(r<0.26)win=bet; msg=win?`The reels caught. +${money(win)}.`:`Nothing. The reels don't know you're there.`; }
   else if(game==='roulette'){ if(chance(18/38)){win=bet*2;msg=`Red. +${money(win)}.`;} else msg=`Black. It's gone.`; }
   else { if(chance(0.46)){win=bet*2;msg=`You beat the dealer. +${money(win)}.`;} else if(chance(0.09)){win=bet;msg=`Push — you keep your ${money(bet)}.`;} else msg=`Dealer wins. Of course.`; }
   if(win)G.cash+=win;
@@ -2665,11 +2808,11 @@ function makeDatingCandidate(source){
   const other=G.sex==='Male'?'Female':'Male';
   const age=G.age<18?rnd(Math.max(16,G.age-1),17):clamp(G.age+rnd(-6,7),18,80);
   const income=age<18?rnd(0,4500):rnd(18000,145000);
-  return {source,sex:other,name:(other==='Male'?pick(MALE):pick(FEMALE))+' '+pick(LAST),age,job:age<18?'student':pick(DATE_JOBS),stats:{looks:rnd(20,98),smarts:rnd(20,98),happiness:rnd(20,98),health:rnd(25,100)},netWorth:age<18?rnd(0,2500):rnd(-15000,Math.max(25000,income*3))};
+  return {source,sex:other,name:(other==='Male'?pick(MALE):pick(FEMALE))+' '+pick(LAST),age,job:age<18?'student':pick(DATE_JOBS),stats:{looks:rnd(20,98),smarts:rnd(20,98),happiness:rnd(20,98),health:rnd(25,100)},personality:rollPersonality('partner'),netWorth:age<18?rnd(0,2500):rnd(-15000,Math.max(25000,income*3))};
 }
 function datingProfileHtml(c){
   const context=c.source==='hookup'?'Looking for something casual':c.source==='singles'?'Met at tonight\'s singles event':'Suggested profile';
-  return `<h2>${esc(c.name)}, ${c.age}</h2><div class="note">${esc(context)} • ${esc(capitalize(c.job))} • Net worth ${money(c.netWorth)}</div><div style="margin-top:14px">${miniBar('Looks',c.stats.looks)}${miniBar('Smarts',c.stats.smarts)}${miniBar('Happiness',c.stats.happiness)}${miniBar('Health',c.stats.health)}</div><p>Interested?</p><div class="opts"><button class="primary" onclick="acceptDatingCandidate()">Yes — meet them</button><button onclick="passDatingCandidate()">No — pass</button></div>`;
+  const temp={role:'partner',personality:c.personality||rollPersonality('partner')};return `<h2>${esc(c.name)}, ${c.age}</h2><div class="note">${esc(context)} • ${esc(capitalize(c.job))} • Net worth ${money(c.netWorth)}</div>${personalityHtml(temp)}<div style="margin-top:14px">${miniBar('Looks',c.stats.looks)}${miniBar('Smarts',c.stats.smarts)}${miniBar('Happiness',c.stats.happiness)}${miniBar('Health',c.stats.health)}</div><p>Interested?</p><div class="opts"><button class="primary" onclick="acceptDatingCandidate()">Yes — meet them</button><button onclick="passDatingCandidate()">No — pass</button></div>`;
 }
 function showDatingCandidate(source){
   source=source||'dating';
@@ -2686,10 +2829,10 @@ function acceptDatingCandidate(){
   if(!spendAct('love-profile:'+c.source))return;
   datingCandidateDraft=null;forceClose();
   if(c.source==='hookup'){
-    const f=addNPC('fling',c.name,c.age);f.loyalty=rnd(20,38);f.profileStats=c.stats;f.netWorth=c.netWorth;f.career=c.job;
+    const f=addNPC('fling',c.name,c.age);f.personality=c.personality;f.loyalty=rnd(20,38);f.profileStats=c.stats;f.netWorth=c.netWorth;f.career=c.job;relationshipState(f).attraction=clamp(Math.round(c.stats.looks*.55+rnd(15,40)));
     S.happiness=clamp(S.happiness+4);log(`You met ${c.name} after seeing their profile. The chemistry was real, the expectations were clear, and morning arrived sooner than either of you expected.`);thread('onenight',{name:c.name});if(attached)thread('cheated',{npc:attached.id,name:c.name});afterAction(2);return;
   }
-  const p=addNPC('partner',c.name,c.age);p.loyalty=rnd(c.source==='singles'?48:42,68);p.profileStats=c.stats;p.netWorth=c.netWorth;p.career=c.job;
+  const p=addNPC('partner',c.name,c.age);p.personality=c.personality;p.loyalty=rnd(c.source==='singles'?48:42,68);p.profileStats=c.stats;p.netWorth=c.netWorth;p.career=c.job;const pr=relationshipState(p);pr.attraction=clamp(Math.round(c.stats.looks*.5+rnd(22,45)));pr.familiarity=c.source==='singles'?38:28;pr.respect=clamp(Math.round(c.stats.smarts*.25+ensurePersonality(p).morality*.25+35));
   S.happiness=clamp(S.happiness+5);K.charisma=clamp(K.charisma+1);
   log(c.source==='singles'?`You said yes to meeting ${c.name} again after the singles event. The second conversation was easier than the first, which felt like a promising start.`:`You said yes to ${c.name}'s profile. A first meeting stretched past the planned ending, and the two of you decided to see where this might go.`,'good');afterAction(0);
 }
@@ -2704,15 +2847,15 @@ function openPartnerDate(){
 }
 function takePartnerDate(kind,cost){
   const p=partner();if(!p)return;if(!spendAct('partner-date:'+kind))return;if(!pay(cost)){cancelSpentAction();toast('You cannot afford that date.');return;}forceClose();
-  const gain={coffee:4,dinner:6,concert:7,weekend:10}[kind]||4;p.loyalty=clamp(p.loyalty+gain);S.happiness=clamp(S.happiness+Math.ceil(gain/2));S.stress=clamp(S.stress-Math.ceil(gain/3));
+  const gain={coffee:4,dinner:6,concert:7,weekend:10}[kind]||4;changeRelationship(p,{connection:gain,attraction:Math.ceil(gain/2),familiarity:Math.ceil(gain*.7),conflict:-Math.ceil(gain/3)},`${G.name} planned a ${kind} date for us at age ${G.age}.`,'romance');S.happiness=clamp(S.happiness+Math.ceil(gain/2));S.stress=clamp(S.stress-Math.ceil(gain/3));
   const story={coffee:'You found a quiet table, then walked until neither of you remembered whose idea the walk had been.',dinner:'You dressed up, ordered slowly, and talked without checking the time.',concert:'You lost each other in the crowd for half a song, then found each other laughing.',weekend:'You left the routines at home and remembered how the two of you are when nothing else is asking for attention.'}[kind];log(`${story} ${p.name} felt closer afterward.`,'good');afterAction(0);
 }
 function relationshipTalk(){
   const p=partner();if(!p)return;if(G.flags.relationshipTalkYear===G.year){toast('You already had that conversation this year.');return;}if(!spendAct('relationship-talk'))return;G.flags.relationshipTalkYear=G.year;
-  const good=chance(clamp(.38+p.loyalty/180+K.charisma/500,.3,.9));if(good){p.loyalty=clamp(p.loyalty+rnd(5,10));S.stress=clamp(S.stress-4);log(`You and ${p.name} talked honestly about what was working, what was not, and what each of you wanted next. Nothing was magically solved, but both of you left the conversation feeling chosen.`,'good');}else{p.loyalty=clamp(p.loyalty-rnd(4,9));S.stress=clamp(S.stress+5);log(`You tried to talk with ${p.name} about the relationship. Old complaints arrived before either of you was ready, and the conversation ended colder than it began.`,'bad');}afterAction(0);
+  const r=relationshipState(p),traits=ensurePersonality(p),good=chance(clamp(.26+r.connection/260+r.respect/340+(100-r.conflict)/500+K.charisma/500+traits.kindness/650-traits.volatility/550,.18,.92));if(good){changeRelationship(p,{connection:rnd(5,9),respect:rnd(4,8),familiarity:4,conflict:-rnd(7,14)},`${G.name} had an honest relationship talk with me at age ${G.age}.`,'repair');S.stress=clamp(S.stress-4);log(`You and ${p.name} talked honestly about what was working, what was not, and what each of you wanted next. Nothing was magically solved, but both of you left the conversation feeling chosen.`,'good');}else{changeRelationship(p,{connection:-rnd(4,8),respect:-2,conflict:rnd(7,13)},`${G.name} and I failed to hear each other during a relationship talk at age ${G.age}.`,'conflict');S.stress=clamp(S.stress+5);log(`You tried to talk with ${p.name} about the relationship. Old complaints arrived before either of you was ready, and the conversation ended colder than it began.`,'bad');}afterAction(0);
 }
 function makeFriend(){ if(G.age<5){toast('Friends come once school starts.');return;}if(!spendAct('make-friend'))return; if(chance(0.65)){ const nm=pick(MALE.concat(FEMALE))+' '+pick(LAST); const f=addNPC('friend',nm,G.age+rnd(-5,5)); f.loyalty=rnd(40,60); log(`You made a new friend — ${nm.split(' ')[0]}. It happened sideways, the way it does after childhood: a shared complaint in a line, a favor, a second conversation that didn't have to happen and did.`,'good'); S.happiness=clamp(S.happiness+3); } else { log(`You tried to put yourself out there. It was awkward, went nowhere, and you replayed it in bed that night. Making friends as an adult is a strange and humbling sport.`); S.happiness=clamp(S.happiness-1); } afterAction(0); }
-function socialMedia(){ const r=Math.random(); if(r<0.06&&(K.charisma>30||S.looks>60||S.fame>20)){ S.fame=clamp(S.fame+rnd(3,8)); K.charisma=clamp(K.charisma+2); log(`Something you posted took off. Strangers you'll never meet decided they knew you. The follower count did a thing that felt like money and wasn't — yet.`,'good'); } else if(r<0.13){ S.happiness=clamp(S.happiness-4); S.stress=clamp(S.stress+4); log(`You posted something and it landed wrong. The replies taught you, again, that the internet is a room full of people waiting to be offended on purpose.`,'bad'); } else { K.charisma=clamp(K.charisma+1); log(`You scrolled and posted and scrolled. An hour vanished. You felt informed and vaguely worse, which is the product working exactly as designed.`); } afterAction(0); }
+function socialMedia(){ const r=random(); if(r<0.06&&(K.charisma>30||S.looks>60||S.fame>20)){ S.fame=clamp(S.fame+rnd(3,8)); K.charisma=clamp(K.charisma+2); log(`Something you posted took off. Strangers you'll never meet decided they knew you. The follower count did a thing that felt like money and wasn't — yet.`,'good'); } else if(r<0.13){ S.happiness=clamp(S.happiness-4); S.stress=clamp(S.stress+4); log(`You posted something and it landed wrong. The replies taught you, again, that the internet is a room full of people waiting to be offended on purpose.`,'bad'); } else { K.charisma=clamp(K.charisma+1); log(`You scrolled and posted and scrolled. An hour vanished. You felt informed and vaguely worse, which is the product working exactly as designed.`); } afterAction(0); }
 function oneNight(){showDatingCandidate('hookup');}
 
 /* ---------------- CRIME ---------------- */
@@ -2830,7 +2973,7 @@ function horseRaces(){ if(!afford(50)){toast('You need at least $50 to bet.');re
 function runHorses(kind){ const bet=Math.max(1,Math.round(+($('hbet').value||0))); if(!afford(bet)){$('hout').textContent='You do not have that to lose.';return;}if(!spendAct('horsebet'))return; pay(bet); let win=0,msg=''; if(kind==='favorite'){ if(chance(0.42)){win=bet*2;msg=`Your horse held on. +${money(win)}.`;} else msg='The favorite faded in the stretch. Gone.'; } else { if(chance(0.11)){win=bet*8;msg=`The longshot came home and the whole grandstand groaned. +${money(win)}.`;} else msg='The longshot ran like it owed someone money. Gone.'; } if(win)G.cash+=win; else G.flags.gambled=(G.flags.gambled||0)+1; $('hout').textContent=msg+`  \u00b7  Cash: ${money(G.cash)}`; settleActionEffects();renderSheet();saveGame(true); }
 function fightBet(){ if(!afford(50)){toast('You need at least $50 to bet.');return;} $('modalbox').innerHTML=`<h2>Fight betting</h2><p>Two fighters, one cage, and a crowd that came for blood. Pick a corner.</p><div class="row"><label>Bet</label><input type="number" id="fbet" value="100" min="1"></div><div class="acts"><button onclick="runFight('red')">Red corner</button><button onclick="runFight('blue')">Blue corner</button></div><div class="note" id="fout">Cash: ${money(G.cash)}</div><div style="margin-top:10px"><button onclick="forceClose();afterAction(0)">Leave</button></div>`; openModal(); }
 function runFight(corner){ const bet=Math.max(1,Math.round(+($('fbet').value||0))); if(!afford(bet)){$('fout').textContent='You do not have that to lose.';return;}if(!spendAct('fightbet'))return; pay(bet); const win=chance(0.48)?bet*2:0; const msg=win?`Your fighter got the finish. +${money(win)}.`:'Your fighter hit the canvas in the second. Gone.'; if(win)G.cash+=win; else G.flags.gambled=(G.flags.gambled||0)+1; $('fout').textContent=msg+`  \u00b7  Cash: ${money(G.cash)}`; settleActionEffects();renderSheet();saveGame(true); }
-function sweepstakes(){ if(G.flags.sweepstakesYear===G.year){toast('One entry per year.');return;}if(!spendAct('sweepstakes'))return;G.flags.sweepstakesYear=G.year;const r=Math.random(); let win=0; if(r<0.00002)win=1000000; else if(r<0.0008)win=25000; else if(r<0.012)win=1000; else if(r<0.08)win=50; if(win){G.cash+=win;log(`You entered a sweepstakes and \u2014 this never happens \u2014 actually won ${money(win)}. You reread the email four times looking for the catch.`,'money');} else log(`You entered the sweepstakes. Free to enter, which is the only honest thing about it. You did not win.`); afterAction(0); }
+function sweepstakes(){ if(G.flags.sweepstakesYear===G.year){toast('One entry per year.');return;}if(!spendAct('sweepstakes'))return;G.flags.sweepstakesYear=G.year;const r=random(); let win=0; if(r<0.00002)win=1000000; else if(r<0.0008)win=25000; else if(r<0.012)win=1000; else if(r<0.08)win=50; if(win){G.cash+=win;log(`You entered a sweepstakes and \u2014 this never happens \u2014 actually won ${money(win)}. You reread the email four times looking for the catch.`,'money');} else log(`You entered the sweepstakes. Free to enter, which is the only honest thing about it. You did not win.`); afterAction(0); }
 
 function openLawsuit(){ if(G.age<18){toast('You can bring a suit yourself at 18.');return;}if(G.flags.lastLawsuit&&G.year-G.flags.lastLawsuit<3){toast('Courts move slowly. You can bring another major suit in a few years.');return;} $('modalbox').innerHTML=`<h2>Lawsuit</h2><p>Lawyers cost money and time. Win and you collect; lose and you eat the fees. Who are you suing?</p><div class="opts" id="lsbox"></div>`; const box=$('lsbox'); const co=document.createElement('button'); co.innerHTML='A company<small>deep pockets, better lawyers</small>'; co.onclick=()=>{forceClose();resolveLawsuit(null);}; box.appendChild(co); allNPCs().forEach(n=>{ const b=document.createElement('button'); b.innerHTML=`${esc(n.name)}<small>${capitalize(n.label)}</small>`; b.onclick=()=>{forceClose();resolveLawsuit(n.id);}; box.appendChild(b); }); openModal(); }
 function resolveLawsuit(id){ if(!spendAct('lawsuit'))return;G.flags.lastLawsuit=G.year;const fee=rnd(5000,25000); pay(fee,true); const n=id?npc(id):null; const odds=Math.min(.55,0.18+(S.smarts/500)+((K.charisma||0)/800)); if(chance(odds)){ const award=rnd(8000,120000); G.cash+=award; if(n){n.loyalty=clamp(n.loyalty-30);n.memory.push(`${G.name} sued me at ${G.age}.`);} log(`You won the suit. ${money(award)} awarded, ${money(fee)} to the lawyers, and ${n?`${n.name} will not be sending a holiday card this year`:'a company that will never notice the dent'}. Justice, or something wearing its suit.`,'money'); } else { if(n)n.loyalty=clamp(n.loyalty-15); log(`You lost the suit. ${money(fee)} gone to lawyers and nothing to show but a lesson about how the law actually works, which is slowly, and for whoever can afford more of it.`,'bad'); } afterAction(2); }
@@ -2879,9 +3022,9 @@ const SCHOOLSPORTS=['Football','Basketball','Soccer','Track','Swimming','Basebal
 
 function miniBar(label,value,cls){value=clamp(Math.round(value));return `<div class="bar ${cls||''}"><div class="lbl"><span>${esc(label)}</span><span>${value}</span></div><div class="trk"><div class="fil" style="width:${value}%"></div></div></div>`;}
 function schoolRoster(kind){ensureSchoolRoster();const ids=kind==='faculty'?G.school.facultyIds:G.school.classmateIds;return (ids||[]).map(npc).filter(Boolean);}
-function schoolPersonRow(n){return `<button class="person" data-act="school-person" data-arg="${n.id}"><div class="phead"><div><div class="t">${esc(n.name)}</div><div class="s">${n.facultyRole?esc(n.facultyRole):(n.schoolFriend?'Classmate • friend':'Classmate')}</div></div><div class="rel"><span class="relw">${loyaltyWord(n.loyalty)}</span>${relbar(n.loyalty)}<span class="reln">${Math.round(n.loyalty)} / 100</span></div></div><span class="mchev pchev">›</span></button>`;}
+function schoolPersonRow(n){const r=relationshipState(n);return `<button class="person" data-act="school-person" data-arg="${n.id}"><div class="phead"><div><div class="t">${esc(n.name)}</div><div class="s">${n.facultyRole?esc(n.facultyRole):(n.schoolFriend?'Classmate • friend':'Classmate')} • ${esc(traitSummary(n,2).join(', '))}<br>respect ${Math.round(r.respect)} • familiarity ${Math.round(r.familiarity)}</div></div><div class="rel"><span class="relw">${loyaltyWord(r.connection)}</span>${relbar(r.connection)}<span class="reln">${Math.round(r.connection)} / 100</span></div></div><span class="mchev pchev">›</span></button>`;}
 function schoolPersonDetail(n){
- let h=`<button class="back" onclick="schoolOpen=null;renderActions()">‹ Back to ${n.facultyRole?'faculty':'classmates'}</button><div class="person" style="display:block;margin-top:10px"><div class="phead"><div><div class="t">${esc(n.name)}</div><div class="s">${esc(n.facultyRole||'Classmate')}${n.schoolFriend?' • friend':''}</div></div><div class="rel"><span class="relw">${loyaltyWord(n.loyalty)}</span>${relbar(n.loyalty)}<span class="reln">${Math.round(n.loyalty)} / 100</span></div></div></div>`;
+ const r=relationshipState(n);let h=`<button class="back" onclick="schoolOpen=null;renderActions()">‹ Back to ${n.facultyRole?'faculty':'classmates'}</button><div class="person" style="display:block;margin-top:10px"><div class="phead"><div><div class="t">${esc(n.name)}</div><div class="s">${esc(n.facultyRole||'Classmate')}${n.schoolFriend?' • friend':''}</div></div><div class="rel"><span class="relw">${loyaltyWord(r.connection)}</span>${relbar(r.connection)}<span class="reln">${Math.round(r.connection)} / 100</span></div></div>${personalityHtml(n)}${relationshipAxesHtml(n)}</div>`;
  if(n.facultyRole)return h+grp('At school',actBtn('faculty-talk',n.id,'Talk')+actBtn('faculty-help',n.id,'Ask for help')+actBtn('faculty-recommend',n.id,n.recommended?'Recommendation received':'Ask for a recommendation',n.recommended?'Already completed':'helps scholarship applications',n.recommended));
  const st=n.schoolStats||{looks:50,smarts:50,happiness:50,health:70};h+=`<div style="margin:12px 0">${miniBar('Looks',st.looks,'looks')}${miniBar('Smarts',st.smarts,'smarts')}${miniBar('Happiness',st.happiness,'happy')}${miniBar('Health',st.health,'health')}</div>`;
  return h+grp('Spend time together',actBtn('school-talk',n.id,'Talk between classes')+actBtn('school-studywith',n.id,'Study together')+actBtn('school-lunch',n.id,'Sit together at lunch')+actBtn('school-friend-request',n.id,n.schoolFriend?'Friends':'Ask to be friends',n.schoolFriend?'You are already friends':'relationship affects the answer',n.schoolFriend));
@@ -2895,21 +3038,27 @@ function schoolEducationPanel(){
  let h=nav+`<div class="grp"><h4>${schoolStageName()}</h4><div class="note">${st.name} • Family finances: ${capitalize(G.familyWealth)}<br>Grades ${schoolGPA()}/100 • Popularity ${Math.round(sc.popularity)}/100${sc.clique?' • '+cliqueName(sc.clique):''}${sc.team?' • '+sc.team+' team • '+(sc.teamRole||'Player'):''}${sc.club?' • '+SCHOOL_CLUBS[sc.club].name:''}</div></div>`;
  h+=grp('Classes',actBtn('study',null,'Study','grades + smarts')+actBtn('school-club',null,sc.club?'Change school club':'Join a school club')+(sc.club?actBtn('school-club-attend',null,'Attend '+SCHOOL_CLUBS[sc.club].name,sc.clubYear===G.year?'Already attended this year':'once per year',sc.clubYear===G.year):''));
  let social='';if(G.age>=6){if(sc.team)social+=actBtn('school-season',null,'Play the season',sc.seasonYear===G.year?'Already played this year':(sc.teamRole||'Player')+' • chance to earn leadership',sc.seasonYear===G.year);social+=actBtn('sports',null,sc.team?'Change sports team':'Join a sports team');}
- if(G.age>=11){social+=actBtn('clique',null,sc.clique?'Switch cliques':'Join a clique');const danceName=G.schoolStage==='high'?(G.age>=16?'Go to prom':'Go to homecoming dance'):'Go to a school dance';social+=actBtn('dance',null,danceName,sc.danceYear===G.year?'Already attended this year':'one dance per year',sc.danceYear===G.year);social+=actBtn('school-event',null,G.schoolStage==='high'?'High-school experiences':'Middle-school experiences');}
+ if(G.age>=11){
+  social+=actBtn('clique',null,sc.clique?'Switch cliques':'Join a clique');
+  const promAvailable=G.schoolStage==='high'&&G.age>=16&&!sc.promAttended;
+  const danceName=promAvailable?'Go to prom':G.schoolStage==='high'?'Go to homecoming dance':'Go to a school dance';
+  social+=actBtn('dance',null,danceName,sc.danceYear===G.year?'Already attended this year':promAvailable?'one prom in this life':'one dance per year',sc.danceYear===G.year);
+  social+=actBtn('school-event',null,G.schoolStage==='high'?'High-school experiences':'Middle-school experiences');
+ }
  h+=grp('School life',social,G.age<11?'Clubs, classmates, and faculty are available now; dances and larger school events begin in middle school.':'Choose the parts of school life that matter to you.');
  const canPrivate=FAMILY_LEVEL[G.familyWealth]>=1;h+=grp('School choice',actBtn('private-school',null,st.level?'Change schools':'Ask about private school',sc.schoolChoiceYear===G.year?'Already discussed this year':st.note,sc.schoolChoiceYear===G.year||(!canPrivate&&st.level===0)),canPrivate?`Your family can consider private-school tuition. The final answer still belongs to your parents.`:'Private tuition is currently beyond your family’s budget.');
  if(G.schoolStage==='high')h+=grp('Enrollment',actBtn('school-dropout',null,'Drop out of high school'),'Leaving is permanent and you will not receive a diploma.');
  return h;
 }
 function openSchoolPerson(id){if(!npc(id))return;schoolOpen=id;renderActions();}
-function schoolPersonTalk(id){const n=npc(id);if(!n)return;if(!spendAct('school-talk'))return;n.loyalty=clamp(n.loyalty+rnd(3,7));S.happiness=clamp(S.happiness+1);log(`You caught up with ${n.name} between classes. The conversation began with school and wandered into the things both of you actually cared about.`,'good');afterAction(0);}
-function schoolStudyWith(id){const n=npc(id);if(!n)return;if(!spendAct('school-studywith'))return;n.loyalty=clamp(n.loyalty+rnd(2,5));G.gpaSeed=clamp(G.gpaSeed+rnd(3,6));K.intellect=clamp(K.intellect+2);S.stress=clamp(S.stress+1);log(`You studied with ${n.name}. Between the two of you, the homework made more sense and the time passed faster.`,'good');afterAction(0);}
-function schoolLunch(id){const n=npc(id);if(!n)return;if(!spendAct('school-lunch'))return;n.loyalty=clamp(n.loyalty+rnd(4,8));G.school.popularity=clamp(G.school.popularity+2);S.happiness=clamp(S.happiness+3);log(`You sat with ${n.name} at lunch. It was only one table in one crowded room, but having a place to sit made the whole day easier.`,'good');afterAction(0);}
-function schoolAskFriend(id){const n=npc(id);if(!n||n.schoolFriend)return;if(!spendAct('school-friend-request'))return;const yes=chance(clamp(.25+n.loyalty/120+(K.charisma||0)/300,.2,.9));if(yes){n.schoolFriend=true;n.role='friend';n.label='friend';n.loyalty=clamp(n.loyalty+12);S.happiness=clamp(S.happiness+4);log(`You asked ${n.name} if they wanted to hang out outside school. They said yes, and a classmate became a real friend.`,'good');}else{n.loyalty=clamp(n.loyalty-3);S.happiness=clamp(S.happiness-2);log(`You tried to turn things with ${n.name} into a friendship outside school. They gave you a vague answer, and both of you understood it.`,'bad');}afterAction(0);}
-function facultyTalk(id){const n=npc(id);if(!n)return;if(!spendAct('faculty-talk'))return;n.loyalty=clamp(n.loyalty+rnd(3,7));K.charisma=clamp(K.charisma+1);log(`You stayed after class to talk with ${n.name}, the ${n.facultyRole.toLowerCase()}. They listened without looking at the clock, which made it easier to keep talking.`,'good');afterAction(0);}
-function facultyHelp(id){const n=npc(id);if(!n)return;if(!spendAct('faculty-help'))return;n.loyalty=clamp(n.loyalty+rnd(2,5));G.gpaSeed=clamp(G.gpaSeed+rnd(3,7));if(n.facultyRole.includes('counselor'))S.stress=clamp(S.stress-5);else K.intellect=clamp(K.intellect+2);log(`You asked ${n.name} for help. They took the question seriously, worked through the problem with you, and made the next step feel manageable.`,'good');afterAction(0);}
-function facultyRecommendation(id){const n=npc(id);if(!n||n.recommended)return;if(!spendAct('faculty-recommend'))return;n.recommended=true;const yes=chance(clamp(.25+n.loyalty/120+schoolGPA()/300,.25,.92));if(yes){G.school.recommendation=true;n.loyalty=clamp(n.loyalty+5);log(`${n.name} agreed to write you a recommendation. They asked what you hoped to do next, took notes, and promised not to make it sound generic.`,'good');}else{log(`${n.name} declined to write the recommendation. They were polite, but said they did not know your work well enough to be convincing.`,'bad');}afterAction(0);}
-function familyApprovalOdds(cost){const base={modest:.22,comfortable:.58,wealthy:.82,affluent:.96}[G.familyWealth]||.45;const relationship=livingParents().reduce((s,n)=>s+n.loyalty,0)/Math.max(1,livingParents().length);return clamp(base+relationship/500-cost/100000,.08,.97);}
+function schoolPersonTalk(id){const n=npc(id);if(!n)return;if(!spendAct('school-talk'))return;changeRelationship(n,{connection:rnd(3,6),familiarity:rnd(3,6),conflict:-1},`${G.name} talked with me between classes at age ${G.age}.`,'school');S.happiness=clamp(S.happiness+1);log(`You caught up with ${n.name} between classes. The conversation began with school and wandered into the things both of you actually cared about.`,'good');afterAction(0);}
+function schoolStudyWith(id){const n=npc(id);if(!n)return;if(!spendAct('school-studywith'))return;changeRelationship(n,{connection:rnd(2,5),respect:rnd(3,6),familiarity:3,conflict:-1},`${G.name} studied with me at age ${G.age}.`,'school');G.gpaSeed=clamp(G.gpaSeed+rnd(3,6));K.intellect=clamp(K.intellect+2);S.stress=clamp(S.stress+1);log(`You studied with ${n.name}. Between the two of you, the homework made more sense and the time passed faster.`,'good');afterAction(0);}
+function schoolLunch(id){const n=npc(id);if(!n)return;if(!spendAct('school-lunch'))return;changeRelationship(n,{connection:rnd(4,8),familiarity:rnd(4,7),conflict:-2},`${G.name} chose to sit with me at lunch at age ${G.age}.`,'school');G.school.popularity=clamp(G.school.popularity+2);S.happiness=clamp(S.happiness+3);log(`You sat with ${n.name} at lunch. It was only one table in one crowded room, but having a place to sit made the whole day easier.`,'good');afterAction(0);}
+function schoolAskFriend(id){const n=npc(id);if(!n||n.schoolFriend)return;if(!spendAct('school-friend-request'))return;const r=relationshipState(n),p=ensurePersonality(n),yes=chance(clamp(.12+r.connection/160+r.familiarity/260+p.kindness/600+(K.charisma||0)/350-r.conflict/300,.15,.94));if(yes){n.schoolFriend=true;n.role='friend';n.label='friend';changeRelationship(n,{connection:12,respect:3,familiarity:8,conflict:-3},`${G.name} asked me to be friends at age ${G.age}.`,'friendship');S.happiness=clamp(S.happiness+4);log(`You asked ${n.name} if they wanted to hang out outside school. They said yes, and a classmate became a real friend.`,'good');}else{changeRelationship(n,{connection:-3,conflict:2},`${G.name} asked to be friends and I hesitated at age ${G.age}.`,'rejection');S.happiness=clamp(S.happiness-2);log(`You tried to turn things with ${n.name} into a friendship outside school. They gave you a vague answer, and both of you understood it.`,'bad');}afterAction(0);}
+function facultyTalk(id){const n=npc(id);if(!n)return;if(!spendAct('faculty-talk'))return;changeRelationship(n,{connection:rnd(2,5),respect:rnd(2,5),familiarity:3,conflict:-1},`${G.name} stayed after class to talk at age ${G.age}.`,'school');K.charisma=clamp(K.charisma+1);log(`You stayed after class to talk with ${n.name}, the ${n.facultyRole.toLowerCase()}. They listened without looking at the clock, which made it easier to keep talking.`,'good');afterAction(0);}
+function facultyHelp(id){const n=npc(id);if(!n)return;if(!spendAct('faculty-help'))return;changeRelationship(n,{connection:rnd(2,4),respect:rnd(3,6),familiarity:3},`${G.name} asked me for help at age ${G.age}.`,'school');G.gpaSeed=clamp(G.gpaSeed+rnd(3,7));if(n.facultyRole.includes('counselor'))S.stress=clamp(S.stress-5);else K.intellect=clamp(K.intellect+2);log(`You asked ${n.name} for help. They took the question seriously, worked through the problem with you, and made the next step feel manageable.`,'good');afterAction(0);}
+function facultyRecommendation(id){const n=npc(id);if(!n||n.recommended)return;if(!spendAct('faculty-recommend'))return;n.recommended=true;const r=relationshipState(n),p=ensurePersonality(n),yes=chance(clamp(.08+r.respect/145+r.familiarity/400+schoolGPA()/350+p.kindness/700,.18,.95));if(yes){G.school.recommendation=true;changeRelationship(n,{connection:4,respect:4},`${G.name} earned my recommendation at age ${G.age}.`,'school');log(`${n.name} agreed to write you a recommendation. They asked what you hoped to do next, took notes, and promised not to make it sound generic.`,'good');}else{changeRelationship(n,{connection:-1,conflict:2});log(`${n.name} declined to write the recommendation. They were polite, but said they did not know your work well enough to be convincing.`,'bad');}afterAction(0);}
+function familyApprovalOdds(cost){const base={modest:.22,comfortable:.58,wealthy:.82,affluent:.96}[G.familyWealth]||.45,parents=livingParents();const support=parents.reduce((sum,n)=>{const r=relationshipState(n),p=ensurePersonality(n);return sum+r.connection*.45+r.respect*.3+p.generosity*.2-p.strictness*.08;},0)/Math.max(1,parents.length);return clamp(base+support/420-cost/100000,.08,.97);}
 function askParentsForCamp(id){const a=ACT[id];if(!a||a.cat!=='Camps'||!G.inSchool)return;if(!canAskParentsForLessons()){doActivity(id);return;}if(!spendAct('parent-camp:'+id))return;const parent=pick(livingParents()),first=parent.name.split(' ')[0],approved=chance(familyApprovalOdds(a.cost));if(approved){applyFx(a.fx);log(`You asked ${first} if you could go to ${a.name.toLowerCase()}. After looking at the cost and the dates, ${first} said yes and paid the ${money(a.cost)} fee. You came home with new skills, tired clothes, and several stories told all at once.`,'good');}else{S.happiness=clamp(S.happiness-2);log(`You asked ${first} if you could go to ${a.name.toLowerCase()}. ${first} looked at the ${money(a.cost)} cost and said no. It was not the answer you wanted, even if you understood why.`,'bad');}afterAction(0);}
 function choosePrivateSchool(){const sc=G.school;if(!G.inSchool||!sc)return;const lvl=FAMILY_LEVEL[G.familyWealth]||0,options=[];if(lvl>=1)options.push('private');if(lvl>=2)options.push(G.sex==='Male'?'boys':'girls');$('modalbox').innerHTML=`<h2>School options</h2><p>Your family finances are ${G.familyWealth}. Private tuition would be paid by your parents, but they still have to agree.</p><div class="opts">${options.map(id=>{const x=SCHOOL_TYPES[id];return `<button ${sc.type===id?'disabled':''} onclick="requestPrivateSchool('${id}')">${x.name}<small>${money(x.tuition)}/year • ${x.note}</small></button>`;}).join('')}${sc.type!=='public'?`<button onclick="requestPrivateSchool('public')">Return to public school<small>no tuition • open enrollment</small></button>`:''}</div>`;openModal();}
 function requestPrivateSchool(id){const sc=G.school,x=SCHOOL_TYPES[id];if(!sc||!x||sc.schoolChoiceYear===G.year)return;if(!spendAct('private-school'))return;sc.schoolChoiceYear=G.year;forceClose();if(id==='public'){sc.type='public';sc.name=x.name;resetSchoolRoster(G.schoolStage);log(`Your family moved you back to public school. New halls, new classmates, and no tuition bill waiting at home.`);afterAction(0);return;}const approved=chance(familyApprovalOdds(x.tuition));if(approved){sc.type=id;sc.name=x.name;resetSchoolRoster(G.schoolStage);G.gpaSeed=clamp(G.gpaSeed+3);log(`You asked your parents about ${x.name.toLowerCase()}. They studied the ${money(x.tuition)} tuition, talked privately, and finally said yes. They would pay for it. You started over with smaller classes, unfamiliar uniforms, and a completely new roster.`,'good');}else{S.happiness=clamp(S.happiness-2);log(`You asked your parents about ${x.name.toLowerCase()}. They discussed the tuition and said no. Whether it was the money or the school itself, the decision was final for this year.`,'bad');}afterAction(0);}
@@ -2963,7 +3112,8 @@ function confirmHighSchoolDropout(){
 function schoolDance(){
  if(!G.inSchool||G.age<11){toast('School dances start in middle school.');return;}const sc=G.school;if(sc.danceYear===G.year){toast('You can attend one school dance each year.');return;}if(!spendAct('school-dance'))return;sc.danceYear=G.year;
  sc.popularity=clamp(sc.popularity+rnd(2,6));S.happiness=clamp(S.happiness+rnd(4,8));S.stress=clamp(S.stress-3);
- if(G.schoolStage==='high'&&G.age>=16){
+ if(G.schoolStage==='high'&&G.age>=16&&!sc.promAttended){
+  sc.promAttended=true;
   const roster=schoolRoster('classmates'),boys=roster.filter(n=>n.sex==='Male'),girls=roster.filter(n=>n.sex==='Female');let king=(boys.length?pick(boys).name:pick(MALE)+' '+pick(LAST)),queen=(girls.length?pick(girls).name:pick(FEMALE)+' '+pick(LAST));
   const crownOdds=clamp(.08+sc.popularity/220+S.looks/500+(K.charisma||0)/500,.08,.72),won=chance(crownOdds);
   if(won){if(G.sex==='Male')king=G.name;else queen=G.name;sc.popularity=clamp(sc.popularity+12);K.charisma=clamp(K.charisma+4);S.happiness=clamp(S.happiness+8);}
@@ -2978,12 +3128,14 @@ function schoolDance(){
 /* ---------------- PER-PERSON INTERACTIONS ---------------- */
 function openPerson(id){ if(!npc(id))return; personOpen=id; renderActions(); }
 function personDetail(n){
+  const rel=relationshipState(n),personality=ensurePersonality(n);
   const blood=['parent','sibling','child','grandchild'].includes(n.role);
   const adultBoth=G.age>=18 && n.age>=18;
   const romance=!blood && adultBoth && !n.married && ['friend','coworker','fling'].includes(n.role);
   const life=[capitalize(n.label),n.age,n.career,n.location&&n.location!==G.place?n.location:null,n.partnerName?'with '+n.partnerName:null,(n.children||0)?`${n.children} child${n.children===1?'':'ren'}`:null].filter(Boolean).join(' \u2022 ');
-  let h=`<div class="person" style="display:block"><div class="phead"><div><div class="t">${esc(n.name)}</div><div class="s">${esc(life)}</div></div><div class="rel"><span class="relw">${loyaltyWord(n.loyalty)}</span>${relbar(n.loyalty)}<span class="reln">${Math.round(n.loyalty)} / 100</span></div></div></div>`;
-  h+=grp('Talk', actBtn('talk',n.id,'Conversation')+actBtn('compliment',n.id,'Compliment')+actBtn('insult',n.id,'Insult'));
+  const memories=(n.relationshipHistory||[]).slice(-3).reverse();
+  let h=`<div class="person" style="display:block"><div class="phead"><div><div class="t">${esc(n.name)}</div><div class="s">${esc(life)}${n.socialStatus?` • ${esc(capitalize(n.socialStatus))}`:''}</div></div><div class="rel"><span class="relw">${loyaltyWord(rel.connection)}</span>${relbar(rel.connection)}<span class="reln">${Math.round(rel.connection)} / 100</span></div></div>${personalityHtml(n)}${relationshipAxesHtml(n)}<div class="note">Compatibility ${compatibilityWithPlayer(n)}/100 • ${personality.kindness>=65?'responds strongly to kindness':personality.strictness>=68?'respects consistency and boundaries':personality.ambition>=68?'notices achievement and status':personality.volatility>=68?'reactions can be unpredictable':'temperament is fairly balanced'}</div></div>`;
+  h+=grp('Talk', actBtn('talk',n.id,'Conversation')+actBtn('compliment',n.id,'Compliment')+(rel.conflict>=8?actBtn('apologize',n.id,'Clear the air','reduces conflict; sincerity matters'):'')+actBtn('insult',n.id,'Insult'));
   let together=actBtn('spendtime',n.id,'Spend time')+actBtn('concert',n.id,'Concert')+actBtn('prank',n.id,'Prank');
   if(G.age>=18)together+=actBtn('party',n.id,'Party');
   h+=grp('Do something together', together);
@@ -2997,18 +3149,20 @@ function personDetail(n){
   else if(n.divorced){ st=actBtn('coparent',n.id,'Co-parent calmly')+actBtn('coparent',n.id+'|court','Return to family court'); }
   else if(n.role==='friend'||n.role==='fling'){ st=actBtn('breakup',n.id,'Cut off'); }
   if(st)h+=grp('Status', st);
+  if(memories.length)h+=`<div class="grp"><h4>What they remember</h4>${memories.map(m=>`<div class="memory">${esc(m.text)} <span class="s">${m.age!=null?'Age '+m.age:''}</span></div>`).join('')}</div>`;
   return h;
 }
-function npcTalk(id){ const n=npc(id);if(!n)return;if(!spendAct('talk'))return; n.loyalty=clamp(n.loyalty+rnd(2,5)); S.happiness=clamp(S.happiness+1); log(`You had a real conversation with ${n.name}. ${pick(['Nothing urgent, just the maintenance that keeps people close.','They told you something they had not told anyone.','You disagreed about something small and enjoyed it.'])}`,'good'); afterAction(0); }
-function npcInsult(id){ if(!spendAct())return; const n=npc(id); if(!n)return; n.loyalty=clamp(n.loyalty-rnd(5,12)); n.memory.push(`${G.name} insulted me at ${G.age}.`); if(chance(0.4)){ S.happiness=clamp(S.happiness-3); log(`You said something cruel to ${n.name} and they gave it right back, sharper. It stung more than you expected.`,'bad'); } else { S.stress=clamp(S.stress-2); log(`You said something cruel to ${n.name}. It felt good for exactly as long as it took to land, and worse after.`,'bad'); } afterAction(0); }
-function npcPrank(id){ if(!spendAct('prank'))return; const n=npc(id); if(!n)return; if(chance(0.6)){ n.loyalty=clamp(n.loyalty+rnd(2,5)); S.happiness=clamp(S.happiness+2); log(`You pulled a prank on ${n.name} and, mercifully, they laughed. ${pick(['It became a story you both tell.','They swore cheerful revenge.'])}`,'good'); } else { n.loyalty=clamp(n.loyalty-rnd(4,10)); log(`You pulled a prank on ${n.name} and it did not land. ${pick(['They did not think it was funny. At all.','You crossed a line you did not see until you were over it.'])}`,'bad'); } afterAction(0); }
-function npcConcert(id){ const n=npc(id);if(!n)return;if(G.cash<200&&G.age<18){toast('You cannot cover the tickets.');return;}if(!spendAct('concert'))return;if(!pay(200,true))return; n.loyalty=clamp(n.loyalty+rnd(4,8)); S.happiness=clamp(S.happiness+5); S.stress=clamp(S.stress-3); log(`You took ${n.name} to a concert. ${pick(['You both lost your voices and did not care.','The opener was better than the headliner and that became the joke of the year.','You stood in a crowd of thousands and felt like it was just the two of you.'])}`,'good'); afterAction(0); }
-function npcParty(id){ const n=npc(id);if(!n)return;if(G.age<18){toast('Not yet.');return;}if(G.cash<300){toast('You cannot cover the night.');return;}if(!spendAct('party'))return;if(!pay(300,true))return; n.loyalty=clamp(n.loyalty+rnd(4,9)); S.happiness=clamp(S.happiness+6); S.stress=clamp(S.stress-4); G.addiction.alcohol=clamp(G.addiction.alcohol+4); log(`You went out with ${n.name} and made a night of it. ${pick(['The kind of night that costs you the next morning.','You closed the place down and split a cab and a bad idea for breakfast.','Loud, bright, a little reckless, and exactly what you needed.'])}`,'good'); afterAction(1); }
-function npcDeal(id){ const n=npc(id);if(!n)return;if(!spendAct('deal'))return; if(G.items.length){ const i=rnd(0,G.items.length-1); const inst=G.items[i]; const d=ITEM[inst.id]; const val=Math.round((inst.value??d.price)*((inst.cond??100)/100)*0.9); G.cash+=val; G.items.splice(i,1); n.loyalty=clamp(n.loyalty-rnd(1,4)); log(`You sold your ${d.name.toLowerCase()} to ${n.name} for ${money(val)} \u2014 a better price than a stranger would give, though ${n.name.split(' ')[0]} drove a harder bargain than you expected from a friend.`,'money'); } else { const val=rnd(50,400); G.cash+=val; n.loyalty=clamp(n.loyalty-rnd(1,3)); log(`You talked ${n.name} into buying something off you and cleared ${money(val)}. Money is money; they will forgive you, probably.`,'money'); } afterAction(0); }
+function npcTalk(id){ const n=npc(id);if(!n)return;if(!spendAct('talk'))return;const p=ensurePersonality(n),open=chance(clamp(.52+relationshipState(n).familiarity/250+p.kindness/500-p.volatility/700,.35,.94));if(open){changeRelationship(n,{connection:rnd(2,5),respect:1,familiarity:rnd(2,4),conflict:-2},`${G.name} listened during a real conversation at age ${G.age}.`,'conversation');S.happiness=clamp(S.happiness+1);log(`You had a real conversation with ${n.name}. ${pick(['Nothing urgent, just the maintenance that keeps people close.','They told you something they had not told anyone.','You disagreed about something small and enjoyed it.'])}`,'good');}else{changeRelationship(n,{familiarity:1,conflict:2});log(`${n.name} was distracted or guarded. The conversation stayed on the surface and ended before either of you found the real subject.`);}afterAction(0); }
+function npcInsult(id){ if(!spendAct('insult'))return; const n=npc(id); if(!n)return;const p=ensurePersonality(n),retaliates=chance(clamp(.22+p.volatility/130+p.strictness/500,.25,.9));changeRelationship(n,{connection:-rnd(7,14),respect:-rnd(5,11),conflict:rnd(10,19)},`${G.name} insulted me at age ${G.age}.`,'betrayal');if(retaliates){S.happiness=clamp(S.happiness-3);log(`You said something cruel to ${n.name} and they gave it right back, sharper. It stung more than you expected.`,'bad');}else{S.stress=clamp(S.stress-2);log(`You said something cruel to ${n.name}. It felt good for exactly as long as it took to land, and worse after.`,'bad');}afterAction(0); }
+function npcApologize(id){const n=npc(id);if(!n)return;if(!spendAct('apologize'))return;const r=relationshipState(n),p=ensurePersonality(n),sincere=chance(clamp(.35+K.charisma/260+p.kindness/330+p.morality/600-r.conflict/500,.22,.92));if(sincere){changeRelationship(n,{connection:rnd(2,7),respect:rnd(3,7),conflict:-rnd(9,18)},`${G.name} apologized sincerely at age ${G.age}.`,'repair');log(`You apologized to ${n.name} without defending yourself halfway through it. ${p.strictness>70?'They did not forgive you immediately, but they believed you meant it.':'The tension eased—not erased, but finally moving in the right direction.'}`,'good');}else{changeRelationship(n,{respect:-2,conflict:rnd(2,6)},`${G.name}'s apology felt incomplete at age ${G.age}.`,'failed-repair');log(`You tried to clear the air with ${n.name}, but the apology became an explanation and the explanation became another argument.`,'bad');}afterAction(0);}
+function npcPrank(id){ if(!spendAct('prank'))return; const n=npc(id); if(!n)return;const p=ensurePersonality(n),works=chance(clamp(.7-p.strictness/250-p.volatility/500+relationshipState(n).familiarity/350,.18,.82));if(works){changeRelationship(n,{connection:rnd(2,5),familiarity:3,conflict:-1},`${G.name}'s prank became an inside joke at age ${G.age}.`,'fun');S.happiness=clamp(S.happiness+2);log(`You pulled a prank on ${n.name} and, mercifully, they laughed. ${pick(['It became a story you both tell.','They swore cheerful revenge.'])}`,'good');}else{changeRelationship(n,{connection:-rnd(4,9),respect:-3,conflict:rnd(6,12)},`${G.name}'s prank crossed a line at age ${G.age}.`,'conflict');log(`You pulled a prank on ${n.name} and it did not land. ${pick(['They did not think it was funny. At all.','You crossed a line you did not see until you were over it.'])}`,'bad');}afterAction(0); }
+function npcConcert(id){ const n=npc(id);if(!n)return;if(G.cash<200&&G.age<18){toast('You cannot cover the tickets.');return;}if(!spendAct('concert'))return;if(!pay(200,true))return;changeRelationship(n,{connection:rnd(4,8),attraction:['partner','spouse','fling'].includes(n.role)?3:1,familiarity:rnd(3,6),conflict:-2},`${G.name} took me to a concert at age ${G.age}.`,'shared-experience');S.happiness=clamp(S.happiness+5);S.stress=clamp(S.stress-3);log(`You took ${n.name} to a concert. ${pick(['You both lost your voices and did not care.','The opener was better than the headliner and that became the joke of the year.','You stood in a crowd of thousands and felt like it was just the two of you.'])}`,'good');afterAction(0); }
+function npcParty(id){ const n=npc(id);if(!n)return;if(G.age<18){toast('Not yet.');return;}if(G.cash<300){toast('You cannot cover the night.');return;}if(!spendAct('party'))return;if(!pay(300,true))return;const p=ensurePersonality(n),messy=p.volatility>72&&chance(.28);changeRelationship(n,messy?{connection:2,familiarity:5,conflict:rnd(4,9)}:{connection:rnd(4,8),familiarity:5,conflict:-2},`${G.name} and I went out together at age ${G.age}.`,messy?'messy-night':'shared-experience');S.happiness=clamp(S.happiness+(messy?3:6));S.stress=clamp(S.stress+(messy?2:-4));G.addiction.alcohol=clamp(G.addiction.alcohol+4);log(messy?`You went out with ${n.name}. The night was fun until it became an argument neither of you can reconstruct in the morning.`:`You went out with ${n.name} and made a night of it. ${pick(['The kind of night that costs you the next morning.','You closed the place down and split a cab and a bad idea for breakfast.','Loud, bright, a little reckless, and exactly what you needed.'])}`,messy?'bad':'good');afterAction(1); }
+function npcDeal(id){ const n=npc(id);if(!n)return;if(!spendAct('deal'))return;const p=ensurePersonality(n),loss=p.generosity<35?rnd(3,7):rnd(1,3);if(G.items.length){const i=rnd(0,G.items.length-1),inst=G.items[i],d=ITEM[inst.id],val=Math.round((inst.value??d.price)*((inst.cond??100)/100)*0.9);G.cash+=val;G.items.splice(i,1);changeRelationship(n,{connection:-loss,respect:-2,conflict:2},`${G.name} sold me their ${d.name.toLowerCase()} at age ${G.age}.`,'money');log(`You sold your ${d.name.toLowerCase()} to ${n.name} for ${money(val)} \u2014 a better price than a stranger would give, though ${n.name.split(' ')[0]} drove a harder bargain than you expected from a friend.`,'money');}else{const val=rnd(50,400);G.cash+=val;changeRelationship(n,{connection:-loss,respect:-2,conflict:2},`${G.name} talked me into a purchase at age ${G.age}.`,'money');log(`You talked ${n.name} into buying something off you and cleared ${money(val)}. Money is money; they will forgive you, probably.`,'money');}afterAction(0); }
 function giftNPC(id){ const n=npc(id); if(!n)return; $('modalbox').innerHTML=`<h2>A gift for ${esc(n.name)}</h2><p>Generosity is rarely wasted. How much?</p><div class="opts"><button onclick="confirmGift('${id}','small')">Something small<small>$50</small></button><button onclick="confirmGift('${id}','nice')">Something nice<small>$500</small></button><button onclick="confirmGift('${id}','lavish')">Something lavish<small>$5,000</small></button></div>`; openModal(); }
-function confirmGift(id,tier){ const n=npc(id); if(!n)return; const T={small:[50,3,7],nice:[500,7,13],lavish:[5000,13,22]}[tier]; if(!T)return;if(!spendAct('gift'))return; if(!pay(T[0])){cancelSpentAction();toast('You cannot afford that gift.');return;} forceClose(); n.loyalty=clamp(n.loyalty+rnd(T[1],T[2])); S.happiness=clamp(S.happiness+1); log(`You gave ${n.name} ${tier==='lavish'?'an extravagant gift':tier==='nice'?'a thoughtful gift':'a small gift'}. ${pick(['They lit up.','They protested that you should not have, and clearly loved it.','It was the thought that counted, but the thing did not hurt either.'])}`,'good'); afterAction(0); }
-function npcAskOut(id){ const n=npc(id); if(!n)return; if(['parent','sibling','child'].includes(n.role)){toast('No.');return;} if(G.age<18||n.age<18){toast('Not appropriate.');return;} if(partner()){toast('You are already with someone.');return;} if(n.loyalty>=50 && chance(0.5+n.loyalty/200)){ n.role='partner'; n.label='partner'; n.loyalty=clamp(n.loyalty+6); S.happiness=clamp(S.happiness+6); log(`You asked ${n.name} out \u2014 actually asked, out loud, heart going. ${pick(['They said yes before you finished the sentence.','There was a pause that aged you a year, and then a yes.','They laughed, said finally, and that was that.'])}`,'good'); } else { n.loyalty=clamp(n.loyalty-4); S.happiness=clamp(S.happiness-4); log(`You asked ${n.name} out and it did not go the way the movies promised. ${pick(['They let you down gently, which somehow made it worse.','They value the friendship, they said, and meant it, which did not help.'])}`,'bad'); } afterAction(0); }
-function npcHookup(id){ const n=npc(id); if(!n)return; if(['parent','sibling','child'].includes(n.role)){toast('No.');return;} if(G.age<18||n.age<18){toast('Not appropriate.');return;}if(!spendAct('hookup'))return; S.happiness=clamp(S.happiness+4); n.loyalty=clamp(n.loyalty+rnd(2,6)); n.memory.push(`${G.name} and I got together at ${G.age}.`); const cheat=partner()&&partner().id!==n.id; log(`You and ${n.name} ${pick(['ended a long night at the same door','stopped pretending it was only friendly','let something that had been building finally happen'])}. ${cheat?'You have a partner. You did it anyway, and the knowing sat in your chest like a stone.':'In the morning it was either the start of something or a thing you would both step around forever.'}`); if(cheat)thread('cheated',{npc:partner().id,name:n.name}); afterAction(2); }
+function confirmGift(id,tier){ const n=npc(id); if(!n)return; const T={small:[50,3,7],nice:[500,7,13],lavish:[5000,13,22]}[tier]; if(!T)return;if(!spendAct('gift'))return;if(!pay(T[0])){cancelSpentAction();toast('You cannot afford that gift.');return;}forceClose();const p=ensurePersonality(n),connection=rnd(T[1],T[2])+(p.generosity>70?2:0),respect=tier==='lavish'&&p.morality>72?-1:rnd(1,4);changeRelationship(n,{connection,respect,conflict:-2},`${G.name} gave me ${tier==='lavish'?'an extravagant':'a thoughtful'} gift at age ${G.age}.`,'gift');S.happiness=clamp(S.happiness+1);log(`You gave ${n.name} ${tier==='lavish'?'an extravagant gift':tier==='nice'?'a thoughtful gift':'a small gift'}. ${pick(['They lit up.','They protested that you should not have, and clearly loved it.','It was the thought that counted, but the thing did not hurt either.'])}`,'good');afterAction(0); }
+function npcAskOut(id){ const n=npc(id);if(!n)return;if(['parent','sibling','child'].includes(n.role)){toast('No.');return;}if(G.age<18||n.age<18){toast('Not appropriate.');return;}if(partner()){toast('You are already with someone.');return;}const r=relationshipState(n),compat=compatibilityWithPlayer(n),odds=clamp(.12+compat/125+r.attraction/350-r.conflict/300,.12,.94);if(r.connection>=35&&r.attraction>=25&&chance(odds)){n.role='partner';n.label='partner';changeRelationship(n,{connection:6,attraction:8,familiarity:5,conflict:-3},`${G.name} asked me out and I said yes at age ${G.age}.`,'romance');S.happiness=clamp(S.happiness+6);log(`You asked ${n.name} out \u2014 actually asked, out loud, heart going. ${pick(['They said yes before you finished the sentence.','There was a pause that aged you a year, and then a yes.','They laughed, said finally, and that was that.'])}`,'good');}else{changeRelationship(n,{connection:-3,respect:-1,conflict:3},`${G.name} asked me out and I declined at age ${G.age}.`,'rejection');S.happiness=clamp(S.happiness-4);log(`You asked ${n.name} out and it did not go the way the movies promised. ${pick(['They let you down gently, which somehow made it worse.','They value the friendship, they said, and meant it, which did not help.'])}`,'bad');}afterAction(0); }
+function npcHookup(id){ const n=npc(id);if(!n)return;if(['parent','sibling','child'].includes(n.role)){toast('No.');return;}if(G.age<18||n.age<18){toast('Not appropriate.');return;}if(!spendAct('hookup'))return;const r=relationshipState(n),p=ensurePersonality(n),happens=chance(clamp(.2+r.attraction/115+r.connection/400-r.conflict/250,.15,.94));if(!happens){changeRelationship(n,{connection:-2,conflict:3},`${G.name} made a move I did not return at age ${G.age}.`,'rejection');S.happiness=clamp(S.happiness-3);log(`${n.name} stopped the moment before it became something else. The rejection was gentle and unmistakable.`,'bad');afterAction(0);return;}S.happiness=clamp(S.happiness+4);changeRelationship(n,{connection:rnd(2,6),attraction:rnd(5,10),familiarity:4,conflict:p.morality>75?2:0},`${G.name} and I got together at age ${G.age}.`,'intimacy');const cheat=partner()&&partner().id!==n.id;log(`You and ${n.name} ${pick(['ended a long night at the same door','stopped pretending it was only friendly','let something that had been building finally happen'])}. ${cheat?'You have a partner. You did it anyway, and the knowing sat in your chest like a stone.':'In the morning it was either the start of something or a thing you would both step around forever.'}`);if(cheat)thread('cheated',{npc:partner().id,name:n.name});afterAction(2); }
 
 /* ---------------- INVESTMENTS ---------------- */
 const ASSETS=[
@@ -3050,13 +3204,13 @@ function handleEconomy(){
   if(!G.economy)G.economy={cycle:'Expansion',inflation:2.4,rate:4.5,priceIndex:1};
   const e=G.economy,old=e.cycle;
   if(chance(.18)){const next={Boom:['Expansion','Expansion','Recession'],Expansion:['Boom','Expansion','Flat'],Flat:['Expansion','Flat','Recession'],Recession:['Flat','Expansion','Recession']}[e.cycle]||['Expansion'];e.cycle=pick(next);}
-  const target={Boom:4.8,Expansion:2.7,Flat:2.1,Recession:1.1}[e.cycle];e.inflation=clamp(e.inflation+(target-e.inflation)*.45+(Math.random()-.5)*1.2,-1.5,9.5);e.rate=clamp(e.rate+(e.inflation>4?.8:e.inflation<1?-.6:(e.cycle==='Recession'?-.45:.05)),.25,12);e.priceIndex*=1+e.inflation/100;
+  const target={Boom:4.8,Expansion:2.7,Flat:2.1,Recession:1.1}[e.cycle];e.inflation=clamp(e.inflation+(target-e.inflation)*.45+(random()-.5)*1.2,-1.5,9.5);e.rate=clamp(e.rate+(e.inflation>4?.8:e.inflation<1?-.6:(e.cycle==='Recession'?-.45:.05)),.25,12);e.priceIndex*=1+e.inflation/100;
   if(old!==e.cycle)log(`The economy shifted from ${old.toLowerCase()} to ${e.cycle.toLowerCase()}. Inflation ran ${e.inflation.toFixed(1)}%, and borrowing rates settled near ${e.rate.toFixed(1)}%. Markets and household bills noticed before most people did.`,e.cycle==='Recession'?'bad':'money');
 }
 function handleInvestments(){
   if(!G.market)return;ensureMarket();const e=G.economy||{cycle:'Expansion',inflation:2.4,rate:4.5};let income=0;
   const cycleMove={Boom:.09,Expansion:.035,Flat:0,Recession:-.11}[e.cycle]||0;
-  ASSETS.forEach(a=>{const prev=G.market[a.id];let macro=cycleMove;if(a.cls==='Bonds')macro=(e.cycle==='Recession'?.035:.012)-(e.rate-4.5)*.008;if(a.cls==='Crypto')macro*=1.5;if(a.cls==='Penny')macro*=1.25;if(a.inflation)macro+=(e.inflation-2)*.01;const shock=(Math.random()*2-1)*a.vol;let np=prev*(1+a.drift+macro+shock);if((a.cls==='Penny'||a.cls==='Crypto')&&chance(.04))np*=rnd(20,60)/100;np=Math.max(a.floor||.01,np);G.marketChg[a.id]=prev>0?(np-prev)/prev:0;G.market[a.id]=Math.round(np*10000)/10000;const hd=G.invest[a.id];if(hd&&hd.shares>0&&a.yield)income+=hd.shares*np*a.yield;});
+  ASSETS.forEach(a=>{const prev=G.market[a.id];let macro=cycleMove;if(a.cls==='Bonds')macro=(e.cycle==='Recession'?.035:.012)-(e.rate-4.5)*.008;if(a.cls==='Crypto')macro*=1.5;if(a.cls==='Penny')macro*=1.25;if(a.inflation)macro+=(e.inflation-2)*.01;const shock=(random()*2-1)*a.vol;let np=prev*(1+a.drift+macro+shock);if((a.cls==='Penny'||a.cls==='Crypto')&&chance(.04))np*=rnd(20,60)/100;np=Math.max(a.floor||.01,np);G.marketChg[a.id]=prev>0?(np-prev)/prev:0;G.market[a.id]=Math.round(np*10000)/10000;const hd=G.invest[a.id];if(hd&&hd.shares>0&&a.yield)income+=hd.shares*np*a.yield;});
   income=Math.round(income);if(income>0){G.cash+=income;if(income>=100)log(`Dividends and bond distributions paid ${money(income)} into your account.`,'money');}
 }
 function shareText(n){return n>=1000?Math.round(n).toLocaleString():n>=1?(Math.round(n*100)/100).toLocaleString():n.toFixed(6).replace(/0+$/,'').replace(/\.$/,'');}
@@ -3100,13 +3254,13 @@ function doPropose(id,idx){
   const n=npc(id); if(!n){forceClose();return;} idx=+idx; const inst=G.items[idx]; const d=inst&&ITEM[inst.id];
   if(!d||!d.tags||!d.tags.includes('ring')){toast('That is not a ring.');return;}
   forceClose();
-  const bonus=d.ringBonus||0; const odds=Math.max(0.02,Math.min(0.98,(n.loyalty-35)/55 + bonus));
+  const bonus=d.ringBonus||0,r=relationshipState(n),traits=ensurePersonality(n);const odds=clamp(.08+compatibilityWithPlayer(n)/125+r.connection/350+r.respect/420+r.familiarity/500-r.conflict/240+bonus+(traits.jealousy>78?-.04:0),.02,.98);
   if(chance(odds)){
-    n.engaged=true; n.loyalty=clamp(n.loyalty+8); S.happiness=clamp(S.happiness+10); G.items.splice(idx,1);
+    n.engaged=true;changeRelationship(n,{connection:8,respect:6,attraction:5,familiarity:4,conflict:-5},`${G.name} proposed and I said yes at age ${G.age}.`,'commitment');S.happiness=clamp(S.happiness+10);G.items.splice(idx,1);
     log(`You got down on one knee and offered ${n.name} the ${d.name.toLowerCase()}. ${pick(['They said yes before you finished the question.','There was a silence that took a year off your life, and then a yes, and then the two of you laughing like fools.','They cried, you cried, and a stranger at the next table applauded.'])} You are engaged.`,'good');
     thread('engaged',{npc:n.id});
   } else {
-    n.loyalty=clamp(n.loyalty-6); S.happiness=clamp(S.happiness-8);
+    changeRelationship(n,{connection:-6,respect:-2,conflict:8},`${G.name} proposed before I was ready at age ${G.age}.`,'rejection');S.happiness=clamp(S.happiness-8);
     log(`You proposed to ${n.name}, and they said no \u2014 kindly, or not, but no. ${pick(['They were not ready, they said, in the tone that means not with you.','It was too soon, or too late; you would spend a while deciding which.','The ring stayed in your pocket, and so, for now, did the question.'])} You kept the ring.`,'bad');
   }
   afterAction(0);
@@ -3147,7 +3301,7 @@ function setWedName(choice){
   const originalLast=G.last,theirs=lastNameOf(n); const theirFirst=(n.name||'').trim().split(/\s+/)[0];
   if(choice==='take'){ G.last=theirs; } else if(choice==='hyphen'){ G.last=(G.last||'')+'-'+theirs; }
   G.name=(G.first||'')+' '+(G.last||'');
-  n.role='spouse'; n.married=true; n.engaged=false; n.loyalty=clamp(n.loyalty+10);
+  n.role='spouse';n.married=true;n.engaged=false;changeRelationship(n,{connection:10,respect:8,attraction:5,familiarity:8,conflict:-8},`I married ${G.name} at age ${G.age}.`,'commitment');
   if(!n.career){const [career,income]=pick(NPC_CAREERS);n.career=career;n.income=Math.round(income*rnd(82,118)/100);}
   G.marriage={spouseId:n.id,startYear:G.year,startAge:G.age,prenup:weddingDraft.prenup||'none',startNetWorth:Math.max(0,netWorth()),originalLast};n.marriageStartYear=G.year;
   S.happiness=clamp(S.happiness+v.happy+h.happy); if(v.fame||h.fame)S.fame=clamp(S.fame+(v.fame||0)+(h.fame||0));
@@ -3280,6 +3434,66 @@ function deleteSocial(id){ const x=SOCIALS.find(y=>y.id===id); if(!G.social||!G.
 /* =====================================================================
    PART 6 — GOD MODE, CHARACTER CREATION, OBITUARY, BOOT
    ===================================================================== */
+function collectStabilityIssues(){
+ const issues=[];const add=(severity,code,message)=>issues.push({severity,code,message});
+ if(!G){add('error','NO_LIFE','No active life is loaded.');return issues;}
+ if(!Number.isInteger(G.age)||G.age<0)add('error','AGE_INVALID','Age must be a non-negative whole number.');
+ if(G.lifeStage!==lifeStageForAge(G.age))add('error','LIFE_STAGE_MISMATCH',`Age ${G.age} should use the ${lifeStageForAge(G.age)} life stage, not ${G.lifeStage||'none'}.`);
+ if(Number.isFinite(G.born)&&G.year!==G.born+G.age)add('error','CALENDAR_MISMATCH',`The current year should be ${G.born+G.age}, not ${G.year}.`);
+ const expectedSchool=schoolStageForAge(G.age),shouldAttend=!!expectedSchool&&!leftSchoolEarly();
+ if(G.inSchool!==shouldAttend)add('error','SCHOOL_STATUS_MISMATCH',shouldAttend?'The player should currently be enrolled.':'The player should not currently be enrolled.');
+ if((G.schoolStage||null)!==(shouldAttend?expectedSchool:null))add('error','SCHOOL_STAGE_MISMATCH',`The school stage should be ${shouldAttend?expectedSchool:'none'}.`);
+ if(!G.stats||!G.skills)add('error','CORE_STATS_MISSING','The stats or skills object is missing.');
+ else{
+  for(const key of ['health','happiness','smarts','looks','fitness','fame','stress'])if(!Number.isFinite(G.stats[key])||G.stats[key]<0||G.stats[key]>100)add('error','STAT_RANGE',`${key} is outside 0–100.`);
+  for(const key of Object.keys(SKILLS))if(!Number.isFinite(G.skills[key])||G.skills[key]<0||G.skills[key]>100)add('error','SKILL_RANGE',`${SKILLS[key]} is outside 0–100.`);
+ }
+ if(!Number.isFinite(G.debt)||G.debt<0)add('error','DEBT_INVALID','Debt cannot be negative or non-numeric.');
+ if(!Number.isFinite(G.creditScore)||G.creditScore<300||G.creditScore>850)add('error','CREDIT_RANGE','Credit score must stay between 300 and 850.');
+ const people=Array.isArray(G.npcs)?G.npcs:[],ids=new Set();
+ for(const n of people){if(!n.id)add('error','NPC_ID_MISSING',`${n.name||'An NPC'} has no ID.`);else if(ids.has(n.id))add('error','NPC_ID_DUPLICATE',`NPC ID ${n.id} appears more than once.`);else ids.add(n.id);if(!n.personality)add('error','NPC_PERSONALITY_MISSING',`${n.name||'An NPC'} has no personality profile.`);else for(const key of Object.keys(PERSONALITY_TRAITS))if(!Number.isFinite(n.personality[key])||n.personality[key]<0||n.personality[key]>100)add('error','NPC_TRAIT_RANGE',`${n.name}'s ${key} trait is invalid.`);if(!n.relationship)add('error','NPC_RELATIONSHIP_MISSING',`${n.name||'An NPC'} has no relationship profile.`);else for(const key of Object.keys(RELATIONSHIP_AXES))if(!Number.isFinite(n.relationship[key])||n.relationship[key]<0||n.relationship[key]>100)add('error','NPC_RELATIONSHIP_RANGE',`${n.name}'s ${key} score is invalid.`);}
+ const missingSchoolRefs=[...((G.school&&G.school.classmateIds)||[]),...((G.school&&G.school.facultyIds)||[])].filter(id=>!ids.has(id));
+ if(missingSchoolRefs.length)add('error','SCHOOL_REFERENCE_BROKEN',`${missingSchoolRefs.length} school roster reference(s) point to missing people.`);
+ const livingSpouses=people.filter(n=>n.alive&&n.role==='spouse');
+ if(livingSpouses.length>1)add('error','MULTIPLE_SPOUSES',`${livingSpouses.length} living NPCs are marked as the current spouse.`);
+ if(G.job&&!JOB[G.job.id])add('error','JOB_REFERENCE_BROKEN',`The active job ID ${G.job.id} does not exist.`);
+ if(!G.rng||!Number.isFinite(G.rng.seed)||!Number.isFinite(G.rng.state))add('error','RNG_STATE_MISSING','This life has no reproducible random seed.');
+ try{JSON.parse(JSON.stringify({G,NPCID}));}catch(e){add('error','SAVE_SERIALIZATION',`The current life cannot be serialized: ${e.message}`);}
+ return issues;
+}
+function runCoreSelfTests(){
+ const tests=[];const test=(name,fn)=>{try{tests.push({name,passed:!!fn()});}catch(e){tests.push({name,passed:false,error:e.message});}};
+ test('Life-stage age boundaries',()=>[[0,'baby'],[2,'child'],[5,'elementary'],[11,'middle-school'],[14,'high-school'],[18,'young-adult'],[26,'adult'],[65,'senior']].every(([age,stage])=>lifeStageForAge(age)===stage));
+ test('School-stage age boundaries',()=>[[4,null],[5,'elementary'],[10,'elementary'],[11,'middle'],[13,'middle'],[14,'high'],[17,'high'],[18,null]].every(([age,stage])=>schoolStageForAge(age)===stage));
+  test('Seeded randomness repeats exactly',()=>{const oldSeed=RNG_SEED,oldState=RNG_STATE;setRandomSeed(2600);const a=[random(),random(),random()];setRandomSeed(2600);const b=[random(),random(),random()];setRandomSeed(oldSeed,oldState);return a.every((n,i)=>n===b[i]);});
+  test('Save data round-trips through JSON',()=>{const copy=JSON.parse(JSON.stringify({G,NPCID}));return copy.G.name===G.name&&copy.G.age===G.age;});
+  test('NPC personality and relationship schemas',()=>G.npcs.every(n=>Object.keys(PERSONALITY_TRAITS).every(k=>Number.isFinite(ensurePersonality(n)[k]))&&Object.keys(RELATIONSHIP_AXES).every(k=>Number.isFinite(relationshipState(n)[k]))));
+  test('Legacy loyalty changes bridge into conflict',()=>{const personality={};for(const key of Object.keys(PERSONALITY_TRAITS))personality[key]=50;const n={role:'friend',loyalty:30,personality,relationship:{connection:50,respect:50,attraction:20,conflict:10,familiarity:40,_legacyLoyalty:50},relationshipHistory:[]};const r=relationshipState(n);return r.connection===30&&r.conflict>10&&r.respect<50;});
+ syncRandomState();return tests;
+}
+function buildStabilityReport(){return {gameVersion:GAME_VERSION,generatedAt:new Date().toISOString(),life:{name:G&&G.name,age:G&&G.age,year:G&&G.year,lifeStage:G&&G.lifeStage,seed:G&&G.rng&&G.rng.seed},issues:collectStabilityIssues(),selfTests:runCoreSelfTests()};}
+function openDiagnostics(){
+ if(!G){toast('Start a life first.');return;}
+ const report=buildStabilityReport(),failures=report.selfTests.filter(t=>!t.passed),issues=report.issues;
+ const issueHtml=issues.length?`<div class="list">${issues.map(x=>`<div class="person"><div class="t">${esc(x.code)}</div><div class="s">${esc(x.message)}</div></div>`).join('')}</div>`:'<p class="good">No impossible core states were found in this life.</p>';
+ const testHtml=report.selfTests.map(t=>`<div class="kv"><span>${esc(t.name)}</span><span style="color:${t.passed?'var(--green)':'var(--red)'}">${t.passed?'PASS':'FAIL'}</span></div>`).join('');
+ $('modalbox').innerHTML=`<h2>Stability diagnostics</h2><p class="note">Life seed <b>${report.life.seed}</b> • ${issues.length} state issue${issues.length===1?'':'s'} • ${report.selfTests.length-failures.length}/${report.selfTests.length} core tests passed</p>${issueHtml}<h4>Automatic core tests</h4>${testHtml}<div class="opts" style="margin-top:14px"><button class="primary" onclick="repairStability()">Repair safe issues</button><button onclick="exportStabilityReport()">Export report</button><button onclick="openGod()">Back to God mode</button></div>`;
+ openModal();
+}
+function repairStability(){
+ if(!G)return;
+ sanitizeSave();
+ for(const key of ['health','happiness','smarts','looks','fitness','fame','stress'])S[key]=clamp(Number.isFinite(S[key])?S[key]:50);
+ for(const key of Object.keys(SKILLS))K[key]=clamp(Number.isFinite(K[key])?K[key]:0);
+ G.debt=Math.max(0,Number.isFinite(G.debt)?Math.round(G.debt):0);G.creditScore=clamp(Number.isFinite(G.creditScore)?Math.round(G.creditScore):600,300,850);
+ const validIds=new Set(G.npcs.map(n=>n.id));G.school.classmateIds=G.school.classmateIds.filter(id=>validIds.has(id));G.school.facultyIds=G.school.facultyIds.filter(id=>validIds.has(id));
+ const largestNpc=G.npcs.reduce((m,n)=>Math.max(m,/^n\d+$/.test(n.id)?+n.id.slice(1):0),0);NPCID=Math.max(NPCID||1,largestNpc+1);
+ reconcileLifeState();syncRandomState();saveGame(true);renderAll();openDiagnostics();
+}
+function exportStabilityReport(){
+ const report=buildStabilityReport(),blob=new Blob([JSON.stringify(report,null,2)],{type:'application/json'}),a=document.createElement('a');
+ a.href=URL.createObjectURL(blob);a.download=`SMIS-diagnostic-seed-${report.life.seed}.json`;a.click();URL.revokeObjectURL(a.href);toast('Diagnostic report exported.');
+}
 function openGod(){
   if(!G){toast('Start a life first.');return;}
   const num=(id,val)=>`<input type="number" id="${id}" value="${Math.round(val)}">`;
@@ -3290,7 +3504,7 @@ function openGod(){
   const propSel=`<select id="god_prop">${PROPERTIES.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}</select>`;
   const evSel=`<select id="god_ev">${EVENTS.map(e=>`<option value="${e.id}">${e.id}</option>`).join('')}</select>`;
   const npcRoleSel=`<select id="god_npcrole"><option value="friend">friend</option><option value="partner">partner</option><option value="spouse">spouse</option><option value="child">child</option><option value="sibling">sibling</option><option value="parent">parent</option><option value="coworker">coworker</option></select>`;
-  const npcList=allNPCs().map(n=>`<div class="row"><label>${esc(n.name)} <span class="s">(${n.label})</span></label><input type="range" min="0" max="100" value="${n.loyalty}" oninput="npc('${n.id}').loyalty=+this.value"></div>`).join('')||'<div class="note">No one in your life yet.</div>';
+  const npcList=allNPCs().map(n=>{const r=relationshipState(n);return `<div class="person" style="margin-bottom:7px"><div class="t">${esc(n.name)} <span class="s">(${esc(n.label)})</span></div>${personalityHtml(n)}${Object.entries(RELATIONSHIP_AXES).map(([key,label])=>`<div class="row"><label>${label}</label><input type="range" min="0" max="100" value="${Math.round(r[key])}" oninput="godRelationship('${n.id}','${key}',this.value)"></div>`).join('')}</div>`;}).join('')||'<div class="note">No one in your life yet.</div>';
   $('modalbox').innerHTML=`<div class="god"><h2>God mode</h2>
     <div class="note">This is your workshop. Bend anything. Nothing here judges you — it's your story.</div>
     <div class="acts">
@@ -3302,6 +3516,7 @@ function openGod(){
       <button onclick="godImmortal()">${(G.flags&&G.flags.immortal)?'Mortality on':'Immortality'}</button>
       <button onclick="if(G.jailUntil>G.age){G.jailUntil=0;renderAll();toast('Freed.')}">Release from jail</button>
       <button onclick="godSkip(5)">Skip 5 years</button>
+      <button onclick="openDiagnostics()">Stability check</button>
     </div>
     <h4>Money & standing</h4>
     <div class="row"><label>Cash</label>${num('god_cash',G.cash)}<label>Debt</label>${num('god_debt',G.debt)}<label>Credit</label>${num('god_credit',G.creditScore)}</div>
@@ -3321,6 +3536,7 @@ function openGod(){
   openModal();
 }
 function gv(id){ const el=$(id); return el?+el.value:null; }
+function godRelationship(id,key,value){const n=npc(id),r=relationshipState(n);if(!n||!r||!(key in RELATIONSHIP_AXES))return;r[key]=clamp(+value);n.loyalty=Math.round(r.connection);r._legacyLoyalty=n.loyalty;if(r.conflict>=70&&r.connection<28)n.socialStatus='enemy';else if(r.conflict>=48&&r.respect<42)n.socialStatus='rival';else n.socialStatus=null;}
 function godApply(){
   ['health','happiness','smarts','looks','fitness','fame','stress'].forEach(k=>{const v=gv('god_'+k);if(v!=null)S[k]=clamp(v);});
   Object.keys(SKILLS).forEach(k=>{const v=gv('god_skill_'+k);if(v!=null)K[k]=clamp(v);});
@@ -3329,7 +3545,7 @@ function godApply(){
   const cr=gv('god_credit'); if(cr!=null)G.creditScore=clamp(cr,300,850);
   const age=gv('god_age'); if(age!=null&&age>=0)G.age=Math.round(age);
   const edu=gv('god_edu'); if(edu!=null)G.edu=edu;
-  renderAll(); saveGame(true); toast('Reality updated.');
+  reconcileLifeState();renderAll(); saveGame(true); toast('Reality updated.');
 }
 function godMoney(n){ G.cash+=n; renderAll(); saveGame(true); toast(`+${money(n)}`); }
 function godHeal(){ S.health=100; S.stress=clamp(S.stress-40); G.addiction.alcohol=0; G.addiction.drugs=0; G.conditions=[]; renderAll(); toast('Healed.'); }
@@ -3391,6 +3607,7 @@ function fillCities(prefix){
   sel.innerHTML=['(random)'].concat(Object.keys(COUNTRIES[country])).map(c=>`<option>${c}</option>`).join('');
 }
 function beginLife(){
+  const lifeSeed=freshSeed();setRandomSeed(lifeSeed);
   const p=(createMode==='god')?'g':'b';
   const rd=id=>{const el=$(p+'_'+id);return el?el.value:'';};
   let country=rd('country'); if(country==='(random)'||!country)country=null;
@@ -3401,7 +3618,7 @@ function beginLife(){
     name:(rd('first')||'').trim()||null,
     last:(rd('last')||'').trim()||null,
     sex:rd('sex')||'Male',
-    place:city, country:country,
+    place:city, country:country, seed:lifeSeed,
   };
   if(createMode==='god'){
     ['health','happiness','smarts','looks','fitness','stress'].forEach(k=>{const v=rd(k);if(v!=='')cfg[k]=clamp(+v);});
@@ -3461,15 +3678,15 @@ function sanitizeSave(){
  if(!G.flags)G.flags={};if(!G.flags.gigCounts||typeof G.flags.gigCounts!=='object')G.flags.gigCounts={};if(!G.addiction)G.addiction={alcohol:0,drugs:0};if(!G.social)G.social={};if(!G.pets)G.pets=[];if(!Array.isArray(G.conditions))G.conditions=[];G.conditions=G.conditions.filter(c=>DISEASE[c.id]);
  if(!Array.isArray(G.pensions))G.pensions=[];if(!G.serviceYears||typeof G.serviceYears!=='object')G.serviceYears={};if(!G.highSalary||typeof G.highSalary!=='object')G.highSalary={};if(!Array.isArray(G.careerHistory))G.careerHistory=[];if(!Array.isArray(G.supportOrders))G.supportOrders=[];if(!Array.isArray(G.divorceHistory))G.divorceHistory=[];
  if(!G.familyWealth){const parentIncome=(G.npcs||[]).filter(n=>n.role==='parent').reduce((sum,n)=>sum+(n.income||0),0);G.familyWealth=parentIncome>=300000?'affluent':parentIncome>=170000?'wealthy':parentIncome>=90000?'comfortable':'modest';}
- const schoolDefaults={popularity:40,clique:null,team:null,teamRole:null,seasonYear:null,type:'public',name:'Public school',classmateIds:[],facultyIds:[],danceYear:null,promCourt:null,club:null,clubYear:null,schoolEvents:{},schoolChoiceYear:null,recommendation:false};G.school=Object.assign(schoolDefaults,G.school||{});if(G.school.team&&!G.school.teamRole)G.school.teamRole='Player';if(!Array.isArray(G.school.classmateIds))G.school.classmateIds=[];if(!Array.isArray(G.school.facultyIds))G.school.facultyIds=[];if(!G.school.schoolEvents||typeof G.school.schoolEvents!=='object')G.school.schoolEvents={};if(!SCHOOL_TYPES[G.school.type]){G.school.type='public';G.school.name='Public school';}if(G.school.club&&!SCHOOL_CLUBS[G.school.club])G.school.club=null;if(G.inSchool&&!['elementary','middle','high'].includes(G.schoolStage))G.schoolStage=G.age>=14?'high':G.age>=11?'middle':'elementary';if(!G.invest)G.invest={};if(!G.market)G.market={};if(!G.marketChg)G.marketChg={};
+ const schoolDefaults={popularity:40,clique:null,team:null,teamRole:null,seasonYear:null,type:'public',name:'Public school',classmateIds:[],facultyIds:[],danceYear:null,promAttended:false,promCourt:null,club:null,clubYear:null,schoolEvents:{},schoolChoiceYear:null,recommendation:false};G.school=Object.assign(schoolDefaults,G.school||{});if(G.school.team&&!G.school.teamRole)G.school.teamRole='Player';if(!Array.isArray(G.school.classmateIds))G.school.classmateIds=[];if(!Array.isArray(G.school.facultyIds))G.school.facultyIds=[];if(!G.school.schoolEvents||typeof G.school.schoolEvents!=='object')G.school.schoolEvents={};if(!SCHOOL_TYPES[G.school.type]){G.school.type='public';G.school.name='Public school';}if(G.school.club&&!SCHOOL_CLUBS[G.school.club])G.school.club=null;if(G.age>=5&&G.age<=17&&!G.inSchool&&G.special&&!G.flags.highSchoolDropout)G.flags.leftSchoolForCareer=true;if(!G.invest)G.invest={};if(!G.market)G.market={};if(!G.marketChg)G.marketChg={};
  if(!G.threads)G.threads=[];if(!G.arcs)G.arcs=[];if(!G.balance)G.balance={livingCost:0};if(!G.economy)G.economy={cycle:'Expansion',inflation:2.4,rate:4.5,priceIndex:1};if(!G.actionEffects||typeof G.actionEffects!=='object')G.actionEffects={};
  if(G.eduProgram){if(G.eduProgram.gpa==null)G.eduProgram.gpa=clamp(Math.round((G.gpaSeed+S.smarts)/2));if(G.eduProgram.scholarship==null)G.eduProgram.scholarship=0;if(G.eduProgram.parentShare==null)G.eduProgram.parentShare=0;const cc=campusState();if(!cc.campusEvents||typeof cc.campusEvents!=='object')cc.campusEvents={};if(cc.leader)cc.officeAttempted=true;}
  if(G.special){const c=G.special;if(c.form==null)c.form=50;if(c.momentum==null)c.momentum=10;if(c.projects==null)c.projects=0;if(c.awards==null)c.awards=0;if(c.residuals==null)c.residuals=0;if(c.catalog==null)c.catalog=0;if(c.focus==null)c.focus=c.type==='actor'?'Film & television':c.type==='musician'?'Rock & pop':pick(SPORTS);if(c.type==='actor')ensureActorCareer();if(c.type==='musician')ensureMusicianCareer();if(c.type==='athlete')ensureAthleteCareer();}
- G.npcs=G.npcs||[];G.npcs.forEach(n=>{if(n.career===undefined)n.career=null;if(n.income===undefined)n.income=0;if(n.partnerName===undefined)n.partnerName=null;if(n.children===undefined)n.children=0;if(n.location===undefined)n.location=G.place;if(n.education===undefined)n.education=0;if(n.friendOutsideWork===undefined)n.friendOutsideWork=false;if(n.workplaceConflict===undefined)n.workplaceConflict=null;if(n.classmate&&!n.schoolStats)n.schoolStats={looks:rnd(25,95),smarts:rnd(25,95),happiness:rnd(25,95),health:rnd(35,100)};if(!n.memory)n.memory=[];});
+ G.npcs=G.npcs||[];G.npcs.forEach(n=>{if(n.career===undefined)n.career=null;if(n.income===undefined)n.income=0;if(n.partnerName===undefined)n.partnerName=null;if(n.children===undefined)n.children=0;if(n.location===undefined)n.location=G.place;if(n.education===undefined)n.education=0;if(n.friendOutsideWork===undefined)n.friendOutsideWork=false;if(n.workplaceConflict===undefined)n.workplaceConflict=null;if(n.classmate&&!n.schoolStats)n.schoolStats={looks:rnd(25,95),smarts:rnd(25,95),happiness:rnd(25,95),health:rnd(35,100)};if(!n.memory)n.memory=[];ensurePersonality(n);const r=relationshipState(n);if(r.conflict>=70&&r.connection<28)n.socialStatus='enemy';else if(r.conflict>=48&&r.respect<42)n.socialStatus='rival';else if(['parent','sibling','child','grandchild'].includes(n.role)&&r.connection<20)n.socialStatus='estranged';else n.socialStatus=null;});
  if(G.job){ensureWorkplace();const j=JOB[G.job.id];G.serviceYears[j.track]=Math.max(G.serviceYears[j.track]||0,G.job.years||0);G.highSalary[j.track]=Math.max(G.highSalary[j.track]||0,jobAnnualPay());}
  if(G.military){const mpay=(G.military.officer?OFFPAY:MILPAY)[G.military.rank]||0;G.serviceYears.Military=Math.max(G.serviceYears.Military||0,G.military.years||0);G.highSalary.Military=Math.max(G.highSalary.Military||0,mpay);}
  const spouse=G.npcs.find(n=>n.alive&&n.role==='spouse');if(spouse){ensureMarriage(spouse);for(const k of kids())if(!k.otherParentId)k.otherParentId=spouse.id;}else if(G.marriage)G.marriage=null;
- G.version=GAME_VERSION;
+ reconcileLifeState();syncRandomState();G.version=GAME_VERSION;
 }
 function homeLabel(){ const p=G.props[G.props.length-1]; return (p&&PROP[p.id])?PROP[p.id].name:(G.home==='rent'?'Renting':'With parents'); }
 
