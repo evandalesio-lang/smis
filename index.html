@@ -146,7 +146,7 @@ button.person .phead{flex:1;margin:0}
 </head>
 <body>
 <header>
-  <h1>LifeMachine <small>v2.8.4</small></h1>
+  <h1>LifeMachine <small>v2.9</small></h1>
   <span class="who" id="who"></span>
   <span class="spacer"></span>
   <div class="tools">
@@ -211,7 +211,7 @@ const MALE=['James','Liam','Noah','Ethan','Mason','Logan','Owen','Caleb','Henry'
 const FEMALE=['Emma','Olivia','Ava','Sophia','Mia','Chloe','Harper','Ella','Grace','Lily','Nora','Zoe','Claire','Ivy','Sadie','Maya','Ruby','Jade','Tessa','Lena','Rachel','Dana','Kim','Nicole','Erin','Jenna','Brooke','Vanessa'];
 const LAST=['Carter','Brooks','Reyes','Nguyen','Kowalski','Fischer','Okafor','Santos','Marino','Hughes','Dalton','Keller','Bennett','Hayes','Morales','Petrov','Lindqvist','Walsh','Barnes','Chen','Dixon','Fleming','Garza','Holt','Ivers','Jensen','Knox','Lowe'];
 const SPORTS=['football','basketball','baseball','soccer','MMA','hockey'];
-const GAME_VERSION='2.8.4';
+const GAME_VERSION='2.9';
 
 // ---------- DATA: skills ----------
 const SKILLS={acting:'Acting',music:'Music',athletics:'Athletics',fitness:'Fitness',intellect:'Intellect',charisma:'Charisma',discipline:'Discipline',combat:'Combat',cooking:'Cooking',tech:'Tech',writing:'Writing',business:'Business',gardening:'Gardening',stealth:'Stealth',driving:'Driving'};
@@ -574,7 +574,7 @@ const ACTIVITIES=[
  A('dance','Dance class','Creative',600,{charisma:2,fitness:2,looks:1},{age:6}),
  A('modeling','Modeling lessons','Creative',1200,{looks:4,charisma:2},{age:12}),
  // Home
- A('garden','Gardening','Home',150,{gardening:5,happiness:3,stress:-4},{age:8,needsYard:true}),
+ A('garden','Gardening','Home',0,{gardening:5,happiness:3,stress:-4},{age:8,needsYard:true}),
  A('cookhome','Cook at home','Home',0,{cooking:4,health:1},{age:12}),
  // Fun & social
  A('movie','Go to the movies','Fun',15,{happiness:4,stress:-3},{age:6}),
@@ -1230,7 +1230,7 @@ function blankLife(cfg){
   addiction:{alcohol:0,drugs:0},
   notoriety:0, record:[], jailUntil:0,
   items:[], props:[], home:'parents',
-  npcs:[], threads:[], arcs:[], flags:{}, social:{}, pets:[], conditions:[], supportOrders:[], divorceHistory:[], marriage:null, actionEffects:{}, consequences:{scores:{family:0,money:0,crime:0,health:0,education:0,career:0},sources:{},history:[],cooldowns:{},barriers:{},lastYear:null}, livingWorld:{history:[],cooldowns:{},counts:{},categoryCounts:{},lastIds:[],lastCategory:null,categoryStreak:0}, justice:{caseSeq:0,activeCase:null,cases:[],history:[],probation:null,prison:null,lastPrison:null}, assets:{primaryProperty:null,actionYear:null,actionsUsed:0,history:[]}, wellbeing:{sleep:72,nutrition:68,mental:72,energy:74,routines:{sleep:'balanced',nutrition:'balanced',exercise:'light',mind:'unwind'},history:[],actionYear:null,actionsUsed:0,lastYear:null,injury:null}, godless:!!cfg.godless,
+  npcs:[], threads:[], arcs:[], flags:{}, social:{}, pets:[], conditions:[], supportOrders:[], divorceHistory:[], marriage:null, actionEffects:{}, consequences:{scores:{family:0,money:0,crime:0,health:0,education:0,career:0},sources:{},history:[],cooldowns:{},barriers:{},lastYear:null}, livingWorld:{history:[],cooldowns:{},counts:{},categoryCounts:{},lastIds:[],lastCategory:null,categoryStreak:0}, relationshipLife:{history:[],cooldowns:{},lastYear:null,lastNpcId:null}, goals:{active:null,history:[],lastYear:null}, justice:{caseSeq:0,activeCase:null,cases:[],history:[],probation:null,prison:null,lastPrison:null}, assets:{primaryProperty:null,actionYear:null,actionsUsed:0,history:[]}, wellbeing:{sleep:72,nutrition:68,mental:72,energy:74,routines:{sleep:'balanced',nutrition:'balanced',exercise:'light',mind:'unwind'},history:[],actionYear:null,actionsUsed:0,lastYear:null,injury:null}, godless:!!cfg.godless,
   balance:{livingCost:0}, economy:{cycle:'Expansion',inflation:2.4,rate:4.5,priceIndex:1}, version:GAME_VERSION,
   year:2026, history:[]
  };
@@ -1307,6 +1307,134 @@ const livingParents=()=>G.npcs.filter(n=>n.alive&&n.role==='parent');
 const friends=()=>G.npcs.filter(n=>n.alive&&n.role==='friend');
 const kids=()=>G.npcs.filter(n=>n.alive&&n.role==='child');
 const partner=()=>G.npcs.find(n=>n.alive&&(n.role==='partner'||n.role==='spouse'));
+
+// ---- relationships that initiate moments of their own ----
+function ensureRelationshipLife(){
+ if(!G.relationshipLife||typeof G.relationshipLife!=='object')G.relationshipLife={};
+ const r=G.relationshipLife;if(!Array.isArray(r.history))r.history=[];if(!r.cooldowns||typeof r.cooldowns!=='object')r.cooldowns={};if(r.lastYear===undefined)r.lastYear=null;if(r.lastNpcId===undefined)r.lastNpcId=null;return r;
+}
+function recordRelationshipMoment(n,kind,title,outcome){
+ const state=ensureRelationshipLife();state.history.push({npcId:n.id,name:n.name,kind,title,outcome,age:G.age,year:G.year});if(state.history.length>30)state.history.shift();state.cooldowns[n.id]=G.year+2;state.lastNpcId=n.id;
+}
+function finishRelationshipMoment(n,kind,title,outcome,changes,memory,logText,logKind){
+ changeRelationship(n,changes,memory,kind);recordRelationshipMoment(n,kind,title,outcome);log(logText,logKind);
+}
+function relationshipSituationKinds(n){
+ const r=relationshipState(n),k=['invitation','favor','milestone','secret'];
+ if(r.conflict>=28)k.push('conflict','conflict');if(S.stress>=55)k.push('support','support');if(['partner','spouse','friend','sibling'].includes(n.role))k.push('surprise');return k;
+}
+function openRelationshipSituation(id,forcedKind){
+ const n=npc(id);if(!n||!n.alive)return false;const r=relationshipState(n),p=ensurePersonality(n),kind=forcedKind||pick(relationshipSituationKinds(n));
+ if(kind==='invitation'){
+  const plan=pick(['a last-minute concert','dinner at a place with terrible parking','a day trip with no useful itinerary','a birthday gathering where you know exactly one person']);
+  ask(`${n.name} reaches out`,`${n.name} invites you to ${plan}. “I know it is short notice,” they say, which is technically an apology and definitely not more notice.`,[
+   {label:'Go with them',sub:'Make the time and share the day.',fn:()=>{const cost=G.age>=18?rnd(40,180):0;if(cost)pay(cost,true);S.happiness=clamp(S.happiness+5);S.stress=clamp(S.stress-3);finishRelationshipMoment(n,kind,'An invitation','Went together',{connection:7,familiarity:5,conflict:-3},`${G.name} accepted my invitation at age ${G.age}.`,`You went with ${n.name}. The plan was imperfect, the timing was worse, and the two of you had a genuinely good time${cost?` for ${money(cost)}`:''}.`,'good');}},
+   {label:'Suggest another day',sub:'Keep the connection without dropping everything.',fn:()=>finishRelationshipMoment(n,kind,'An invitation','Rescheduled',{connection:2,respect:3},`${G.name} could not come, but made another plan with me.`,`You could not make it, so you and ${n.name} chose another day. For once, “we should do this sometime” came with an actual date.`,'good')},
+   {label:'Say you are busy',sub:'A clean no; they may still be disappointed.',fn:()=>finishRelationshipMoment(n,kind,'An invitation','Declined',{connection:p.kindness>65?-1:-4,familiarity:-1},`${G.name} declined my invitation at age ${G.age}.`,`You told ${n.name} you could not go. They said, “No problem.” It was probably only a small problem.`)}
+  ]);return true;
+ }
+ if(kind==='favor'){
+  const amount=G.age>=18?rnd(250,2200):0,need=amount?`They need ${money(amount)} to cover a sudden expense and promise to repay you.`:`They need help with a miserable afternoon of lifting, carrying, and finding the one screw that rolled under the furniture.`;
+  ask(`${n.name} needs a favor`,`${n.name} calls without the usual warm-up. ${need}`,[
+   {label:amount?'Cover the expense':'Show up and help',sub:amount?`${money(amount)} • generosity builds trust`:'Give them your afternoon.',cond:()=>!amount||G.cash>=amount,fn:()=>{if(amount)pay(amount);S.happiness=clamp(S.happiness+2);finishRelationshipMoment(n,kind,'A difficult favor','Helped',{connection:9,respect:7,conflict:-4},`${G.name} helped when I needed it at age ${G.age}.`,amount?`You sent ${n.name} ${money(amount)}. Their relieved “thank you” arrived before the payment notification.`:`You helped ${n.name}. The job took twice as long as promised and ended with takeout eaten from the boxes.`,'good');}},
+   {label:'Help another way',sub:'Offer time, advice, or a smaller solution.',fn:()=>{S.stress=clamp(S.stress+2);finishRelationshipMoment(n,kind,'A difficult favor','Found another way',{connection:4,respect:4,familiarity:3},`${G.name} found another way to help me.`,`You could not solve the whole problem, but you stayed on the phone and helped ${n.name} find a workable answer.`,'good');}},
+   {label:'Refuse',sub:'Keep your time and money.',fn:()=>finishRelationshipMoment(n,kind,'A difficult favor','Refused',{connection:-6,respect:-4,conflict:p.generosity>65?7:3},`${G.name} refused when I asked for help at age ${G.age}.`,`You said no. ${n.name} went quiet for half a second too long, then thanked you for being honest.`,'bad')}
+  ]);return true;
+ }
+ if(kind==='conflict'){
+  ask(`The thing ${n.name} has not said`,`${n.name} finally brings up the tension between you. “I am tired of pretending this is fine.” The sentence lands with all the conversations that should have happened earlier.`,[
+   {label:'Listen without interrupting',sub:'Lower conflict and rebuild respect.',fn:()=>{S.stress=clamp(S.stress-3);finishRelationshipMoment(n,kind,'The overdue conversation','Listened',{connection:5,respect:8,conflict:-14,familiarity:4},`${G.name} listened when I finally spoke honestly.`,`You let ${n.name} finish. Some of it felt unfair; enough of it felt true. The argument became a conversation.`,'good');}},
+   {label:'Stand your ground',sub:'Respect may rise even if conflict does too.',fn:()=>finishRelationshipMoment(n,kind,'The overdue conversation','Stood firm',{respect:p.strictness>55?5:-2,conflict:6,connection:-2},`${G.name} stood their ground during our argument.`,`You defended yourself. ${n.name} did not agree, but the two of you finally stopped speaking in hints.`)},
+   {label:'Walk away',sub:'End the conversation before it gets worse.',fn:()=>finishRelationshipMoment(n,kind,'The overdue conversation','Walked away',{connection:-7,respect:-5,conflict:9},`${G.name} walked away from our unfinished argument.`,`You left before either of you said the worst possible thing. Unfortunately, the second-worst things had already been said.`,'bad')}
+  ]);return true;
+ }
+ if(kind==='support'){
+  ask(`${n.name} notices`,`${n.name} studies your face and says, “You look exhausted.” You begin the automatic denial, but they have known you long enough to wait it out.`,[
+   {label:'Tell them the truth',sub:'Let somebody share the weight.',fn:()=>{S.stress=clamp(S.stress-9);ensureWellbeing().mental=clamp(ensureWellbeing().mental+5);finishRelationshipMoment(n,kind,'They noticed','Opened up',{connection:8,respect:4,familiarity:7,conflict:-4},`${G.name} trusted me with what was really happening.`,`You told ${n.name} what had been piling up. They did not fix it. They stayed, which helped more.`,'good');}},
+   {label:'Make a joke',sub:'Deflect, but keep the moment warm.',fn:()=>{K.charisma=clamp(K.charisma+1);S.stress=clamp(S.stress-2);finishRelationshipMoment(n,kind,'They noticed','Joked about it',{connection:2,familiarity:2},`${G.name} joked instead of telling me what was wrong.`,`You made ${n.name} laugh and escaped the serious conversation. A successful maneuver, if not exactly a solution.`)}},
+   {label:'Insist you are fine',sub:'Close the door.',fn:()=>finishRelationshipMoment(n,kind,'They noticed','Shut them out',{connection:-3,respect:-1},`${G.name} would not let me help.`,`You insisted you were fine with the intensity of someone very obviously not fine. ${n.name} let the subject drop.`)}
+  ]);return true;
+ }
+ if(kind==='milestone'){
+  const milestone=pick(['a promotion','a birthday they were pretending not to care about','finishing a difficult course','finally ending a terrible week']);
+  ask(`${n.name} has news`,`${n.name} calls to tell you about ${milestone}. They try to sound casual. They fail completely.`,[
+   {label:'Celebrate properly',sub:'Spend $120 and make it memorable.',cond:()=>G.age<18||G.cash>=120,fn:()=>{if(G.age>=18)pay(120);S.happiness=clamp(S.happiness+4);finishRelationshipMoment(n,kind,'Good news','Celebrated',{connection:7,respect:3,familiarity:4},`${G.name} celebrated my good news with me.`,`You celebrated with ${n.name}. There was food, an unnecessary toast, and at least one photograph neither of you will approve of later.`,'good');}},
+   {label:'Call and congratulate them',sub:'Simple, sincere, and free.',fn:()=>finishRelationshipMoment(n,kind,'Good news','Called',{connection:3,respect:3},`${G.name} called to celebrate my good news.`,`You called ${n.name} and let them enjoy telling the whole story twice.`,'good')},
+   {label:'Send a quick message',sub:'Acknowledge it and move on.',fn:()=>finishRelationshipMoment(n,kind,'Good news','Sent a message',{connection:1},`${G.name} sent a quick message about my news.`,`You sent three celebratory emojis and trusted them to perform the emotional labor.`)}
+  ]);return true;
+ }
+ if(kind==='secret'){
+  ask(`${n.name} tells you something`,`${n.name} lowers their voice and tells you something private. It is not dangerous, exactly, but it is interesting enough to become dangerous in the wrong conversation.`,[
+   {label:'Keep it private',sub:'Trust grows quietly.',fn:()=>finishRelationshipMoment(n,kind,'A confidence','Kept the secret',{connection:6,respect:7,familiarity:6,conflict:-2},`${G.name} kept something private for me.`,`You kept ${n.name}'s confidence. Nothing happened, which was the whole point.`,'good')},
+   {label:'Offer honest advice',sub:'Helpful if they are ready to hear it.',fn:()=>finishRelationshipMoment(n,kind,'A confidence','Gave advice',{connection:p.strictness>65?2:5,respect:5,familiarity:4},`${G.name} gave me honest advice when I confided in them.`,`You gave ${n.name} your honest opinion. They did not love every word, but they stayed for all of it.`,'good')},
+   {label:'Tell someone else',sub:'Tempting, funny, and risky.',fn:()=>{K.charisma=clamp(K.charisma+2);finishRelationshipMoment(n,kind,'A confidence','Shared the secret',{connection:-12,respect:-16,conflict:15},`${G.name} shared something I told them in confidence.`,`You told one person, who told one person, who apparently owned a megaphone. ${n.name} found out.`,'bad');}}
+  ]);return true;
+ }
+ ask(`A completely unnecessary surprise`,`${n.name} appears with snacks and a plan that begins with, “Do not ask too many questions.” Against your better judgment, the plan sounds fun.`,[
+  {label:'Go along with it',sub:'Choose the story over the schedule.',fn:()=>{S.happiness=clamp(S.happiness+7);S.stress=clamp(S.stress-4);finishRelationshipMoment(n,'surprise','An unnecessary surprise','Went along',{connection:8,familiarity:6},`${G.name} trusted one of my questionable plans.`,`You followed ${n.name}'s plan. It involved a closed road, an alarming amount of cheese, and a story that improved every time either of you retold it.`,'good');}},
+  {label:'Ask several questions',sub:'Improve the plan before agreeing.',fn:()=>{K.intellect=clamp(K.intellect+1);finishRelationshipMoment(n,'surprise','An unnecessary surprise','Negotiated',{connection:4,respect:3},`${G.name} made me explain the plan first.`,`You made ${n.name} explain everything. The plan became safer, duller, and still surprisingly fun.`,'good');}},
+  {label:'Stay home',sub:'Some days the couch wins.',fn:()=>finishRelationshipMoment(n,'surprise','An unnecessary surprise','Stayed home',{connection:-2},`${G.name} turned down my surprise plan.`,`You stayed home. ${n.name} sent photographs proving the evening was either wonderful or evidence in a future trial.`)}
+ ]);return true;
+}
+function handleDynamicRelationshipYear(){
+ const state=ensureRelationshipLife();if(state.lastYear===G.year)return;state.lastYear=G.year;if(G.age<5||prisonState()||!chance(.46))return;
+ const candidates=allNPCs().filter(n=>!['faculty','inmate','former-classmate'].includes(n.role)&&(state.cooldowns[n.id]||0)<=G.year&&relationshipState(n).familiarity>=18);
+ if(!candidates.length)return;let pool=candidates.filter(n=>n.id!==state.lastNpcId);if(!pool.length)pool=candidates;pool.sort((a,b)=>(relationshipState(b).connection+relationshipState(b).conflict*.35)-(relationshipState(a).connection+relationshipState(a).conflict*.35));const shortlist=pool.slice(0,Math.min(5,pool.length));openRelationshipSituation(pick(shortlist).id);
+}
+
+// ---- one active personal goal connects choices across the rest of life ----
+const GOAL_TYPES={
+ fitness:{name:'Get in better shape',years:2,note:'Raise Fitness by 15 points.'},
+ savings:{name:'Build financial breathing room',years:3,note:'Increase net worth through cash, investments, property, or debt reduction.'},
+ debt:{name:'Cut your debt in half',years:3,note:'Reduce the balance without requiring one specific strategy.'},
+ career:{name:'Move your career forward',years:4,note:'Get hired or earn a promotion.'},
+ education:{name:'Reach an education milestone',years:6,note:'Finish your current program or improve your school performance.'},
+ home:{name:'Own a home',years:5,note:'Purchase your first property.'},
+ relationship:{name:'Strengthen a relationship',years:2,note:'Choose someone and build a closer, calmer connection.'},
+ skill:{name:'Develop a skill',years:3,note:'Choose one skill and raise it by 15 points.'}
+};
+function ensureGoals(){if(!G.goals||typeof G.goals!=='object')G.goals={};const g=G.goals;if(!Array.isArray(g.history))g.history=[];if(g.active===undefined)g.active=null;if(g.lastYear===undefined)g.lastYear=null;return g;}
+function goalEligible(type){if(type==='debt')return G.age>=16&&G.debt>0;if(type==='career')return G.age>=15;if(type==='education')return !!G.eduProgram||G.inSchool;if(type==='home')return G.age>=18&&!G.props.length;if(type==='relationship')return G.age>=5&&allNPCs().some(n=>!['faculty','inmate'].includes(n.role)&&relationshipState(n).connection<95);if(type==='skill')return G.age>=8&&Object.keys(K).some(k=>(K[k]||0)<95);if(type==='savings')return G.age>=16;if(type==='fitness')return G.age>=10&&S.fitness<95;return false;}
+function availableGoalTypes(){return Object.keys(GOAL_TYPES).filter(goalEligible);}
+function openGoalChoice(){
+ if(ensureGoals().active){toast('Finish or leave your current goal before choosing another.');return;}
+ const choices=availableGoalTypes();$('modalbox').innerHTML=`<h2>Choose a personal goal</h2><p>Pick one direction for this chapter of your life. The goal watches what you do across every screen, so progress comes from living—not from pressing a special progress button.</p><div class="opts">${choices.map(id=>`<button onclick="startPersonalGoal('${id}')">${esc(GOAL_TYPES[id].name)}<small>${esc(GOAL_TYPES[id].note)} • ${GOAL_TYPES[id].years} year${GOAL_TYPES[id].years===1?'':'s'}</small></button>`).join('')}</div>`;openModal();
+}
+function startPersonalGoal(type,arg){
+ if(ensureGoals().active||!goalEligible(type))return;
+ if(type==='relationship'&&!arg){const people=allNPCs().filter(n=>!['faculty','inmate'].includes(n.role)&&relationshipState(n).connection<95);$('modalbox').innerHTML=`<h2>Who do you want to grow closer to?</h2><div class="opts">${people.map(n=>`<button onclick="startPersonalGoal('relationship','${n.id}')">${esc(n.name)}<small>${esc(capitalize(n.socialStatus||n.label||n.role))} • connection ${Math.round(relationshipState(n).connection)}/100</small></button>`).join('')}</div>`;openModal();return;}
+ if(type==='skill'&&!arg){const choices=Object.keys(SKILLS).filter(id=>(K[id]||0)<95).sort((a,b)=>(K[a]||0)-(K[b]||0)).slice(0,12);$('modalbox').innerHTML=`<h2>Which skill?</h2><p>Your twelve least-developed skills are shown so the choice stays useful.</p><div class="opts">${choices.map(id=>`<button onclick="startPersonalGoal('skill','${id}')">${esc(SKILLS[id])}<small>Current level ${Math.round(K[id]||0)}/100</small></button>`).join('')}</div>`;openModal();return;}
+ const def=GOAL_TYPES[type],a={type,name:def.name,startedYear:G.year,startedAge:G.age,deadlineYear:G.year+def.years,startValue:0,targetValue:0,targetId:arg||null};
+ if(type==='fitness'){a.startValue=S.fitness;a.targetValue=Math.min(100,S.fitness+15);a.detail=`Reach ${a.targetValue} Fitness.`;}
+ else if(type==='savings'){a.startValue=netWorth();a.targetValue=a.startValue+Math.max(5000,Math.round(Math.max(10000,Math.abs(a.startValue))*.25));a.detail=`Raise net worth from ${money(a.startValue)} to ${money(a.targetValue)}.`;}
+ else if(type==='debt'){a.startValue=G.debt;a.targetValue=Math.floor(G.debt/2);a.detail=`Reduce debt from ${money(a.startValue)} to ${money(a.targetValue)} or less.`;}
+ else if(type==='career'){a.startJobId=G.job&&G.job.id||null;a.detail=a.startJobId?`Move beyond your current ${JOB[a.startJobId].title} role.`:'Land an ordinary job.';}
+ else if(type==='education'){a.startEdu=G.edu;if(G.eduProgram){a.mode='program';a.detail=`Complete your ${PROGRAMS.find(p=>p.id===G.eduProgram.id)?.name||'current program'}.`;}else{a.mode='school';a.startValue=schoolGPA();a.targetValue=Math.min(100,a.startValue+10);a.detail=`Raise your grades from ${a.startValue} to ${a.targetValue}.`;}}
+ else if(type==='home'){a.startValue=G.props.length;a.targetValue=a.startValue+1;a.detail='Purchase your first property.';}
+ else if(type==='relationship'){const n=npc(arg);if(!n||relationshipState(n).connection>=95)return;a.personName=n.name;a.startValue=relationshipState(n).connection;a.targetValue=Math.min(100,a.startValue+15);a.detail=`Raise your connection with ${n.name} from ${Math.round(a.startValue)} to ${Math.round(a.targetValue)} while keeping conflict under control.`;}
+ else if(type==='skill'){if(!(arg in K)||(K[arg]||0)>=95)return;a.skillName=SKILLS[arg]||capitalize(arg);a.startValue=K[arg]||0;a.targetValue=Math.min(100,a.startValue+15);a.detail=`Raise ${a.skillName} from ${Math.round(a.startValue)} to ${Math.round(a.targetValue)}.`;}
+ ensureGoals().active=a;forceClose();log(`You set a personal goal: ${a.name}. ${a.detail}`,'good');afterAction(0);
+}
+function goalProgressData(a=ensureGoals().active){
+ if(!a)return{pct:0,current:'',target:'',complete:false};let pct=0,current='',target=a.detail;
+ if(a.type==='fitness'){current=`Fitness ${Math.round(S.fitness)}`;pct=(S.fitness-a.startValue)/Math.max(1,a.targetValue-a.startValue)*100;}
+ else if(a.type==='savings'){const value=netWorth();current=`Net worth ${money(value)}`;pct=(value-a.startValue)/Math.max(1,a.targetValue-a.startValue)*100;}
+ else if(a.type==='debt'){current=`Debt ${money(G.debt)}`;pct=(a.startValue-G.debt)/Math.max(1,a.startValue-a.targetValue)*100;}
+ else if(a.type==='career'){const moved=a.startJobId?!!G.job&&G.job.id!==a.startJobId:!!G.job;current=G.job?JOB[G.job.id].title:'No current job';pct=moved?100:G.job?Math.max(10,Math.round((G.job.perf||50)*.7)):0;}
+ else if(a.type==='education'){if(a.mode==='program'){const ep=G.eduProgram,finished=G.edu>a.startEdu;current=finished?EDU[G.edu]:ep?`${Math.round(ep.creditsEarned||0)}/${Math.round(ep.creditsNeeded||1)} credits`:'Program left';pct=finished?100:ep?(ep.creditsEarned||0)/Math.max(1,ep.creditsNeeded||1)*100:0;}else{const gpa=schoolGPA();current=`Grades ${gpa}`;pct=(gpa-a.startValue)/Math.max(1,a.targetValue-a.startValue)*100;}}
+ else if(a.type==='home'){current=G.props.length?'Property purchased':'No property yet';pct=G.props.length>a.startValue?100:0;}
+ else if(a.type==='relationship'){const n=npc(a.targetId),r=n&&relationshipState(n);current=n?`${n.name}: ${Math.round(r.connection)} connection, ${Math.round(r.conflict)} conflict`:`${a.personName} is no longer in your life`;pct=r?(r.connection-a.startValue)/Math.max(1,a.targetValue-a.startValue)*100:0;if(r&&r.conflict>55)pct-=20;}
+ else if(a.type==='skill'){const value=K[a.targetId]||0;current=`${a.skillName} ${Math.round(value)}`;pct=(value-a.startValue)/Math.max(1,a.targetValue-a.startValue)*100;}
+ pct=clamp(Math.round(pct));return{pct,current,target,complete:pct>=100};
+}
+function completePersonalGoal(){const goals=ensureGoals(),a=goals.active;if(!a)return false;const p=goalProgressData(a);if(!p.complete)return false;S.happiness=clamp(S.happiness+6);S.stress=clamp(S.stress-4);K.discipline=clamp(K.discipline+4);if(a.type==='relationship')K.charisma=clamp(K.charisma+2);if(a.type==='fitness')S.health=clamp(S.health+3);const result={...a,status:'completed',endedYear:G.year,endedAge:G.age};goals.history.push(result);if(goals.history.length>20)goals.history.shift();goals.active=null;log(`Goal completed: ${a.name}. The reward was not a trophy so much as proof that your choices had started pointing in the same direction.`,'good');return true;}
+function checkPersonalGoal(){return completePersonalGoal();}
+function handlePersonalGoalYear(){const goals=ensureGoals(),a=goals.active;if(!a||goals.lastYear===G.year)return;goals.lastYear=G.year;if(completePersonalGoal())return;if(G.year>=a.deadlineYear){goals.history.push({...a,status:'unfinished',endedYear:G.year,endedAge:G.age});if(goals.history.length>20)goals.history.shift();goals.active=null;S.happiness=clamp(S.happiness-2);log(`Your goal to ${a.name.toLowerCase()} reached its deadline unfinished. Life moved on, but the goal can be chosen again when the timing is better.`,'bad');}}
+function abandonPersonalGoal(){const goals=ensureGoals(),a=goals.active;if(!a)return;goals.history.push({...a,status:'left',endedYear:G.year,endedAge:G.age});if(goals.history.length>20)goals.history.shift();goals.active=null;log(`You let go of the goal to ${a.name.toLowerCase()}. Changing direction is not the same thing as failing.`);afterAction(0);}
+function tabGoals(){
+ const goals=ensureGoals(),a=goals.active;let h='';if(a){const p=goalProgressData(a),years=Math.max(0,a.deadlineYear-G.year);h+=`<div class="grp"><h4>${esc(a.name)}</h4><div class="note">${esc(a.detail)}<br>${esc(p.current)} • ${years} year${years===1?'':'s'} remaining</div>${miniBar('Progress',p.pct,'happy')}<div class="acts">${actBtn('goal-abandon',null,'Leave this goal')}</div></div>`;}else h+=grp('Choose your direction',actBtn('goal-choose',null,'Choose a personal goal'),'One active goal at a time. Progress comes automatically from the choices you already make throughout LifeMachine.');
+ const history=goals.history.slice(-8).reverse();if(history.length)h+=`<div class="grp"><h4>Past goals</h4>${history.map(x=>`<div class="kv"><span>${esc(x.name)}</span><span>${x.status==='completed'?'Completed':x.status==='left'?'Left behind':'Unfinished'} • age ${x.endedAge}</span></div>`).join('')}</div>`;return h;
+}
 
 // NPCs have lives beyond the player's action menu. Only major news from close
 // relationships reaches the journal, keeping the yearly log readable.
@@ -1413,7 +1541,7 @@ const WELLNESS_ROUTINES={
  mind:{ignore:{name:'Push feelings aside',cost:0,note:'No bill, but pressure accumulates.'},unwind:{name:'Make time to unwind',cost:0,note:'Ordinary rest and hobbies.'},therapy:{name:'Regular therapy',cost:4200,note:'Build resilience and reduce stress.'}}
 };
 function ensureAssets(){if(!G.assets||typeof G.assets!=='object')G.assets={};const a=G.assets;if(!Array.isArray(a.history))a.history=[];if(a.primaryProperty===undefined)a.primaryProperty=null;if(!Number.isFinite(a.actionsUsed))a.actionsUsed=0;if(a.actionYear===undefined)a.actionYear=null;if(!Number.isFinite(G.flags.assetSeq))G.flags.assetSeq=0;const used=new Set(),fresh=prefix=>{let id;do{id=prefix+(++G.flags.assetSeq);}while(used.has(id));return id;};for(const it of (G.items||[])){if(!it.uid||used.has(it.uid))it.uid=fresh('item');used.add(it.uid);if(!Number.isFinite(it.uses))it.uses=0;if(!Number.isFinite(it.memories))it.memories=0;if(it.insured===undefined)it.insured=false;if(it.broken===undefined)it.broken=false;}for(const p of (G.props||[])){if(!p.uid||used.has(p.uid))p.uid=fresh('prop');used.add(p.uid);if(!Number.isFinite(p.memories))p.memories=0;if(p.insured===undefined)p.insured=false;}if(a.primaryProperty!=null&&!G.props.some(p=>p.uid===a.primaryProperty&&!p.rented))a.primaryProperty=null;if(a.primaryProperty==null){const p=G.props.find(p=>!p.rented);if(p)a.primaryProperty=p.uid;}return a;}
-function ensureWellbeing(){if(!G.wellbeing||typeof G.wellbeing!=='object')G.wellbeing={};const w=G.wellbeing;for(const [k,v] of Object.entries({sleep:70,nutrition:65,mental:70,energy:70,actionsUsed:0}))if(!Number.isFinite(w[k]))w[k]=v;for(const k of ['sleep','nutrition','mental','energy'])w[k]=clamp(w[k]);if(!w.routines||typeof w.routines!=='object')w.routines={};w.routines=Object.assign({sleep:'balanced',nutrition:'balanced',exercise:'light',mind:'unwind'},w.routines);for(const k of Object.keys(WELLNESS_ROUTINES))if(!WELLNESS_ROUTINES[k][w.routines[k]])w.routines[k]=Object.keys(WELLNESS_ROUTINES[k])[0];if(!Array.isArray(w.history))w.history=[];if(w.actionYear===undefined)w.actionYear=null;if(w.lastYear===undefined)w.lastYear=null;if(w.injury===undefined)w.injury=null;return w;}
+function ensureWellbeing(){if(!G.wellbeing||typeof G.wellbeing!=='object')G.wellbeing={};const w=G.wellbeing;for(const [k,v] of Object.entries({sleep:70,nutrition:65,mental:70,energy:70,actionsUsed:0}))if(!Number.isFinite(w[k]))w[k]=v;for(const k of ['sleep','nutrition','mental','energy'])w[k]=clamp(w[k]);if(!w.routines||typeof w.routines!=='object')w.routines={};w.routines=Object.assign({sleep:'balanced',nutrition:'balanced',exercise:'light',mind:'unwind'},w.routines);for(const k of Object.keys(WELLNESS_ROUTINES))if(!WELLNESS_ROUTINES[k][w.routines[k]])w.routines[k]=Object.keys(WELLNESS_ROUTINES[k])[0];if(!Array.isArray(w.history))w.history=[];if(!w.actionCounts||typeof w.actionCounts!=='object')w.actionCounts={};if(w.actionYear===undefined)w.actionYear=null;if(w.lastYear===undefined)w.lastYear=null;if(w.injury===undefined)w.injury=null;return w;}
 function assetRecord(type,title,detail){const a=ensureAssets();a.history.push({type,title,detail,age:G.age,year:G.year});if(a.history.length>30)a.history.shift();}
 function itemValue(it){const d=ITEM[it.id];return d?Math.max(0,Math.round((it.value??d.price)*((it.cond??100)/100))):0;}
 function propertyValue(p){const d=PROP[p.id];if(!d)return 0;return Math.max(0,Math.round(d.price*(1+(p.upgrades||0)*.18)*((p.cond??100)/100)*.92));}
@@ -1422,7 +1550,8 @@ function functionalItems(test){return (G.items||[]).filter(it=>{const d=ITEM[it.
 function hasFunctionalTag(tag){return functionalItems(d=>d.tags.includes(tag)||(tag==='gym'&&['gear','homegym'].includes(d.id))).length>0;}
 function assetBonuses(){const home=primaryHomeProperty(),homeDef=home&&PROP[home.id],vehicles=functionalItems(d=>d.tags.includes('car')||d.tags.includes('moto')),tech=functionalItems(d=>d.cat==='Tech'),creative=functionalItems(d=>d.tags.includes('instrument')||d.tags.includes('studio')),comfort=functionalItems(d=>d.cat==='Home'),luxury=functionalItems(d=>d.cat==='Luxury'||d.price>=100000);return{home:homeDef?Math.round((home.cond??100)*.06+homeDef.happy*5+(home.upgrades||0)*4):0,transport:vehicles.length?Math.round(Math.max(...vehicles.map(x=>x.cond??100))*.12):0,tech:Math.min(15,tech.length*3),creative:Math.min(15,creative.length*3),fitness:hasFunctionalTag('gym')?12:0,learning:functionalItems(d=>d.tags.includes('books')).length?10:0,comfort:Math.min(15,comfort.length*2),status:Math.min(20,luxury.reduce((n,x)=>n+(ITEM[x.id].fame||1)*2,0))};}
 function useAssetAction(){const a=ensureAssets();if(a.actionYear!==G.year){a.actionYear=G.year;a.actionsUsed=0;}a.actionsUsed++;return true;}
-function useWellbeingAction(){const w=ensureWellbeing();if(w.actionYear!==G.year){w.actionYear=G.year;w.actionsUsed=0;}if(w.actionsUsed>=3){toast('You have used all three wellbeing actions this year.');return false;}w.actionsUsed++;return true;}
+function wellbeingActionUses(kind){const w=ensureWellbeing();if(w.actionYear!==G.year)return 0;return w.actionCounts[kind]||0;}
+function useWellbeingAction(kind){const w=ensureWellbeing();if(w.actionYear!==G.year){w.actionYear=G.year;w.actionsUsed=0;w.actionCounts={};}w.actionsUsed++;w.actionCounts[kind]=(w.actionCounts[kind]||0)+1;const effective=w.actionCounts[kind]<=3;if(!effective)toast('You can keep doing this, but only the first three times each year improve your stats.');return effective;}
 function handleAssetBenefitsYear(){const a=ensureAssets(),w=ensureWellbeing(),b=assetBonuses(),home=primaryHomeProperty();if(home){const d=PROP[home.id],quality=b.home;if(quality>=12){w.mental=clamp(w.mental+2);S.stress=clamp(S.stress-2);}if(d.yard)w.mental=clamp(w.mental+1);if(partner()&&!home.rented&&quality>=10)changeRelationship(partner(),{connection:1,conflict:-1},`Shared a stable home with ${G.name}.`,'home');}if(b.transport&&G.job){G.job.perf=clamp(G.job.perf+Math.round(b.transport/6));G.job.security=clamp(G.job.security+1);w.energy=clamp(w.energy+2);}if(b.tech&&G.job&&['tech','intellect','writing','business'].includes(workPrimarySkill(JOB[G.job.id])))G.job.perf=clamp(G.job.perf+Math.max(1,Math.round(b.tech/5)));if(b.learning&&ensureWellbeing().routines.mind!=='ignore')K.intellect=clamp(K.intellect+1);if(b.status)S.fame=clamp(S.fame+Math.min(2,Math.round(b.status/8)));a.lastSummary=b;}
 function handleWellbeingYear(){const w=ensureWellbeing(),r=w.routines,b=assetBonuses();if(w.lastYear===G.year)return;w.lastYear=G.year;const costs=prisonState()?0:Object.keys(r).reduce((n,k)=>n+(WELLNESS_ROUTINES[k][r[k]]?.cost||0),0);if(costs)pay(costs,true);
  if(r.sleep==='short'){w.sleep-=12;w.energy-=8;S.stress+=5;}else if(r.sleep==='balanced'){w.sleep+=2;w.energy+=2;}else{w.sleep+=8;w.energy+=7;S.stress-=4;if(G.job)G.job.recognition=clamp(G.job.recognition-1);}
@@ -1470,7 +1599,7 @@ function ageUp(){
  if(justice.prison){
   handlePrisonYear();
   const sentenceComplete=G.age>=G.jailUntil;if(sentenceComplete)releaseFromPrison(false);
-  handlePensions();handleSupportOrders();handleWellbeingYear();handleConditionsYear();handleStressConsequences();handleNPCYear();handleLifeConsequences();if(prisonState()&&!pendingChoice)rollEvent();if(!pendingChoice)tickThreads();if(!pendingChoice)tickArcs();handleAgingAndDeath();reconcileLifeState();finishYear();return;
+  handlePensions();handleSupportOrders();handleWellbeingYear();handleConditionsYear();handleStressConsequences();handleNPCYear();handleLifeConsequences();handlePersonalGoalYear();if(prisonState()&&!pendingChoice)rollEvent();if(!pendingChoice)tickThreads();if(!pendingChoice)tickArcs();handleAgingAndDeath();reconcileLifeState();finishYear();return;
  }
  // schooling
  handleSchool();
@@ -1506,11 +1635,15 @@ function ageUp(){
  handleNPCYear();
  // major pressures and protective buffers now spill across life systems
  handleLifeConsequences();
+ // personal goals read progress from every connected system
+ handlePersonalGoalYear();
  // Graduation is a defining choice, so it is offered before a random event can occupy the decision window.
  if(G.flags.collegePrompt&&!pendingChoice){G.flags.collegePrompt=false;offerCollegeChoice();handleAgingAndDeath();finishYear();return;}
  // threads and longer arcs (the world keeping receipts)
  if(!pendingChoice)tickThreads();
  if(!pendingChoice)tickArcs();
+ // people sometimes initiate the year's defining choice themselves
+ if(!pendingChoice)handleDynamicRelationshipYear();
  // one random event, weighted, unless an arc already needs a decision
  if(!pendingChoice)rollEvent();
  // aging health
@@ -1855,7 +1988,7 @@ function renderModalChoice(){
 function resolveChoice(i){
   const p=pendingChoice; pendingChoice=null; closeModal();
   try{ p.opts[i].fn(); }catch(e){ console.error(e); }
-  normalizeCoreMeters();syncAllRelationships();
+  normalizeCoreMeters();syncAllRelationships();checkPersonalGoal();
   renderAll(); saveGame(true);
   scrollStoryLatest();
   if(!G.alive){ setTimeout(openObituary,300); }
@@ -2458,7 +2591,7 @@ function scrollStoryLatest(instant){
   const go=()=>{const target=document.querySelector('#log .yr:last-child p:last-child')||document.querySelector('#log .yr:last-child');if(target&&target.scrollIntoView)target.scrollIntoView({behavior:instant?'auto':'smooth',block:'center'});};
   if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>requestAnimationFrame(go));else setTimeout(go,0);
 }
-function afterAction(stress){ if(stress)S.stress=clamp(S.stress+stress);settleActionEffects();renderAll();saveGame(true);scrollStoryLatest(); }
+function afterAction(stress){ if(stress)S.stress=clamp(S.stress+stress);settleActionEffects();checkPersonalGoal();renderAll();saveGame(true);scrollStoryLatest(); }
 
 /* =====================================================================
    RENDERING — sheet, log, header
@@ -2623,7 +2756,7 @@ let datingCandidateDraft=null; // profile currently being considered in Love
 const MENU=[
  {id:'people', title:'Relationships', sub:'Family, friends, the people in your life', icon:'💞', body:tabLife},
  {id:'consequences',title:'Consequences',sub:'See how every part of life affects the others',icon:'⚖️',body:tabConsequences},
- {id:'livingworld',title:'Living World',sub:'Event history, variety, rarity, and callbacks',icon:'🌎',body:tabLivingWorld},
+ {id:'goals',title:'Goals',sub:'Choose a direction and watch life respond',icon:'🎯',body:tabGoals,cond:()=>G.age>=5},
  {id:'love',   title:'Love',          sub:'Dating, romance, and everything after', icon:'❤️', body:tabLove,        cond:()=>G.age>=13},
  {id:'work',   title:'Occupation',    sub:'Jobs, military, special careers, gigs', icon:'💼', body:tabWork},
  {id:'edu',    title:'Education',      sub:'School, degrees, and summer camps',     icon:'🎓', body:tabLearn},
@@ -2655,7 +2788,7 @@ function renderActions(){
     const cat=MENU.find(m=>m.id===menuOpen);
     if(!cat||(cat.cond&&!safeCond(cat.cond))){ menuOpen=null; return renderActions(); }
     wrap.innerHTML=`<button class="back" onclick="menuOpen=null;personOpen=null;propOpen=null;socialOpen=null;schoolOpen=null;schoolView='overview';renderActions()">‹ Back</button><span class="mtitle">${cat.icon} ${esc(cat.title)}</span>`;
-    if(jailed && cat.id!=='people' && cat.id!=='justice'){ body.innerHTML=`<div class="note">You're incarcerated for ${G.jailUntil-G.age} more year(s). Relationships and the Justice & Prison screen remain available while you serve the sentence.</div>`; body.onclick=null; }
+    if(jailed && cat.id!=='people' && cat.id!=='justice' && cat.id!=='goals'){ body.innerHTML=`<div class="note">You're incarcerated for ${G.jailUntil-G.age} more year(s). Relationships, Goals, and the Justice & Prison screen remain available while you serve the sentence.</div>`; body.onclick=null; }
     else { body.innerHTML=cat.body()||'<div class="note">Nothing here right now.</div>'; body.onclick=onActClick; }
   } else {
     wrap.innerHTML=`<span class="mtitle">What do you want to do?</span>`;
@@ -2670,6 +2803,7 @@ function onActClick(e){
   const b=e.target.closest('button[data-act]'); if(!b)return;
   const act=b.dataset.act, arg=b.dataset.arg;
   const H={
+    'goal-choose':openGoalChoice, 'goal-abandon':abandonPersonalGoal,
     activity:doActivity, gig:doGig, 'apply-job':a=>applyJob(a),
     'work-style':openWorkStyle, 'work-hours':openWorkHours, 'retire-job':retireFromJob, 'claim-pension':claimPensionAction,
     'work-collaborate':a=>workInteract(a,'collaborate'), 'work-network':a=>workInteract(a,'network'), 'work-befriend':a=>workInteract(a,'befriend'), 'work-confront':a=>workInteract(a,'confront'), 'work-steal':workTakeCredit, 'work-hr':workReportHR,
@@ -2788,8 +2922,8 @@ function loyaltyWord(l){ return l>=88?'devoted':l>=72?'close':l>=58?'warm':l>=44
 function loyaltyClass(l){ return l>=72?'good':l>=44?'ok':'bad'; }
 function relbar(l){ l=clamp(Math.round(l)); return `<div class="relbar ${loyaltyClass(l)}"><div style="width:${l}%"></div></div>`; }
 function personRow(n){
-  const r=relationshipState(n),life=[capitalize(n.label),n.age,n.socialStatus?capitalize(n.socialStatus):null,n.career,n.workplaceConflict?'workplace conflict':null,n.location&&n.location!==G.place?n.location:null].filter(Boolean).join(' • '),traits=traitSummary(n,2).join(', ');
-  return `<button class="person" data-act="person" data-arg="${n.id}"><div class="phead"><div><div class="t">${esc(n.name)}</div><div class="s">${esc(life)}${n.married?' • married':''}<br>${esc(traits)} • respect ${Math.round(r.respect)} • conflict ${Math.round(r.conflict)}</div></div><div class="rel"><span class="relw">${loyaltyWord(r.connection)}</span>${relbar(r.connection)}<span class="reln">${Math.round(r.connection)} / 100</span></div></div><span class="mchev pchev">›</span></button>`;
+  const r=relationshipState(n),relation=capitalize(n.socialStatus||n.label||n.role),occupation=n.career||(n.age<18?'Student':'Not currently working');
+  return `<button class="person" data-act="person" data-arg="${n.id}"><div class="phead"><div><div class="t">${esc(n.name)}</div><div class="s">${esc(relation)} • ${esc(occupation)}</div></div><div class="rel"><span class="relw">${loyaltyWord(r.connection)}</span>${relbar(r.connection)}<span class="reln">${Math.round(r.connection)} / 100</span></div></div><span class="mchev pchev">›</span></button>`;
 }
 function npcCompliment(id){ if(!spendAct('compliment'))return; const n=npc(id); if(!n)return;const p=ensurePersonality(n),works=chance(clamp(.72+p.kindness/500-p.volatility/900,.55,.94)); if(works){changeRelationship(n,{connection:rnd(3,7),respect:rnd(1,3),familiarity:1,conflict:-2},`${G.name} offered a sincere compliment at age ${G.age}.`,'kindness');log(`You told ${n.name} something true and kind. ${pick(['They pretended it was no big deal and clearly kept it.','It landed. You saw it land.','They said it back, and meant it.'])}`,'good'); } else {changeRelationship(n,{connection:-2,conflict:2},`${G.name}'s compliment felt awkward or insincere at age ${G.age}.`,'misunderstanding');log(`You tried to compliment ${n.name} and it came out sideways. They gave you the polite smile, the one that closes a door softly.`); } afterAction(0); }
 function tabLife(){
@@ -3186,9 +3320,6 @@ function tabAssets(){
   cats.forEach(c=>{ h+=grp('Buy · '+c, ITEMS.filter(i=>i.cat===c&&!i.hidden).map(i=>{const nl=(i.tags.includes('car')||i.tags.includes('moto'))?'license':i.tags.includes('boat')?'boat':i.tags.includes('plane')?'pilot':null;const lock=G.age<(i.age||16)||(nl&&!G.flags[nl]);return actBtn('buy-item',i.id,i.name,money(i.price),lock);}).join('')); });
   // licenses
   h+=`<div class="grp"><h4>Licenses</h4><div class="list">${licRow('car',"Driver's license",16,'lets you buy and drive cars')}${licRow('boat','Boating license',16,'required to buy boats')}${licRow('pilot',"Pilot's license",18,'required to buy aircraft')}</div></div>`;
-  // home activities
-  h+=grp('Around the house', activityButtons(['Home']), hasYard()?'':'Gardening needs a home with a yard.');
-  const history=ensureAssets().history.slice(-8).reverse();if(history.length)h+=`<div class="grp"><h4>Ownership history</h4>${history.map(x=>`<div class="ripple"><b>${esc(x.title)}</b><div class="note">Age ${x.age} • ${esc(x.detail)}</div></div>`).join('')}</div>`;
   return h;
 }
 function licRow(kind,name,age,note){
@@ -3384,15 +3515,15 @@ function actAct(id){ const a=ACT[id]; if(!a)return ''; const locked=G.age<a.age|
 function wellnessRoutineName(kind){const w=ensureWellbeing(),r=WELLNESS_ROUTINES[kind]&&WELLNESS_ROUTINES[kind][w.routines[kind]];return r?r.name:'None';}
 function openWellnessRoutine(kind){const group=WELLNESS_ROUTINES[kind];if(!group)return;$('modalbox').innerHTML=`<h2>${esc(capitalize(kind))} routine</h2><p>Pick what fits your life. The routine stays in place until you change it, and paid options are charged once each year.</p><div class="opts">${Object.entries(group).map(([id,r])=>`<button onclick="setWellnessRoutine('${kind}','${id}')">${esc(r.name)}<small>${r.cost?money(r.cost)+'/yr • ':''}${esc(r.note)}</small></button>`).join('')}</div>`;openModal();}
 function setWellnessRoutine(kind,id){const w=ensureWellbeing(),r=WELLNESS_ROUTINES[kind]&&WELLNESS_ROUTINES[kind][id];if(!r)return;forceClose();w.routines[kind]=id;log(`You changed your ${kind} routine to ${r.name.toLowerCase()}. The first day felt like a decision. The tenth began to feel like a life.`,'good');afterAction(0);}
-function wellnessRest(){const w=ensureWellbeing();if(!useWellbeingAction())return;w.sleep=clamp(w.sleep+12);w.energy=clamp(w.energy+10);w.mental=clamp(w.mental+4);S.stress=clamp(S.stress-7);log(`You took a real day off. You slept in, ignored your notifications, ate something easy, and did absolutely nothing useful. By evening, you felt like a person again.`,'good');afterAction(0);}
-function wellnessMeal(){const w=ensureWellbeing();if(!useWellbeingAction())return;const equipped=functionalItems(d=>['applpack','espresso'].includes(d.id)).length>0;w.nutrition=clamp(w.nutrition+(equipped?14:9));w.energy=clamp(w.energy+4);S.health=clamp(S.health+2);K.cooking=clamp(K.cooking+(equipped?3:2));log(`You planned and cooked real meals${equipped?' in a kitchen that finally earned its counter space':''}. By Thursday the containers no longer looked aspirational; they looked like dinner.`,'good');afterAction(0);}
-function wellnessWorkout(){const w=ensureWellbeing();if(G.age<8){toast('You are too young for structured training.');return;}if(w.injury&&w.injury.severity>=2){toast(`Your ${w.injury.name} needs recovery before hard training.`);return;}if(!useWellbeingAction())return;const gym=hasFunctionalTag('gym');if(!gym)pay(25,true);const gain=gym?6:4;S.fitness=clamp(S.fitness+gain);S.health=clamp(S.health+2);w.sleep=clamp(w.sleep+4);w.energy=clamp(w.energy-5);w.mental=clamp(w.mental+3);K.athletics=clamp(K.athletics+2);if(!w.injury&&chance(.04+(w.energy<30?.08:0))){w.injury={name:'overuse injury',severity:1,year:G.year};S.health=clamp(S.health-4);log(`The workout ended with the unmistakable discovery that one part of your body had filed a formal complaint.`,'bad');}else log(`You trained${gym?' with your own equipment':' at the gym'}, hard enough to improve and sensibly enough to return under your own power.`,'good');afterAction(0);}
-function wellnessTherapy(){const w=ensureWellbeing();if(G.age<12){toast('Therapy becomes available at 12.');return;}if(!useWellbeingAction())return;pay(1800,true);w.mental=clamp(w.mental+14);w.energy=clamp(w.energy+4);S.stress=clamp(S.stress-12);K.discipline=clamp(K.discipline+2);log(`In therapy, you stayed with one uncomfortable thought instead of changing the subject. There was no dramatic breakthrough, but something finally made sense.`,'good');afterAction(0);}
-function wellnessRecover(){const w=ensureWellbeing();if(!w.injury){toast('You have no active physical injury.');return;}if(!useWellbeingAction())return;const cost=900*w.injury.severity;pay(cost,true);w.injury.severity--;w.energy=clamp(w.energy+8);S.health=clamp(S.health+5);if(w.injury.severity<=0){log(`Treatment and patient recovery cleared your ${w.injury.name}. You celebrated by doing absolutely nothing reckless for almost an entire afternoon.`,'good');w.injury=null;}else log(`You treated the ${w.injury.name}. It improved, although the clinician used the phrase “gradual return” with pointed eye contact.`,'good');afterAction(0);}
+function wellnessRest(){const w=ensureWellbeing(),effective=useWellbeingAction('rest');if(effective){w.sleep=clamp(w.sleep+12);w.energy=clamp(w.energy+10);w.mental=clamp(w.mental+4);S.stress=clamp(S.stress-7);}log(effective?`You took a real day off. You slept in, ignored your notifications, ate something easy, and did absolutely nothing useful. By evening, you felt like a person again.`:`You took another quiet day. It was pleasant, but you had already gained everything your stats could get from extra rest this year.`,effective?'good':null);afterAction(0);}
+function wellnessMeal(){const w=ensureWellbeing(),effective=useWellbeingAction('meal'),equipped=functionalItems(d=>['applpack','espresso'].includes(d.id)).length>0;if(effective){w.nutrition=clamp(w.nutrition+(equipped?14:9));w.energy=clamp(w.energy+4);S.health=clamp(S.health+2);K.cooking=clamp(K.cooking+(equipped?3:2));}log(effective?`You planned and cooked real meals${equipped?' in a kitchen that finally earned its counter space':''}. By Thursday the containers no longer looked aspirational; they looked like dinner.`:`You cooked another batch of meals. It still cost time, but your stats have already received their three meal-prep boosts this year.`,effective?'good':null);afterAction(0);}
+function wellnessWorkout(){const w=ensureWellbeing();if(G.age<14){toast('You can go to the gym at 14.');return;}if(w.injury&&w.injury.severity>=2){toast(`Your ${w.injury.name} needs recovery before hard training.`);return;}const effective=useWellbeingAction('gym'),homeGym=hasFunctionalTag('gym');if(!homeGym)pay(25,true);if(effective){const gain=homeGym?6:5;S.fitness=clamp(S.fitness+gain);S.health=clamp(S.health+2);w.sleep=clamp(w.sleep+4);w.energy=clamp(w.energy-5);w.mental=clamp(w.mental+3);K.athletics=clamp(K.athletics+2);if(!w.injury&&chance(.04+(w.energy<30?.08:0))){w.injury={name:'overuse injury',severity:1,year:G.year};S.health=clamp(S.health-4);log(`The workout ended with the unmistakable discovery that one part of your body had filed a formal complaint.`,'bad');}else log(`You worked out ${homeGym?'with your home equipment':'at the gym'} and left pleasantly exhausted. Fitness improved, and tomorrow’s stairs became a problem for tomorrow.`, 'good');}else log(`You ${homeGym?'used your home equipment':'paid $25 and went to the gym'} again. The workout still happened, but you have already earned all three gym stat boosts this year.`);afterAction(0);}
+function wellnessTherapy(){const w=ensureWellbeing();if(G.age<12){toast('Therapy becomes available at 12.');return;}const effective=useWellbeingAction('therapy');pay(1800,true);if(effective){w.mental=clamp(w.mental+14);w.energy=clamp(w.energy+4);S.stress=clamp(S.stress-12);K.discipline=clamp(K.discipline+2);}log(effective?`In therapy, you stayed with one uncomfortable thought instead of changing the subject. There was no dramatic breakthrough, but something finally made sense.`:`You attended another therapy session and paid ${money(1800)}. It may still matter to you, but your stats have already received three therapy boosts this year.`,effective?'good':'money');afterAction(0);}
+function wellnessRecover(){const w=ensureWellbeing();if(!w.injury){toast('You have no active physical injury.');return;}const effective=useWellbeingAction('recovery'),cost=900*w.injury.severity;pay(cost,true);if(effective){w.injury.severity--;w.energy=clamp(w.energy+8);S.health=clamp(S.health+5);if(w.injury.severity<=0){log(`Treatment and patient recovery cleared your ${w.injury.name}. You celebrated by doing absolutely nothing reckless for almost an entire afternoon.`,'good');w.injury=null;}else log(`You treated the ${w.injury.name}. It improved, although the clinician used the phrase “gradual return” with pointed eye contact.`,'good');}else log(`You paid ${money(cost)} for another recovery appointment. Your injury received attention, but you have already used its three stat-changing treatments this year.`,'money');afterAction(0);}
 function tabMindBody(){
-  const w=ensureWellbeing(),used=w.actionYear===G.year?w.actionsUsed:0,b=assetBonuses();let h=`<div class="grp"><h4>Your wellbeing</h4><div class="note">${used}/3 wellbeing actions used this year${w.injury?` • recovering from ${esc(w.injury.name)} (severity ${w.injury.severity})`:''}<br>Your routines run automatically each year. Workload, prison, possessions, illness, and recovery all change the result.</div>${miniBar('Sleep',w.sleep,'smarts')}${miniBar('Nutrition',w.nutrition,'health')}${miniBar('Mental resilience',w.mental,'happy')}${miniBar('Energy',w.energy,'')}</div>`;
+  const w=ensureWellbeing(),b=assetBonuses(),gymUses=wellbeingActionUses('gym');let h=`<div class="grp"><h4>Your wellbeing</h4><div class="note">Wellbeing actions stay available all year. Each option improves stats on its first three uses per year; later uses still happen and still charge any listed cost.${w.injury?`<br>Recovering from ${esc(w.injury.name)} (severity ${w.injury.severity})`:''}<br>Your routines run automatically each year. Workload, prison, possessions, illness, and recovery all change the result.</div>${miniBar('Sleep',w.sleep,'smarts')}${miniBar('Nutrition',w.nutrition,'health')}${miniBar('Mental resilience',w.mental,'happy')}${miniBar('Energy',w.energy,'')}</div>`;
   h+=grp('Annual routines',Object.keys(WELLNESS_ROUTINES).map(k=>actBtn('wellness-routine',k,capitalize(k),wellnessRoutineName(k))).join(''),`Current annual routine cost: ${money(Object.keys(w.routines).reduce((n,k)=>n+(WELLNESS_ROUTINES[k][w.routines[k]]?.cost||0),0))}. Home comfort ${b.comfort}/100 • fitness equipment ${b.fitness}/100.`);
-  h+=grp('Take care of yourself',actBtn('wellness-rest',null,'Take real rest','sleep, energy, and stress')+actBtn('wellness-meal',null,'Prepare for the week','nutrition and cooking')+actBtn('wellness-workout',null,'Complete a workout',hasFunctionalTag('gym')?'uses your home gym':'$25 without equipment')+actBtn('wellness-therapy',null,'Attend therapy','$1,800 • mental resilience',G.age<12)+(w.injury?actBtn('wellness-recover',null,'Treat the injury',money(900*w.injury.severity)):''),'Three focused wellbeing actions are available each year.');
+  h+=grp('Take care of yourself',actBtn('wellness-rest',null,'Take real rest',`${wellbeingActionUses('rest')}/3 stat boosts • sleep, energy, and stress`)+actBtn('wellness-meal',null,'Prepare for the week',`${wellbeingActionUses('meal')}/3 stat boosts • nutrition and cooking`)+actBtn('wellness-workout',null,'Go to the gym',`${gymUses}/3 fitness boosts • ${hasFunctionalTag('gym')?'uses your home equipment':'$25 per visit'}`,G.age<14)+actBtn('wellness-therapy',null,'Attend therapy',`${wellbeingActionUses('therapy')}/3 stat boosts • $1,800`,G.age<12)+(w.injury?actBtn('wellness-recover',null,'Treat the injury',`${wellbeingActionUses('recovery')}/3 treatment boosts • ${money(900*w.injury.severity)}`):''),'You may repeat these whenever you like. Each one changes stats only three times per year.');
   if(canAskParentsForLessons()){
     let lessons='';
     if(G.age>=8)lessons+=actBtn('parent-lesson','acting','Ask for acting lessons','Parents pay');
@@ -3637,13 +3768,13 @@ function schoolDance(){
 /* ---------------- PER-PERSON INTERACTIONS ---------------- */
 function openPerson(id){ if(!npc(id))return; personOpen=id; renderActions(); }
 function personDetail(n){
-  const rel=relationshipState(n),personality=ensurePersonality(n);
+  const rel=relationshipState(n);
   const blood=['parent','sibling','child','grandchild'].includes(n.role);
   const adultBoth=G.age>=18 && n.age>=18;
   const romance=!blood && adultBoth && !n.married && ['friend','coworker','fling'].includes(n.role);
-  const life=[capitalize(n.label),n.age,n.career,n.location&&n.location!==G.place?n.location:null,n.partnerName?'with '+n.partnerName:null,(n.children||0)?`${n.children} child${n.children===1?'':'ren'}`:null].filter(Boolean).join(' \u2022 ');
+  const relation=capitalize(n.socialStatus||n.label||n.role),occupation=n.career||(n.age<18?'Student':'Not currently working');
   const memories=(n.relationshipHistory||[]).slice(-3).reverse();
-  let h=`<div class="person" style="display:block"><div class="phead"><div><div class="t">${esc(n.name)}</div><div class="s">${esc(life)}${n.socialStatus?` • ${esc(capitalize(n.socialStatus))}`:''}</div></div><div class="rel"><span class="relw">${loyaltyWord(rel.connection)}</span>${relbar(rel.connection)}<span class="reln">${Math.round(rel.connection)} / 100</span></div></div>${personalityHtml(n)}${relationshipAxesHtml(n)}<div class="note">Compatibility ${compatibilityWithPlayer(n)}/100 • ${personality.kindness>=65?'responds strongly to kindness':personality.strictness>=68?'respects consistency and boundaries':personality.ambition>=68?'notices achievement and status':personality.volatility>=68?'reactions can be unpredictable':'temperament is fairly balanced'}</div></div>`;
+  let h=`<div class="person" style="display:block"><div class="phead"><div><div class="t">${esc(n.name)}</div><div class="s">${esc(relation)} • ${esc(occupation)}</div></div><div class="rel"><span class="relw">${loyaltyWord(rel.connection)}</span>${relbar(rel.connection)}<span class="reln">${Math.round(rel.connection)} / 100</span></div></div></div>`;
   h+=grp('Talk', actBtn('talk',n.id,'Conversation')+actBtn('compliment',n.id,'Compliment')+(rel.conflict>=8?actBtn('apologize',n.id,'Clear the air','reduces conflict; sincerity matters'):'')+actBtn('insult',n.id,'Insult'));
   let together=actBtn('spendtime',n.id,'Spend time')+actBtn('concert',n.id,'Concert')+actBtn('prank',n.id,'Prank');
   if(G.age>=18)together+=actBtn('party',n.id,'Party');
@@ -3971,6 +4102,7 @@ function collectStabilityIssues(){
  if(G.job&&JOB[G.job.id]){for(const key of ['perf','recognition','morale','security','burnout','reviewRating'])if(!Number.isFinite(G.job[key])||G.job[key]<0||G.job[key]>100)add('error','WORK_METER_RANGE',`${key} is outside 0–100.`);if(!WORK_STYLES[G.job.style])add('error','WORK_STYLE_INVALID','The active work style does not exist.');if(!Array.isArray(G.job.reviewHistory))add('error','WORK_REVIEW_SCHEMA','Work review history must be a list.');if(G.job.project&&(!Number.isFinite(G.job.project.progress)||!Number.isFinite(G.job.project.quality)))add('error','WORK_PROJECT_SCHEMA','The active workplace assignment is invalid.');}
  const consequences=ensureConsequences();if(!Array.isArray(consequences.history)||!consequences.cooldowns||!consequences.barriers)add('error','CONSEQUENCE_SCHEMA','The life-consequence record is incomplete.');for(const key of Object.keys(CONSEQUENCE_DOMAINS))if(!Number.isFinite(consequences.scores[key])||consequences.scores[key]<0||consequences.scores[key]>100)add('error','CONSEQUENCE_RANGE',`${key} consequence pressure is outside 0–100.`);
  const world=ensureLivingWorld();if(!Array.isArray(world.history)||!Array.isArray(world.lastIds)||!world.cooldowns||!world.counts||!world.categoryCounts)add('error','LIVING_WORLD_SCHEMA','The living-world event record is incomplete.');if(world.history.some(x=>!x.id||!Number.isFinite(x.age)||!Number.isFinite(x.year)))add('error','EVENT_HISTORY_SCHEMA','One or more remembered events are invalid.');
+ const relationshipLife=ensureRelationshipLife();if(!Array.isArray(relationshipLife.history)||!relationshipLife.cooldowns)add('error','RELATIONSHIP_LIFE_SCHEMA','Dynamic relationship history is incomplete.');const goals=ensureGoals();if(!Array.isArray(goals.history)||goals.active&&!GOAL_TYPES[goals.active.type])add('error','GOAL_SCHEMA','Personal goal data is invalid.');
  const justice=ensureJustice();if(!Array.isArray(justice.cases)||!Array.isArray(justice.history))add('error','JUSTICE_SCHEMA','The court and justice history is incomplete.');if(justice.activeCase&&!['counsel','bail','plea','trial'].includes(justice.activeCase.stage))add('error','CASE_STAGE_INVALID','The active court case has an invalid stage.');if(justice.prison){for(const key of ['conduct','reputation','safety','rehabilitation'])if(!Number.isFinite(justice.prison[key])||justice.prison[key]<0||justice.prison[key]>100)add('error','PRISON_METER_RANGE',`${key} is outside 0–100.`);if(G.jailUntil<=G.age)add('error','PRISON_SENTENCE_SYNC','Prison state remains active after the sentence end age.');}if(justice.probation&&(!Number.isFinite(justice.probation.yearsLeft)||justice.probation.yearsLeft<1||!Number.isFinite(justice.probation.compliance)||justice.probation.compliance<0||justice.probation.compliance>100))add('error','SUPERVISION_SCHEMA','Probation or parole has invalid time or compliance data.');if((G.record||[]).some(r=>r.expunged&&(!Number.isFinite(r.expungedAge)||!Number.isFinite(r.expungedYear))))add('error','RECORD_RELIEF_SCHEMA','A sealed record is missing its court date.');
  const assets=ensureAssets(),assetIds=[...G.items,...G.props].map(x=>x.uid);if(new Set(assetIds).size!==assetIds.length)add('error','ASSET_ID_DUPLICATE','Two possessions share the same persistent ID.');if(assets.primaryProperty&&!G.props.some(p=>p.uid===assets.primaryProperty&&!p.rented))add('error','PRIMARY_HOME_INVALID','The selected primary home is missing or rented.');if(G.items.some(it=>!Number.isFinite(it.cond)||!Number.isFinite(it.uses)||!Number.isFinite(it.memories)))add('error','ASSET_SCHEMA','One or more possessions have invalid condition or use history.');const well=ensureWellbeing();for(const key of ['sleep','nutrition','mental','energy'])if(!Number.isFinite(well[key])||well[key]<0||well[key]>100)add('error','WELLBEING_RANGE',`${key} is outside 0–100.`);for(const key of Object.keys(WELLNESS_ROUTINES))if(!WELLNESS_ROUTINES[key][well.routines[key]])add('error','WELLBEING_ROUTINE',`${key} has an invalid routine.`);
  if(!G.rng||!Number.isFinite(G.rng.seed)||!Number.isFinite(G.rng.state))add('error','RNG_STATE_MISSING','This life has no reproducible random seed.');
@@ -3990,6 +4122,7 @@ function runCoreSelfTests(){
  test('Dynamic workplace schema',()=>!G.job||(JOB[G.job.id]&&WORK_STYLES[G.job.style]&&['perf','recognition','morale','security','burnout','reviewRating'].every(k=>Number.isFinite(G.job[k])&&G.job[k]>=0&&G.job[k]<=100)&&Array.isArray(G.job.reviewHistory)&&(!G.job.project||(Number.isFinite(G.job.project.progress)&&Number.isFinite(G.job.project.quality)))));
  test('Life-consequence schema and ranges',()=>{const c=ensureConsequences(),p=consequenceProfile();return Array.isArray(c.history)&&c.cooldowns&&c.barriers&&Object.keys(CONSEQUENCE_DOMAINS).every(k=>Number.isFinite(p.scores[k])&&p.scores[k]>=0&&p.scores[k]<=100);});
  test('Living-world event director schema',()=>{const w=ensureLivingWorld(),sample={id:'ev_test',min:0,max:120,w:2,category:'Life',rarity:'uncommon'};return Array.isArray(w.history)&&Array.isArray(w.lastIds)&&eventCategory(sample)==='Life'&&eventRarity(sample)==='uncommon'&&eventMaxTimes(sample)===2&&eventCooldown(sample)===5;});
+ test('Dynamic relationships and personal goals',()=>{const r=ensureRelationshipLife(),g=ensureGoals();return Array.isArray(r.history)&&r.cooldowns&&Array.isArray(g.history)&&(!g.active||GOAL_TYPES[g.active.type]);});
  test('Event library definitions are valid and unique',()=>{const ids=EVENTS.map(e=>e.id);return new Set(ids).size===ids.length&&EVENTS.every(e=>e.id&&Number.isFinite(e.min)&&Number.isFinite(e.max)&&e.min<=e.max&&typeof e.run==='function');});
  test('Justice, court, prison, and supervision schemas',()=>{const j=ensureJustice();return Array.isArray(j.cases)&&Array.isArray(j.history)&&(!j.prison||(['Minimum','Medium','Maximum','Juvenile'].includes(j.prison.security)&&['conduct','reputation','safety','rehabilitation'].every(k=>Number.isFinite(j.prison[k])&&j.prison[k]>=0&&j.prison[k]<=100)))&&(!j.probation||(Number.isFinite(j.probation.yearsLeft)&&j.probation.yearsLeft>=1&&Number.isFinite(j.probation.compliance)&&j.probation.compliance>=0&&j.probation.compliance<=100));});
  test('Dynamic asset schema and valuation',()=>{const a=ensureAssets(),ids=[...G.items,...G.props].map(x=>x.uid);return Array.isArray(a.history)&&new Set(ids).size===ids.length&&G.items.every(x=>Number.isFinite(x.cond)&&Number.isFinite(x.uses)&&Number.isFinite(x.memories)&&itemValue(x)>=0)&&G.props.every(x=>Number.isFinite(x.cond)&&Number.isFinite(x.memories)&&propertyValue(x)>=0)&&(!a.primaryProperty||G.props.some(p=>p.uid===a.primaryProperty&&!p.rented));});
@@ -4201,7 +4334,7 @@ function sanitizeSave(){
  if(!G)return;
  G.items=(G.items||[]).filter(it=>ITEM[it.id]);G.props=(G.props||[]).filter(p=>PROP[p.id]);
  if(G.job&&(!JOB[G.job.id]||['babysit','lawns'].includes(G.job.id)))G.job=null;if(G.special&&!SPECIAL[G.special.type])G.special=null;
- if(!G.flags)G.flags={};if(!G.flags.gigCounts||typeof G.flags.gigCounts!=='object')G.flags.gigCounts={};if(!G.addiction)G.addiction={alcohol:0,drugs:0};if(!G.social)G.social={};if(!G.pets)G.pets=[];if(!Array.isArray(G.conditions))G.conditions=[];G.conditions=G.conditions.filter(c=>DISEASE[c.id]);ensureConsequences();ensureLivingWorld();ensureJustice();ensureAssets();ensureWellbeing();
+ if(!G.flags)G.flags={};if(!G.flags.gigCounts||typeof G.flags.gigCounts!=='object')G.flags.gigCounts={};if(!G.addiction)G.addiction={alcohol:0,drugs:0};if(!G.social)G.social={};if(!G.pets)G.pets=[];if(!Array.isArray(G.conditions))G.conditions=[];G.conditions=G.conditions.filter(c=>DISEASE[c.id]);ensureConsequences();ensureLivingWorld();ensureRelationshipLife();ensureGoals();ensureJustice();ensureAssets();ensureWellbeing();
  if(!Array.isArray(G.pensions))G.pensions=[];if(!G.serviceYears||typeof G.serviceYears!=='object')G.serviceYears={};if(!G.highSalary||typeof G.highSalary!=='object')G.highSalary={};if(!Array.isArray(G.careerHistory))G.careerHistory=[];if(!Array.isArray(G.supportOrders))G.supportOrders=[];if(!Array.isArray(G.divorceHistory))G.divorceHistory=[];
  if(!G.familyWealth){const parentIncome=(G.npcs||[]).filter(n=>n.role==='parent').reduce((sum,n)=>sum+(n.income||0),0);G.familyWealth=parentIncome>=300000?'affluent':parentIncome>=170000?'wealthy':parentIncome>=90000?'comfortable':'modest';}
  const schoolDefaults={popularity:40,attendance:100,behavior:72,disciplinePoints:0,detentions:0,suspensions:0,clique:null,team:null,teamRole:null,seasonYear:null,type:'public',name:'Public school',classmateIds:[],facultyIds:[],alumniIds:[],danceYear:null,promAttended:false,promCourt:null,club:null,clubYear:null,schoolEvents:{},schoolChoiceYear:null,recommendation:false,achievements:[],disciplinaryLog:[],peerCouples:[],bullyId:null,crushId:null,counselorPlan:null,lastPeerYear:null,stageHistory:[]};G.school=Object.assign(schoolDefaults,G.school||{});G.school.popularity=clamp(Number.isFinite(G.school.popularity)?G.school.popularity:40);G.school.attendance=clamp(Number.isFinite(G.school.attendance)?G.school.attendance:100);G.school.behavior=clamp(Number.isFinite(G.school.behavior)?G.school.behavior:72);for(const k of ['disciplinePoints','detentions','suspensions'])G.school[k]=Math.max(0,Number.isFinite(G.school[k])?Math.round(G.school[k]):0);if(G.school.team&&!G.school.teamRole)G.school.teamRole='Player';for(const key of ['classmateIds','facultyIds','alumniIds','achievements','disciplinaryLog','peerCouples','stageHistory'])if(!Array.isArray(G.school[key]))G.school[key]=[];if(!G.school.schoolEvents||typeof G.school.schoolEvents!=='object')G.school.schoolEvents={};if(!SCHOOL_TYPES[G.school.type]){G.school.type='public';G.school.name='Public school';}if(G.school.club&&!SCHOOL_CLUBS[G.school.club])G.school.club=null;if(G.age>=5&&G.age<=17&&!G.inSchool&&G.special&&!G.flags.highSchoolDropout)G.flags.leftSchoolForCareer=true;if(!G.invest)G.invest={};if(!G.market)G.market={};if(!G.marketChg)G.marketChg={};
