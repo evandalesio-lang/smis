@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SMIS</title>
+<title>LifeMachine</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Karla:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -115,6 +115,20 @@ button.person .phead{flex:1;margin:0}
 .item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:6px}
 .item .t{font-weight:500}.item .s{color:var(--muted);font-size:12.5px}
 .item button{white-space:nowrap}
+.workdash{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 12px}
+.workcard{border:1px solid var(--line);border-radius:7px;background:var(--panel2);padding:9px 10px}
+.workcard.wide{grid-column:1/-1}
+.workcard .wklabel{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.workcard .wkvalue{font-family:var(--serif);font-size:18px;color:var(--ink);margin-top:2px}
+.workcard .wkdetail{color:var(--muted);font-size:12px;margin-top:2px}
+.workproject{border-left:3px solid var(--blue);padding:8px 10px;margin:8px 0;background:var(--panel2);border-radius:0 6px 6px 0}
+.workproject.complete{border-left-color:var(--green)}
+.consequence-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 14px}
+.consequence-card{border:1px solid var(--line);border-radius:7px;background:var(--panel2);padding:8px 10px}
+.consequence-card .domain{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);margin-bottom:3px}
+.consequence-card .domain b{color:var(--ink);font-weight:500}
+.ripple{border-left:3px solid var(--gold);background:var(--panel2);padding:8px 10px;margin:7px 0;border-radius:0 6px 6px 0}
+.ripple.good{border-left-color:var(--green)}.ripple.bad{border-left-color:var(--red)}
 .god .row input,.god .row select{width:auto;min-width:120px}
 .god h4{margin:14px 0 4px;font-family:var(--serif);font-weight:500}
 .create .tabs{margin:4px 0 12px;border-radius:8px;overflow:hidden}
@@ -132,7 +146,7 @@ button.person .phead{flex:1;margin:0}
 </head>
 <body>
 <header>
-  <h1>SMIS <small>v2.6.2</small></h1>
+  <h1>LifeMachine <small>v2.7</small></h1>
   <span class="who" id="who"></span>
   <span class="spacer"></span>
   <div class="tools">
@@ -156,7 +170,7 @@ button.person .phead{flex:1;margin:0}
 <div id="modal"><div class="box" id="modalbox"></div></div>
 <script>
 /* =====================================================================
-   SMIS — a life, kept honestly.
+   LifeMachine — a life, kept honestly.
    Everything below "DATA" is a plain list you can extend.
    ===================================================================== */
 
@@ -164,7 +178,7 @@ button.person .phead{flex:1;margin:0}
 let RNG_SEED=0,RNG_STATE=0;
 function seedNumber(value){
   if(typeof value==='number'&&Number.isFinite(value))return value>>>0;
-  const text=String(value??'SMIS');let h=2166136261;
+  const text=String(value??'LifeMachine');let h=2166136261;
   for(let i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619);}
   return h>>>0;
 }
@@ -182,7 +196,7 @@ function syncRandomState(){if(G)G.rng={seed:RNG_SEED>>>0,state:RNG_STATE>>>0};}
 function restoreRandomState(){
   const saved=G&&G.rng;
   if(saved&&Number.isFinite(saved.seed)&&Number.isFinite(saved.state))setRandomSeed(saved.seed,saved.state);
-  else setRandomSeed(seedNumber(`${G&&G.name||'SMIS'}|${G&&G.born||2026}|${G&&G.age||0}`));
+  else setRandomSeed(seedNumber(`${G&&G.name||'LifeMachine'}|${G&&G.born||2026}|${G&&G.age||0}`));
   syncRandomState();
 }
 setRandomSeed(freshSeed());
@@ -197,7 +211,7 @@ const MALE=['James','Liam','Noah','Ethan','Mason','Logan','Owen','Caleb','Henry'
 const FEMALE=['Emma','Olivia','Ava','Sophia','Mia','Chloe','Harper','Ella','Grace','Lily','Nora','Zoe','Claire','Ivy','Sadie','Maya','Ruby','Jade','Tessa','Lena','Rachel','Dana','Kim','Nicole','Erin','Jenna','Brooke','Vanessa'];
 const LAST=['Carter','Brooks','Reyes','Nguyen','Kowalski','Fischer','Okafor','Santos','Marino','Hughes','Dalton','Keller','Bennett','Hayes','Morales','Petrov','Lindqvist','Walsh','Barnes','Chen','Dixon','Fleming','Garza','Holt','Ivers','Jensen','Knox','Lowe'];
 const SPORTS=['football','basketball','baseball','soccer','MMA','hockey'];
-const GAME_VERSION='2.6.2';
+const GAME_VERSION='2.7';
 
 // ---------- DATA: skills ----------
 const SKILLS={acting:'Acting',music:'Music',athletics:'Athletics',fitness:'Fitness',intellect:'Intellect',charisma:'Charisma',discipline:'Discipline',combat:'Combat',cooking:'Cooking',tech:'Tech',writing:'Writing',business:'Business',gardening:'Gardening',stealth:'Stealth',driving:'Driving'};
@@ -326,6 +340,32 @@ const WORK_SCHEDULES={
   {hours:40,label:'Full schedule',pay:1.82,effort:13,perf:4,stress:9,note:'Full-time hours without a full-time title.'},
  ]
 };
+// Ordinary careers run as an annual simulation. The player sets a durable work
+// style; assignments, deadlines, reviews, office politics, and turnover then
+// develop as the years pass instead of requiring a repeated "work" button.
+const WORK_STYLES={
+ balanced:{name:'Balanced professional',project:0,quality:1,network:0,stress:-2,risk:0,note:'Reliable work without making the job your entire life.'},
+ ambitious:{name:'Ambitious climber',project:5,quality:0,network:2,stress:5,risk:3,note:'Volunteer for visible work and compete for advancement.'},
+ meticulous:{name:'Meticulous specialist',project:1,quality:7,network:-2,stress:3,risk:-5,note:'Trade speed and visibility for careful, defensible work.'},
+ collaborative:{name:'Team builder',project:1,quality:2,network:7,stress:0,risk:-2,note:'Share credit, build trust, and make the group stronger.'},
+ boundaries:{name:'Protect your boundaries',project:-4,quality:0,network:-3,stress:-7,risk:2,note:'Do solid work, leave on time, and accept slower advancement.'}
+};
+const WORK_PROJECTS={
+ 'Food service':['holiday rush plan','new-hire training rollout','inventory-loss reduction','customer-service reset'],
+ Culinary:['seasonal menu launch','kitchen reorganization','catering contract','food-safety inspection'],
+ Retail:['store reset','holiday sales campaign','shrink-reduction plan','new location opening'],
+ Corporate:['cross-department rollout','cost-reduction initiative','client implementation','quarterly planning project'],
+ Tech:['platform migration','security remediation','product release','legacy-system replacement'],
+ Trades:['commercial buildout','municipal contract','difficult renovation','safety modernization'],
+ Healthcare:['patient-care initiative','accreditation review','new-clinic opening','quality-improvement program'],
+ Law:['major case preparation','regulatory review','complex negotiation','client crisis response'],
+ Education:['curriculum redesign','accreditation review','student-support initiative','district improvement plan'],
+ Police:['community-safety initiative','major investigation','training modernization','interagency operation'],
+ Finance:['portfolio review','regulatory audit','major client acquisition','risk-control overhaul'],
+ Media:['investigative package','publication redesign','major editorial series','breaking-news project'],
+ 'Part-time':['busy-season assignment','training push','inventory project','customer-service initiative']
+};
+const WORK_PHASES=['Planning','In progress','Final stretch'];
 const PENSION_RULES={
  'Military':{years:20,age:0,rate:.50,name:'military retirement pension'},
  'Police':{years:20,age:50,rate:.50,name:'public-safety pension'},
@@ -845,7 +885,7 @@ const EVENTS=[
  {id:'ev_prop_break',min:18,max:90,w:3,cond:()=>G.props.some(p=>p.cond<50),run:()=>{const p=pick(G.props.filter(p=>p.cond<50));const c=Math.round(PROP[p.id].price*0.02+rnd(1000,8000));pay(c,true);log(`Something failed at the ${PROP[p.id].name.toLowerCase()} — a pipe, a roof, the furnace at 2 a.m. in January. You had been putting off the maintenance. It cost ${money(c)}, which is what putting it off costs.`,'bad');p.cond=clamp(p.cond-10);S.stress+=6;}},
  {id:'ev_nothing',min:0,max:120,w:4,run:()=>log(quietYearText())},
 
- /* ===================== EXPANDED EVENT LIBRARY (SMIS voice) ===================== */
+ /* ===================== EXPANDED EVENT LIBRARY (LifeMachine voice) ===================== */
  // ---- school & childhood (while in school) ----
  {id:'ev_casting',min:6,max:12,w:3,cond:()=>G.inSchool,run:()=>ask('The school play',`Your school is putting on a production, and there is an open casting call. The gym smells like floor polish and nerves, and a teacher with a clipboard is waving kids up onto the little stage under the lights.`,[
   {label:'Audition for the lead',fn:()=>{ if(chance(0.4+(K.acting||0)/120+S.looks/300)){K.acting=clamp((K.acting||0)+6);S.happiness+=5;if(G.school)G.school.popularity=clamp(G.school.popularity+6);log(`You got the lead. Opening night your hands shook until the lights hit, and then something in you went very still and very sure. Your parents filmed the whole thing badly and cried anyway.`,'good');} else {K.acting=clamp((K.acting||0)+2);log(`You did not get the lead. You got Tree Number Two, which you played with more commitment than the part strictly required. Someone laughed at exactly the right moment and you decided that counted.`);} }},
@@ -998,6 +1038,7 @@ const THREADS={
  gang:{wait:2,p:0.24,fire:t=>{if(G.jailUntil>G.age){log(`The crew collected on its protection. A package changed hands. A guard looked the other way. Your sentence did not grow, but the chain around it did.`,'bad');S.stress=clamp(S.stress+8);G.notoriety+=3;}else{log(`Someone from the old prison crew found you outside. They did not threaten you; they did not have to. You paid to make the conversation end.`,'bad');const loss=Math.min(G.cash,rnd(1500,12000));pay(loss);S.stress=clamp(S.stress+10);}}},
  founder_return:{wait:8,p:0.18,fire:t=>{log(`${t.name} called years after the company sale. They were starting again and wanted you in the room—not for your money this time, but because you had stayed when failure was still the likeliest ending.`,'good');K.business=clamp(K.business+4);S.happiness=clamp(S.happiness+4);}},
  stolen_credit:{wait:1,p:.5,fire:t=>{const colleague=npc(t.npc),sameJob=G.job&&G.job.id===t.job;if(sameJob){const exposed=chance(.72);if(exposed){G.job.perf=clamp(G.job.perf-24);G.job.recognition=clamp(G.job.recognition-22);G.job.hrWarnings=(G.job.hrWarnings||0)+1;S.stress=clamp(S.stress+14);if(colleague){colleague.loyalty=clamp(colleague.loyalty-18);colleague.workplaceConflict='your retaliation after the stolen-credit complaint';}log(`${colleague?colleague.name:t.name} brought version history, drafts, and timestamps into a meeting with HR. The work you claimed was traced back to them. Your performance rating collapsed, your file gained a warning, and every compliment you received for the project became evidence.`,'bad');if(G.job.perf<38&&chance(.45)){const title=JOB[G.job.id].title;log(`The company fired you from your ${title} position for dishonesty. Security waited while you packed.`,'bad');quitJob(true,'fired for taking credit');}}else{G.job.recognition=clamp(G.job.recognition+4);log(`${colleague?colleague.name:t.name} never found enough proof to challenge the credit you took. The promotion committee remembered the presentation. You remembered the silence afterward.`);}}else{S.stress=clamp(S.stress+5);log(`${colleague?colleague.name:t.name}, whose work you once claimed, told the story publicly after you had both moved on. It no longer cost you the job, but it changed how several old colleagues remembered you.`,'bad');}}},
+ family_lie:{wait:1,p:.38,fire:t=>{const n=npc(t.npc);if(!n||!n.alive)return;if(chance(.68)){changeRelationship(n,{connection:-14,respect:-18,conflict:16},`${G.name}'s lie about ${t.crime} came apart at age ${G.age}.`,'betrayal');S.stress=clamp(S.stress+10);recordConsequence('crime','family','The family lie surfaced',`${n.name} learned the truth about ${t.crime} from somebody else. What hurt most was no longer only the crime; it was the time you allowed them to believe the lie.`,'bad');}else{S.stress=clamp(S.stress+4);log(`The lie you told ${t.name} about ${t.crime} survived another year. Keeping it alive required smaller lies you had not planned.`,'bad');return false;}}},
  divorce_aftershock:{wait:1,p:.42,fire:t=>{const ex=npc(t.npc);if(!ex||!ex.alive)return;const children=kids().filter(k=>k.age<18&&k.otherParentId===ex.id);if(children.length&&ex.loyalty<30){children.forEach(k=>k.loyalty=clamp(k.loyalty-rnd(2,6)));S.stress=clamp(S.stress+8);log(`${ex.name} challenged a holiday handoff and the old marriage came back to life in a courthouse hallway. The children heard more than either parent intended.`,'bad');}else if(children.length){children.forEach(k=>k.loyalty=clamp(k.loyalty+3));ex.loyalty=clamp(ex.loyalty+4);log(`You and ${ex.name} made it through a school event without reopening the divorce. The children moved between you without bracing for impact, which felt like its own small victory.`,'good');}else{S.stress=clamp(S.stress-3);log(`${ex.name} returned the last box of things that had lived in the wrong closet since the divorce. You spoke for ten civil minutes, closed the door, and felt something finally become past tense.`);}}},
  engaged:{wait:2,p:0.4,fire:t=>{const p=npc(t.npc);if(!p||!p.alive||!p.engaged)return;ask('The wedding that has not happened',`${p.name} asks whether the two of you are actually getting married or merely staying engaged forever. The question has been coming for months. Tonight it finally sits between you.`,[
    {label:'Set a date',fn:()=>{p.loyalty=clamp(p.loyalty+8);log(`You picked a season, then a date. The relief on ${p.name}'s face told you how long they had been waiting.`,'good');}},
@@ -1053,7 +1094,8 @@ const STORY_ARCS={
 let G=null;         // the whole game state
 let S=null, K=null; // shortcuts into G.stats / G.skills
 let yearUndo=null;  // exact state immediately before the most recent Age up
-const SAVEKEY='smis_save_v1';
+const SAVEKEY='lifemachine_save_v1';
+const LEGACY_SAVEKEY='smis_save_v1';
 
 // One source of truth for the player's age band and compulsory-school stage.
 // Feature code can read these helpers instead of inventing overlapping age rules.
@@ -1104,7 +1146,7 @@ function blankLife(cfg){
   addiction:{alcohol:0,drugs:0},
   notoriety:0, record:[], jailUntil:0,
   items:[], props:[], home:'parents',
-  npcs:[], threads:[], arcs:[], flags:{}, social:{}, pets:[], conditions:[], supportOrders:[], divorceHistory:[], marriage:null, actionEffects:{}, godless:!!cfg.godless,
+  npcs:[], threads:[], arcs:[], flags:{}, social:{}, pets:[], conditions:[], supportOrders:[], divorceHistory:[], marriage:null, actionEffects:{}, consequences:{scores:{family:0,money:0,crime:0,health:0,education:0,career:0},sources:{},history:[],cooldowns:{},barriers:{},lastYear:null}, godless:!!cfg.godless,
   balance:{livingCost:0}, economy:{cycle:'Expansion',inflation:2.4,rate:4.5,priceIndex:1}, version:GAME_VERSION,
   year:2026, history:[]
  };
@@ -1315,7 +1357,7 @@ function ageUp(){
  if(G.jailUntil>G.age){
   log(`You spent the year in prison. The days are identical and the nights are worse. You are ${G.jailUntil-G.age} year(s) from release.`,'bad');
   K.combat=clamp(K.combat+2);K.stealth=clamp(K.stealth+2);S.happiness=clamp(S.happiness-6);
-  handlePensions();handleSupportOrders();handleConditionsYear();handleStressConsequences();handleNPCYear();tickThreads();if(!pendingChoice)tickArcs();handleAgingAndDeath();reconcileLifeState();finishYear();return;
+  handlePensions();handleSupportOrders();handleConditionsYear();handleStressConsequences();handleNPCYear();handleLifeConsequences();if(!pendingChoice)tickThreads();if(!pendingChoice)tickArcs();handleAgingAndDeath();reconcileLifeState();finishYear();return;
  }
  // schooling
  handleSchool();
@@ -1346,6 +1388,8 @@ function ageUp(){
  handleStressConsequences();
  // people keep living whether or not the player calls them
  handleNPCYear();
+ // major pressures and protective buffers now spill across life systems
+ handleLifeConsequences();
  // Graduation is a defining choice, so it is offered before a random event can occupy the decision window.
  if(G.flags.collegePrompt&&!pendingChoice){G.flags.collegePrompt=false;offerCollegeChoice();handleAgingAndDeath();finishYear();return;}
  // threads and longer arcs (the world keeping receipts)
@@ -1417,7 +1461,8 @@ function handleJobYear(){
  G.job.effort=(G.job.effort||0)+schedule.effort;G.job.recognition=clamp((G.job.recognition||0)+(schedule.hours>=50?rnd(1,4):schedule.hours<40?-2:0));G.job.years=(G.job.years||0)+1;
  S.stress=clamp(S.stress+Math.round((j.stress-8)/2)+schedule.stress);
  if(schedule.hours>=50&&partner()&&chance(.28)){const p=partner();p.loyalty=clamp(p.loyalty-rnd(2,6));log(`Your ${schedule.hours}-hour weeks showed up at home as missed dinners and half-heard conversations. ${p.name} stopped asking what time you would be back.`,'bad');}
- handleWorkplaceIncident();
+ runWorkplaceYear(j,schedule);
+ if(G.job)handleWorkplaceIncident();
 }
 function handleLivingCosts(){
  if(G.age<18)return;
@@ -1514,6 +1559,88 @@ function handleStressConsequences(){
  if(stress>=88&&!G.conditions.some(x=>['insomnia','ulcer','anxiety','hypertension','heart'].includes(x.id))&&chance(.28)){const eligible=['insomnia','ulcer','anxiety','hypertension','heart'].filter(id=>DISEASE[id]&&conditionEligible(DISEASE[id]));if(eligible.length)addCondition(pick(eligible),false);}
 }
 function healthConditionSummary(){const list=G.conditions||[],known=list.filter(x=>x.diagnosed).map(x=>DISEASE[x.id]&&DISEASE[x.id].name).filter(Boolean),hidden=list.length-known.length;return[known.join(', '),hidden?`${hidden} unexplained symptom${hidden===1?'':'s'}`:''].filter(Boolean).join(' • ');}
+
+/* =====================================================================
+   LIFE CONSEQUENCES — pressure in one system changes the others
+   ===================================================================== */
+const CONSEQUENCE_DOMAINS={
+ family:{name:'Family',icon:'♥'},money:{name:'Money',icon:'$'},crime:{name:'Crime',icon:'⚖'},health:{name:'Health',icon:'✚'},education:{name:'Education',icon:'◆'},career:{name:'Career',icon:'▲'}
+};
+function ensureConsequences(){
+ if(!G.consequences||typeof G.consequences!=='object')G.consequences={};const c=G.consequences;if(!c.scores||typeof c.scores!=='object')c.scores={};if(!c.sources||typeof c.sources!=='object')c.sources={};if(!Array.isArray(c.history))c.history=[];if(!c.cooldowns||typeof c.cooldowns!=='object')c.cooldowns={};if(!c.barriers||typeof c.barriers!=='object')c.barriers={};for(const k in CONSEQUENCE_DOMAINS)if(!Number.isFinite(c.scores[k]))c.scores[k]=0;return c;
+}
+function consequenceFamily(){return G.npcs.filter(n=>n.alive&&['parent','sibling','child','grandchild','spouse','partner'].includes(n.role));}
+function familySupportScore(){const people=consequenceFamily();if(!people.length)return 0;return clamp(Math.round(people.reduce((sum,n)=>{const r=relationshipState(n);return sum+r.connection*.62+r.respect*.22+(100-r.conflict)*.16;},0)/people.length));}
+function consequenceProfile(){
+ const c=ensureConsequences(),people=consequenceFamily(),support=familySupportScore(),income=Math.max(0,annualIncome()),living=Math.max(1,(G.balance&&G.balance.livingCost)||Math.round(12000*(COST_OF_LIVING[G.place]||1))),debtRatio=G.debt/Math.max(living,income*.45,12000),activeOrders=(G.supportOrders||[]).filter(o=>o.active!==false&&o.direction==='out').length,conditionBurden=(G.conditions||[]).reduce((n,x)=>n+(x.severity||1)*(DISEASE[x.id]&&DISEASE[x.id].serious?11:6),0),recentRecord=(G.record||[]).filter(r=>G.age-(r.age||0)<=3).length;
+ const scores={};const sources={};
+ scores.family=people.length?clamp(Math.round((100-support)*.62+activeOrders*10+kids().filter(k=>k.age<18).length*2+(partner()&&relationshipState(partner()).conflict>55?12:0))):0;sources.family=people.length?`${support}/100 family support${activeOrders?` • ${activeOrders} outgoing court order${activeOrders===1?'':'s'}`:''}`:'No close family relationships';
+ scores.money=G.age<18?clamp(Math.round((100-({modest:38,comfortable:64,wealthy:82,affluent:95}[G.familyWealth]||55))*.45)):clamp(Math.round(debtRatio*48+Math.max(0,650-G.creditScore)*.075+(G.cash<living*.5?14:0)+(income===0?18:0)));sources.money=`${money(G.debt)} debt • ${money(G.cash)} cash • ${G.creditScore} credit`;
+ scores.crime=clamp(Math.round((G.record||[]).length*15+recentRecord*7+(G.notoriety||0)*.65+(G.jailUntil>G.age?28:0)));sources.crime=G.record.length?`${G.record.length} offense${G.record.length===1?'':'s'} on record • notoriety ${Math.round(G.notoriety||0)}`:'No criminal record';
+ scores.health=clamp(Math.round((100-S.health)*.5+conditionBurden+S.stress*.16+(G.addiction.alcohol+G.addiction.drugs)*.16));sources.health=`Health ${Math.round(S.health)}/100 • stress ${Math.round(S.stress)}/100${G.conditions.length?` • ${G.conditions.length} active condition${G.conditions.length===1?'':'s'}`:''}`;
+ if(G.eduProgram){const ep=G.eduProgram;scores.education=clamp(Math.round((100-(ep.gpa??65))*.5+(ep.probation?22:0)+Math.min(22,debtRatio*12)+S.stress*.08));sources.education=`${collegeLetter(ep.gpa??65)} average • ${ep.left} estimated year${ep.left===1?'':'s'} left${ep.probation?' • probation':''}`;}else if(G.inSchool){scores.education=clamp(Math.round((100-schoolGPA())*.38+(100-G.school.attendance)*.35+G.school.disciplinePoints*4));sources.education=`Grades ${schoolGPA()}/100 • attendance ${Math.round(G.school.attendance)}/100`;}else{scores.education=0;sources.education=`${EDU[G.edu]} completed`;}
+ if(G.job){scores.career=clamp(Math.round((100-G.job.security)*.38+(G.job.burnout||0)*.34+(100-G.job.perf)*.2+(G.job.hrWarnings||0)*7));sources.career=`Security ${Math.round(G.job.security)}/100 • performance ${Math.round(G.job.perf)}/100 • burnout ${Math.round(G.job.burnout||0)}/100`;}else if(G.special){scores.career=clamp(Math.round((100-(G.special.form||50))*.42+(100-(G.special.momentum||10))*.25));sources.career=`${SPECIAL[G.special.type].tiers[G.special.tier]} • momentum ${Math.round(G.special.momentum||0)}/100`;}else if(G.military){scores.career=clamp(Math.round(S.stress*.25));sources.career=`${G.military.branch} • ${G.military.years} years served`;}else{scores.career=G.age>=18?clamp(42+(income===0?14:0)-(G.edu||0)*3):0;sources.career=G.age>=18?'No current career':'Too young for a career';}
+ c.scores=scores;c.sources=sources;c.buffers={family:support,savings:clamp(Math.round(G.cash/Math.max(1,living)*50)),education:clamp(G.edu*15+(G.flags.collegeNetwork||0)*.35),career:G.job?G.job.security:0,health:clamp(Math.round(S.health*.72+S.fitness*.28))};return{scores,sources,buffers:c.buffers,support,income,living,debtRatio,recentRecord};
+}
+function recordConsequence(source,target,title,summary,kind='bad'){
+ const c=ensureConsequences(),entry={year:G.year,age:G.age,source,target,title,summary,kind};c.history.push(entry);if(c.history.length>30)c.history.shift();log(summary,kind==='good'?'good':kind==='money'?'money':'bad');return entry;
+}
+function consequenceReady(key,years=2){const c=ensureConsequences();return !c.cooldowns[key]||G.year>=c.cooldowns[key];}
+function coolConsequence(key,years=2){ensureConsequences().cooldowns[key]=G.year+years;}
+function chooseConsequenceCandidate(profile){
+ const s=profile.scores,c=[];const add=(key,source,target,need,weight)=>{if(need&&consequenceReady(key))c.push({key,source,target,weight});};
+ add('money-family','money','family',s.money>=45&&consequenceFamily().length,s.money+s.family*.35);add('money-health','money','health',s.money>=58&&G.age>=18,s.money+s.health*.4);add('health-career','health',G.eduProgram?'education':'career',s.health>=45&&(G.job||G.special||G.eduProgram),s.health+s.career*.35+s.education*.35);add('crime-career','crime','career',s.crime>=20&&G.age>=16,s.crime+s.career*.3+profile.recentRecord*25);add('crime-family','crime','family',s.crime>=20&&consequenceFamily().length,s.crime+s.family*.4+profile.recentRecord*35);add('crime-education','crime','education',s.crime>=20&&!!G.eduProgram,s.crime+s.education*.45+profile.recentRecord*30);add('career-family','career','family',s.career>=48&&consequenceFamily().length&&(G.job||G.special||G.military),s.career+s.family*.4);add('education-money','education','money',!!G.eduProgram&&s.money>=42,s.education+s.money*.65);add('family-career','family','career',s.family>=50&&!!G.job,s.family+s.career*.45);
+ if(!c.length)return null;if(profile.recentRecord){const crimeLinks=c.filter(x=>x.source==='crime');if(crimeLinks.length){crimeLinks.sort((a,b)=>b.weight-a.weight);return crimeLinks[0];}}c.sort((a,b)=>b.weight-a.weight);return c[0];
+}
+function healthCareerCrossroad(profile){
+ const c=ensureConsequences(),condition=(G.conditions||[]).sort((a,b)=>(b.severity||1)-(a.severity||1))[0],name=condition&&DISEASE[condition.id]?DISEASE[condition.id].name.toLowerCase():'your health';coolConsequence('health-career',3);
+ ask('Something has to give',`${capitalize(name)} is no longer staying inside the doctor’s office. It is reaching ${G.job?'your workdays':G.eduProgram?'your classes':'your career'} and the people depending on you can see it.`,[
+  {label:'Ask for breathing room',sub:'Disclose the problem and request leave or a reduced load.',fn:()=>{if(G.job){const sup=npc(ensureWorkplace().supervisor),support=workRelationshipScore(sup,true);if(support>=55||chance(.45)){G.job.hours=G.job.hours>40?40:G.job.hours>32?32:G.job.hours;G.job.security=clamp(G.job.security+3);G.job.burnout=clamp(G.job.burnout-14);S.stress=clamp(S.stress-9);recordConsequence('health','career','Supported medical leave',`${sup?sup.name:'Your supervisor'} approved breathing room while you dealt with ${name}. The smaller paycheck and slower momentum hurt less than pretending you were fine.`,'good');}else{G.job.security=clamp(G.job.security-8);G.job.recognition=clamp(G.job.recognition-6);recordConsequence('health','career','Leave without support',`You disclosed ${name} and asked for room. Management granted the minimum and quietly began imagining the team without you.`,'bad');}}else if(G.eduProgram){const campus=campusState();campus.courseLoad='light';G.eduProgram.gpa=clamp(G.eduProgram.gpa+3);S.stress=clamp(S.stress-8);recordConsequence('health','education','Reduced course load',`You reduced your course load to protect your health. Graduation moved farther away, but for the first time in months the calendar looked survivable.`,'good');}}},
+  {label:'Hide it and keep going',sub:'Protect momentum now; risk health and burnout.',fn:()=>{S.health=clamp(S.health-5);S.stress=clamp(S.stress+8);if(G.job){G.job.perf=clamp(G.job.perf+3);G.job.burnout=clamp(G.job.burnout+12);}if(G.eduProgram)G.eduProgram.gpa=clamp(G.eduProgram.gpa-5);recordConsequence('health',G.eduProgram?'education':'career','Kept it hidden',`You kept ${name} private and maintained the schedule. Everyone saw the output. Nobody saw what it cost until the cost became part of you.`,'bad');},},
+  {label:'Step away completely',sub:'Leave work or school to protect your health.',fn:()=>{if(G.job)quitJob(false,'left for health reasons');if(G.special){G.special=null;log(`You stepped away from the career. The calls slowed, then stopped.`);}if(G.eduProgram){G.eduProgram=null;log(`You withdrew from school before the next bill arrived.`);}S.stress=clamp(S.stress-16);S.health=clamp(S.health+4);recordConsequence('health','career','Health forced a departure',`You stepped away to protect your health. Income and momentum disappeared; the immediate pressure finally loosened.`,'bad');}}
+ ]);
+}
+function educationMoneyCrossroad(profile){
+ const c=ensureConsequences(),ep=G.eduProgram,campus=campusState();coolConsequence('education-money',3);ask('The tuition gap',`School is opening doors while the bills close in behind you. Debt is ${money(G.debt)}, and the next year will not become cheaper by wishing.`,[
+  {label:'Reduce the course load',sub:'Lower yearly cost and stress; graduate later.',fn:()=>{campus.courseLoad='light';S.stress=clamp(S.stress-7);recordConsequence('money','education','A slower path',`You reduced your course load. The yearly bill eased and graduation moved farther away—a trade measured in both money and time.`,'money');}},
+  {label:'Ask family for help',sub:'Support depends on finances and the relationship.',cond:()=>livingParents().length>0,fn:()=>{const parent=pick(livingParents()),support=familySupportScore(),help=chance(clamp(.2+support/150+({modest:0,comfortable:.08,wealthy:.18,affluent:.28}[G.familyWealth]||0),.15,.94));if(help){const amount=Math.min(G.debt,rnd(3000,15000));G.debt=Math.max(0,G.debt-amount);changeRelationship(parent,{connection:4,respect:2},`${G.name} asked me for help staying in school at age ${G.age}.`,'support');recordConsequence('family','money','Family tuition help',`${parent.name} helped carry ${money(amount)} of your education debt. The diploma became a family investment, with all the gratitude and expectation that implies.`,'good');}else{changeRelationship(parent,{connection:-3,conflict:4},`${G.name} asked for tuition help I could not give.`,'money-conflict');recordConsequence('money','family','Family could not help',`${parent.name} said they could not cover the tuition gap. The answer was practical; the silence afterward was personal.`,'bad');}}},
+  {label:'Borrow and continue',sub:'Keep momentum; accept a larger future burden.',fn:()=>{const amount=rnd(8000,22000);G.debt+=amount;G.creditScore=clamp(G.creditScore-6,300,850);ep.gpa=clamp(ep.gpa+2);recordConsequence('education','money','Borrowed for momentum',`You borrowed ${money(amount)} and kept the same pace. The degree moved closer. Financial freedom moved the other way.`,'money');}}
+ ]);
+}
+function crimeFamilyCrossroad(profile){
+ const relative=pick(consequenceFamily()),crime=G.record[G.record.length-1],label=crime?crime.crime.toLowerCase():'what happened';coolConsequence('crime-family',3);ask('Tell them before somebody else does',`${relative.name} has heard enough to know something is wrong. The ${label} is already changing your future; now it is standing at the edge of the family.`,[
+  {label:'Tell the truth',fn:()=>{const p=ensurePersonality(relative),r=relationshipState(relative),stays=p.kindness+r.connection>105;changeRelationship(relative,{connection:stays?4:-9,respect:stays?5:-8,conflict:stays?-3:8},`${G.name} told me the truth about ${label} at age ${G.age}.`,'crime-disclosure');recordConsequence('crime','family','The truth reached home',stays?`${relative.name} did not excuse what you did, but they stayed. Honesty preserved something the charge had not yet destroyed.`:`You told ${relative.name} the truth. They looked at you as if revising years of memories, then asked for distance.` ,stays?'good':'bad');}},
+  {label:'Lie about it',fn:()=>{K.stealth=clamp(K.stealth+2);S.stress=clamp(S.stress+7);thread('family_lie',{npc:relative.id,name:relative.name,crime:label});recordConsequence('crime','family','A lie entered the family',`You gave ${relative.name} a cleaner version. They accepted it for now. The lie became another consequence waiting for its own year.`,'bad');}},
+  {label:'Refuse to discuss it',fn:()=>{changeRelationship(relative,{connection:-10,respect:-6,conflict:7},`${G.name} shut me out after ${label}.`,'estrangement');S.happiness=clamp(S.happiness-3);recordConsequence('crime','family','Silence widened the distance',`You told ${relative.name} it was none of their business. The conversation ended. The subject did not.`,'bad');}}
+ ]);
+}
+function applyConsequenceRipple(candidate,profile){
+ const key=candidate.key,c=ensureConsequences();if(key==='health-career'&&!pendingChoice&&(profile.scores.health>=62||G.eduProgram)){healthCareerCrossroad(profile);return;}if(key==='education-money'&&!pendingChoice&&profile.scores.money>=58){educationMoneyCrossroad(profile);return;}if(key==='crime-family'&&!pendingChoice&&profile.recentRecord){crimeFamilyCrossroad(profile);return;}coolConsequence(key,2);
+ if(key==='money-family'){const relative=pick(consequenceFamily()),strong=profile.support>=68&&ensurePersonality(relative).generosity>=55;if(strong){const help=rnd(1200,6500);if(G.debt>0)G.debt=Math.max(0,G.debt-Math.min(G.debt,help));else G.cash+=Math.round(help*.45);changeRelationship(relative,{connection:3,respect:2},`${relative.name} helped when money was tight.`,'support');recordConsequence('family','money','Family absorbed the shock',`${relative.name} saw the bills gathering and helped before pride could stop the conversation. Family support softened a financial year that could have broken somewhere else.`,'good');}else{changeRelationship(relative,{connection:-rnd(4,9),respect:-2,conflict:rnd(4,9)},`Money pressure caused conflict with ${G.name} at age ${G.age}.`,'money-conflict');S.stress=clamp(S.stress+5);recordConsequence('money','family','Money entered the relationship',`The argument with ${relative.name} began with a bill and ended with a list of older disappointments. Money was the subject, not the whole cause.`,'bad');}}
+ else if(key==='money-health'){const untreated=(G.conditions||[]).filter(x=>x.lastTreatedYear!==G.year);if(untreated.length){const condition=pick(untreated);condition.severity=clamp((condition.severity||1)+1,1,4);}S.health=clamp(S.health-3);S.stress=clamp(S.stress+5);recordConsequence('money','health','Care was postponed',`You delayed care because the money was not there. The bill disappeared from this year’s calendar; the symptoms did not.`,'bad');}
+ else if(key==='health-career'){if(G.job){const loss=Math.max(3,Math.round(profile.scores.health/11));G.job.perf=clamp(G.job.perf-loss);G.job.security=clamp(G.job.security-Math.ceil(loss/2));G.job.burnout=clamp(G.job.burnout+6);recordConsequence('health','career','Health reached the workplace',`Appointments, fatigue, and bad mornings began appearing in your work. Performance fell ${loss} points, and management started watching the absences as closely as the results.`,'bad');}else if(G.eduProgram){G.eduProgram.gpa=clamp(G.eduProgram.gpa-rnd(4,9));recordConsequence('health','education','Health disrupted school',`Your health began choosing which classes you could attend and which assignments arrived unfinished. The transcript recorded the outcome without recording the reason.`,'bad');}}
+ else if(key==='crime-career'){c.barriers.employmentUntil=Math.max(c.barriers.employmentUntil||0,G.year+3);if(G.job){const j=JOB[G.job.id],loss=j.clean?24:rnd(6,13);G.job.security=clamp(G.job.security-loss);G.job.recognition=clamp(G.job.recognition-Math.ceil(loss/2));if(j.clean&&G.job.security<35&&chance(.55)){const title=j.title;quitJob(true,'failed a required background review');recordConsequence('crime','career','A record ended the job',`A required background review found the record. The ${title} position ended in a meeting with careful language and a security badge left on the table.`,'bad');}else recordConsequence('crime','career','The record followed you to work',`A background check or office rumor carried the record into your career. Your job survived, but trust and future options narrowed.`,'bad');}else recordConsequence('crime','career','Employment barrier',`Applications began ending after the background-check stage. The sentence was over; part of the punishment was not.`,'bad');}
+ else if(key==='crime-family'){const relative=pick(consequenceFamily());changeRelationship(relative,{connection:-rnd(5,12),respect:-rnd(6,14),conflict:rnd(4,10)},`${G.name}'s criminal record changed how I saw them.`,'crime');recordConsequence('crime','family','The charge reached home',`${relative.name} learned enough about the record to stop asking whether it was a misunderstanding. Trust became another thing the case had taken.`,'bad');}
+ else if(key==='crime-education'){const ep=G.eduProgram,oldScholarship=ep.scholarship||0;ep.scholarship=Math.max(0,oldScholarship-.25);ep.gpa=clamp((ep.gpa??65)-rnd(3,8));if(profile.scores.crime>=55)ep.probation=true;recordConsequence('crime','education','The record reached campus',`${oldScholarship>ep.scholarship?'Financial aid was reduced and ':''}an academic-conduct review placed the criminal record beside your transcript. School remained possible, but no longer separate from what happened outside it.`,'bad');}
+ else if(key==='career-family'){const relative=partner()||pick(consequenceFamily()),protect=G.job&&G.job.style==='boundaries';if(protect){changeRelationship(relative,{connection:4,respect:2,conflict:-3},`${G.name} protected time for our family despite work pressure.`,'work-life');recordConsequence('career','family','Boundaries held',`Work pressed harder, but you kept the promises made at home. ${relative.name} noticed the hours you protected, not only the ones you worked.`,'good');}else{changeRelationship(relative,{connection:-rnd(4,9),respect:-2,conflict:rnd(3,8)},`${G.name}'s career pressure took time from us.`,'work-life');S.happiness=clamp(S.happiness-3);recordConsequence('career','family','The career came home',`The job took the hours first, then your attention during the hours that remained. ${relative.name} stopped competing with a workplace that was never in the room and always present.`,'bad');}}
+ else if(key==='education-money'){G.debt+=rnd(2500,7500);S.stress=clamp(S.stress+4);recordConsequence('education','money','Education deepened the debt',`Tuition, housing, and the cost of staying enrolled pushed the debt higher. School kept building a future with money borrowed from it.`,'money');}
+ else if(key==='family-career'){const relative=partner()||pick(consequenceFamily()),r=relationshipState(relative);if(r.connection>=65){G.job.morale=clamp(G.job.morale+6);G.job.burnout=clamp(G.job.burnout-6);G.job.perf=clamp(G.job.perf+2);recordConsequence('family','career','Home became a buffer',`${relative.name} carried more than their share while work was unstable. That support did not solve the job, but it gave you enough room to perform inside it.`,'good');}else{G.job.perf=clamp(G.job.perf-rnd(3,7));G.job.burnout=clamp(G.job.burnout+5);recordConsequence('family','career','Home strain followed you to work',`A family conflict followed you through the workplace doors. Focus slipped, small errors multiplied, and the job absorbed consequences from a room it had never seen.`,'bad');}}
+}
+function applyPositiveLifeBuffer(profile){
+ const c=ensureConsequences();if(!consequenceReady('positive-buffer',2))return;const choices=[];if(profile.support>=72&&consequenceFamily().length)choices.push('family-health');if(G.edu>=3&&G.flags.lastCollegeRecord&&!c.educationLaunchHandled)choices.push('education-career');if(G.job&&G.job.security>=78&&G.job.reviewRating>=70)choices.push('career-money');if(profile.buffers.savings>=65&&G.debt>0)choices.push('money-health');if(!choices.length)return;const key=pick(choices);coolConsequence('positive-buffer',2);
+ if(key==='family-health'){const relative=pick(consequenceFamily());S.stress=clamp(S.stress-6);S.health=clamp(S.health+2);recordConsequence('family','health','Support made recovery possible',`${relative.name} handled meals, rides, calls, or simply the quiet company of a difficult week. Your health improved because care became a shared task.`,'good');}
+ else if(key==='education-career'){c.educationLaunchHandled=true;c.barriers.educationBoostUntil=G.year+3;recordConsequence('education','career','The degree opened a door',`A professor, classmate, internship contact, or alumni connection carried your name into a professional room before you entered it. Education became career leverage instead of only a line on the résumé.`,'good');}
+ else if(key==='career-money'){const bonus=Math.round(annualIncome()*rnd(1,3)/100);G.cash+=bonus;recordConsequence('career','money','Stability became money',`A strong, secure year at work produced ${money(bonus)} in bonus pay and benefits. Career stability finally became financial breathing room.`,'money');}
+ else{const payment=Math.min(G.debt,rnd(1500,6000));G.debt-=payment;G.creditScore=clamp(G.creditScore+4,300,850);S.stress=clamp(S.stress-3);recordConsequence('money','health','Savings bought breathing room',`You used ${money(payment)} of your cushion to reduce debt. The improvement was financial, but your body felt it first.`,'good');}
+}
+function handleLifeConsequences(){
+ const c=ensureConsequences();if(c.lastYear===G.year)return;const profile=consequenceProfile();c.lastYear=G.year;const candidate=chooseConsequenceCandidate(profile),severe=Math.max(...Object.values(profile.scores));if(candidate&&(severe>=60||profile.recentRecord>0||chance(.58)))applyConsequenceRipple(candidate,profile);else if(severe<48&&chance(.42))applyPositiveLifeBuffer(profile);consequenceProfile();
+}
+function consequencePressureWord(v){return v>=75?'critical':v>=58?'high':v>=38?'building':v>=18?'low':'stable';}
+function tabConsequences(){
+ const p=consequenceProfile(),c=ensureConsequences(),cards=Object.entries(CONSEQUENCE_DOMAINS).map(([id,d])=>`<div class="consequence-card"><div class="domain"><b>${d.icon} ${esc(d.name)}</b><span>${consequencePressureWord(p.scores[id])} • ${Math.round(p.scores[id])}/100</span></div>${miniBar('Pressure',p.scores[id],p.scores[id]>=58?'stress':'') }<div class="note">${esc(p.sources[id])}</div></div>`).join(''),hist=c.history.slice(-12).reverse();
+ return `<div class="grp"><h4>Connected life</h4><div class="note">Pressure is not a punishment meter. It shows where consequences are most likely to spill into another part of life when you age up. Savings, education, health, job stability, and strong relationships can act as buffers.</div><div class="consequence-grid">${cards}</div></div><div class="grp"><h4>Protective buffers</h4><div class="kv"><span>Family support</span><span>${p.buffers.family}/100</span></div><div class="kv"><span>Financial cushion</span><span>${p.buffers.savings}/100</span></div><div class="kv"><span>Education leverage</span><span>${p.buffers.education}/100</span></div><div class="kv"><span>Career stability</span><span>${p.buffers.career}/100</span></div><div class="kv"><span>Health resilience</span><span>${p.buffers.health}/100</span></div></div><div class="grp"><h4>Recent ripple effects</h4>${hist.length?hist.map(x=>`<div class="ripple ${x.kind==='good'?'good':x.kind==='bad'?'bad':''}"><b>${esc(x.title)}</b><div class="note">Age ${x.age} • ${esc(CONSEQUENCE_DOMAINS[x.source]?.name||x.source)} → ${esc(CONSEQUENCE_DOMAINS[x.target]?.name||x.target)}<br>${esc(x.summary)}</div></div>`).join(''):'<div class="note">No major cross-system consequences have been recorded yet.</div>'}</div>`;
+}
 
 function handleAgingAndDeath(){
  if(pendingChoice)return; // don't die with an unanswered question on screen
@@ -1646,10 +1773,12 @@ function makeWorkContact(kind,j){
 function ensureWorkplace(){
   if(!G.job)return null;const j=JOB[G.job.id];if(!j)return null;const x=G.job;
   if(x.perf==null)x.perf=60;if(x.years==null)x.years=0;if(x.bonus==null)x.bonus=0;if(x.hours==null)x.hours=j.kind==='part'?20:40;if(x.effort==null)x.effort=0;if(x.recognition==null)x.recognition=12;if(x.hrWarnings==null)x.hrWarnings=0;if(x.startYear==null)x.startYear=G.year;
+  if(!WORK_STYLES[x.style])x.style='balanced';if(x.morale==null)x.morale=62;if(x.security==null)x.security=72;if(x.burnout==null)x.burnout=8;if(x.reviewRating==null)x.reviewRating=60;if(x.lastReviewYear==null)x.lastReviewYear=null;if(x.completedProjects==null)x.completedProjects=0;if(!Array.isArray(x.reviewHistory))x.reviewHistory=[];if(x.projectSeq==null)x.projectSeq=0;
   if(!x.workplace||typeof x.workplace!=='object')x.workplace={supervisor:null,coworkers:[]};if(!Array.isArray(x.workplace.coworkers))x.workplace.coworkers=[];
   let sup=npc(x.workplace.supervisor);if(!sup||!sup.alive){sup=makeWorkContact('supervisor',j);x.workplace.supervisor=sup.id;}else{sup.workRole='supervisor';if(!sup.label||sup.label==='coworker')sup.label='supervisor';}
   x.workplace.coworkers=x.workplace.coworkers.filter(id=>{const n=npc(id);return n&&n.alive&&id!==x.workplace.supervisor;});
   while(x.workplace.coworkers.length<3){const n=makeWorkContact('coworker',j);x.workplace.coworkers.push(n.id);}
+  if(!x.project&&x.nextProjectYear==null)assignWorkProject(j,false);
   return x.workplace;
 }
 function workContacts(){const w=ensureWorkplace();if(!w)return[];return [npc(w.supervisor),...w.coworkers.map(npc)].filter(Boolean);}
@@ -1663,13 +1792,13 @@ function archiveJob(reason){if(!G.job)return;const j=JOB[G.job.id];if(!j)return;
 function leaveWorkplace(){if(!G.job||!G.job.workplace)return;for(const n of workContacts()){n.workRole=null;if(n.friendOutsideWork){n.role='friend';n.label='friend & former coworker';}else{n.label='former coworker';}}}
 function setJob(id){
   const j=JOB[id];if(!j)return;if(G.job)quitJob(false);
-  G.job={id,perf:60,years:0,bonus:0,hours:j.kind==='part'?20:40,effort:0,recognition:12,hrWarnings:0,startYear:G.year,workplace:null,lastPromotionReviewYear:null,lastRaiseYear:null};ensureWorkplace();
+  G.job={id,perf:60,years:0,bonus:0,hours:j.kind==='part'?20:40,effort:0,recognition:12,hrWarnings:0,startYear:G.year,workplace:null,lastPromotionReviewYear:null,lastRaiseYear:null,style:'balanced',morale:62,security:72,burnout:8,reviewRating:60,reviewHistory:[],completedProjects:0,projectSeq:0,lastReviewYear:null,nextProjectYear:null};ensureWorkplace();
   log(`You started work as a ${j.title}. ${money(j.pay)} a year at the standard schedule, before the government and the landlord take their cut.`,'money');
 }
 function promoteJob(id){
   if(!G.job)return false;const old=JOB[G.job.id],next=JOB[id];if(!old||!next||!(old.next||[]).includes(id))return false;archiveJob('promoted');
   const oldWork=ensureWorkplace(),oldSup=npc(oldWork.supervisor);if(oldSup){oldSup.workRole='coworker';oldSup.label=oldSup.friendOutsideWork?'friend & coworker':'coworker';}
-  const coworkers=[oldWork.supervisor,...oldWork.coworkers].filter(Boolean).slice(0,3);G.job={id,perf:clamp(Math.max(65,G.job.perf-8)),years:0,bonus:Math.round((G.job.bonus||0)*.35),hours:next.kind==='part'?20:Math.max(40,G.job.hours||40),effort:0,recognition:clamp((G.job.recognition||0)-10),hrWarnings:Math.max(0,(G.job.hrWarnings||0)-1),startYear:G.year,workplace:{supervisor:null,coworkers},lastPromotionReviewYear:G.year,lastRaiseYear:null};
+  const coworkers=[oldWork.supervisor,...oldWork.coworkers].filter(Boolean).slice(0,3),oldStyle=G.job.style||'balanced';G.job={id,perf:clamp(Math.max(65,G.job.perf-8)),years:0,bonus:Math.round((G.job.bonus||0)*.35),hours:next.kind==='part'?20:Math.max(40,G.job.hours||40),effort:0,recognition:clamp((G.job.recognition||0)-10),hrWarnings:Math.max(0,(G.job.hrWarnings||0)-1),startYear:G.year,workplace:{supervisor:null,coworkers},lastPromotionReviewYear:G.year,lastRaiseYear:null,style:oldStyle,morale:65,security:76,burnout:clamp((G.job.burnout||0)-8),reviewRating:65,reviewHistory:[],completedProjects:0,projectSeq:0,lastReviewYear:null,nextProjectYear:null};
   const sup=makeWorkContact('supervisor',next);G.job.workplace.supervisor=sup.id;G.job.workplace.coworkers=G.job.workplace.coworkers.filter(x=>x!==sup.id).slice(0,3);ensureWorkplace();
   log(`The promotion became official: ${next.title}, ${money(next.pay)} at the standard schedule. A new title appeared beneath your name, along with a new supervisor, a new set of expectations, and problems whose meetings had meetings.`,'good');return true;
 }
@@ -1701,6 +1830,10 @@ function openWorkHours(){
   if(!G.job)return;const j=JOB[G.job.id],current=workSchedule();$('modalbox').innerHTML=`<h2>Choose your workweek</h2><p>Your schedule takes effect over the next year. Hours change compensation, promotion effort, performance, and stress. You currently work about ${current.hours} hours a week.</p><div class="opts">${workSchedules(j).map(x=>`<button onclick="setWorkHours(${x.hours})">${esc(x.label)} — ${x.hours} hours<small>${Math.round(x.pay*100)}% compensation • ${x.effort} yearly effort • ${x.stress>=0?'+':''}${x.stress} schedule stress • ${esc(x.note)}</small></button>`).join('')}</div>`;openModal();
 }
 function setWorkHours(hours){if(!G.job)return;const j=JOB[G.job.id],s=workSchedules(j).find(x=>x.hours===+hours);if(!s)return;G.job.hours=s.hours;forceClose();log(`You set your schedule at roughly ${s.hours} hours a week. ${s.note}`,'money');afterAction(0);}
+function openWorkStyle(){
+  if(!G.job)return;const current=workStyle();$('modalbox').innerHTML=`<h2>How will you approach the job?</h2><p>This is not a one-time action. Your work style shapes project pace, quality, relationships, stress, recognition, and annual reviews until you change it. You are currently a ${current.name.toLowerCase()}.</p><div class="opts">${Object.entries(WORK_STYLES).map(([id,x])=>`<button onclick="setWorkStyle('${id}')">${esc(x.name)}<small>${esc(x.note)}${G.job.style===id?' • current approach':''}</small></button>`).join('')}</div>`;openModal();
+}
+function setWorkStyle(id){if(!G.job||!WORK_STYLES[id])return;G.job.style=id;forceClose();log(`At work, you decided to operate as a ${WORK_STYLES[id].name.toLowerCase()}. ${WORK_STYLES[id].note}`);afterAction(0);}
 function workInteract(id,kind){
   const n=npc(id);if(!n||!currentWorkContact(n))return;if(!spendAct('work-'+kind))return;const isBoss=n.id===G.job.workplace.supervisor;
   if(kind==='collaborate'){changeRelationship(n,{connection:rnd(3,7),respect:rnd(6,11),familiarity:4,conflict:-2},`${G.name} proved dependable on a difficult project at age ${G.age}.`,'work');G.job.perf=clamp(G.job.perf+rnd(3,7));G.job.effort+=rnd(3,6);G.job.recognition=clamp(G.job.recognition+rnd(1,4));K.discipline=clamp(K.discipline+2);log(`You and ${n.name} took on a difficult piece of work together. ${isBoss?'They saw how you handled the pressure up close.':'By the deadline, each of you knew exactly what the other did well.'}`,'good');}
@@ -1990,8 +2123,9 @@ function saveGame(silent){
 }
 function loadGame(){
   try{
-    const raw=localStorage.getItem(SAVEKEY); if(!raw)return false;
+    const raw=localStorage.getItem(SAVEKEY)||localStorage.getItem(LEGACY_SAVEKEY); if(!raw)return false;
     const data=JSON.parse(raw); G=data.G; NPCID=data.NPCID||1; S=G.stats; K=G.skills; restoreRandomState(); sanitizeSave();
+    localStorage.setItem(SAVEKEY,JSON.stringify({G,NPCID}));
     return true;
   }catch(e){ return false; }
 }
@@ -1999,7 +2133,7 @@ function exportSave(){
   if(!G){toast('No life to export yet.');return;}
   const blob=new Blob([JSON.stringify({G,NPCID},null,2)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download=`SMIS-${G.first}-${G.age}.json`; a.click(); URL.revokeObjectURL(a.href);
+  a.download=`LifeMachine-${G.first}-${G.age}.json`; a.click(); URL.revokeObjectURL(a.href);
   toast('Exported.');
 }
 function importSave(input){
@@ -2146,8 +2280,47 @@ function relLine(){
   const p=partner(); if(!p)return 'Single';
   const r=relationshipState(p),tone=r.conflict>=65?'high conflict':r.attraction>=72?'strong chemistry':r.respect>=72?'deep respect':loyaltyWord(r.connection);return `${p.role==='spouse'?'Married to':p.engaged?'Engaged to':'With'} ${p.name} (${tone})`;
 }
+function workStyle(){return WORK_STYLES[(G.job&&G.job.style)||'balanced']||WORK_STYLES.balanced;}
+function workPrimarySkill(j){const gains=Object.keys((j&&j.gain)||{}),req=Object.keys((j&&j.skills)||{});return gains[0]||req[0]||({Corporate:'business',Tech:'tech',Trades:'discipline',Healthcare:'intellect',Law:'writing',Education:'charisma',Police:'discipline',Finance:'business',Media:'writing',Culinary:'cooking',Retail:'charisma','Food service':'discipline','Part-time':'discipline'}[(j&&j.track)||'']||'discipline');}
+function assignWorkProject(j,announce=true){
+  if(!G.job)return null;j=j||JOB[G.job.id];const pool=WORK_PROJECTS[j.track]||WORK_PROJECTS.Corporate,name=pick(pool),difficulty=clamp(38+jobDepth(j)*7+rnd(-7,13),30,88),lead=G.job.years>=1&&((G.job.recognition||0)>38||chance(.3));
+  G.job.projectSeq=(G.job.projectSeq||0)+1;G.job.project={id:`wp${G.year}_${G.job.projectSeq}`,name,phase:0,progress:rnd(4,12),quality:50,difficulty,lead,startYear:G.year,deadline:G.year+rnd(1,2),status:'active',ally:null};G.job.nextProjectYear=null;
+  if(announce)log(`Work assigned you to the ${name}. ${lead?'Your supervisor put you in charge.':'You joined the project team.'} The deadline is ${G.job.project.deadline}, and the early plan already contains more confidence than detail.`);
+  return G.job.project;
+}
+function workTurnover(j){
+  if(!G.job||!chance(.12))return;const w=ensureWorkplace(),replaceBoss=chance(.22),id=replaceBoss?w.supervisor:pick(w.coworkers),leaver=npc(id);if(!leaver)return;
+  leaver.workRole=null;leaver.label=leaver.friendOutsideWork?'friend & former coworker':'former coworker';
+  if(replaceBoss){const fresh=makeWorkContact('supervisor',j);w.supervisor=fresh.id;log(`${leaver.name}, your supervisor, left the organization. ${fresh.name} took over with a new vocabulary, a new set of priorities, and no attachment to the promises made before they arrived.`);}else{w.coworkers=w.coworkers.filter(x=>x!==id);const fresh=makeWorkContact('coworker',j);w.coworkers.push(fresh.id);log(`${leaver.name} left for another job. ${fresh.name} joined the team, inheriting a desk, an inbox, and several problems nobody described during the interview.`);}
+}
+function workProjectDecision(p,j){
+  if(p.crisisYear===G.year||pendingChoice)return;p.crisisYear=G.year;const w=ensureWorkplace(),peer=pick(w.coworkers.map(npc).filter(Boolean)),sup=npc(w.supervisor);
+  ask('The deadline moved',`The ${p.name} is behind schedule, and leadership moved the deadline closer anyway. ${peer?peer.name:'A coworker'} says the team should push back. ${sup?sup.name:'Your supervisor'} wants a recovery plan by morning.`,[
+   {label:'Take ownership',sub:'Carry the difficult work yourself.',fn:()=>{p.progress=clamp(p.progress+rnd(16,25));p.quality=clamp(p.quality+rnd(2,7));G.job.perf=clamp(G.job.perf+rnd(4,8));G.job.recognition=clamp(G.job.recognition+rnd(4,8));G.job.burnout=clamp(G.job.burnout+12);S.stress=clamp(S.stress+10);if(sup)changeRelationship(sup,{respect:6,connection:2},`${G.name} rescued a deadline at age ${G.age}.`,'work');log(`You took the recovery plan home and made yourself responsible for every loose end. The project moved. So did the boundary between your job and the rest of your life.`,'good');}},
+   {label:'Protect the team',sub:'Negotiate a realistic scope.',fn:()=>{const odds=clamp(.32+K.charisma/220+workNetwork()/300,.2,.88);if(chance(odds)){p.deadline++;p.quality=clamp(p.quality+6);G.job.morale=clamp(G.job.morale+7);G.job.recognition=clamp(G.job.recognition+3);if(peer)changeRelationship(peer,{connection:6,respect:6},`${G.name} protected our team during a deadline crisis.`,'work');log(`You turned the panic into a list, cut what did not matter, and won the team another year. People remembered that you protected both the work and the people doing it.`,'good');}else{G.job.perf=clamp(G.job.perf-6);G.job.security=clamp(G.job.security-7);if(sup)changeRelationship(sup,{respect:-6,conflict:5},`${G.name} challenged my deadline at age ${G.age}.`,'work');log(`Leadership heard your scope proposal as refusal. The deadline stayed; your name acquired an asterisk in conversations you were not invited to.`,'bad');}}},
+   {label:'Push it onto a coworker',sub:'Lower your burden; risk the relationship.',fn:()=>{p.progress=clamp(p.progress+rnd(8,18));G.job.burnout=clamp(G.job.burnout-5);if(peer){changeRelationship(peer,{connection:-12,respect:-10,conflict:14},`${G.name} pushed a failing deadline onto me at age ${G.age}.`,'work-conflict');peer.workplaceConflict='being made responsible for your project crisis';}G.job.recognition=clamp(G.job.recognition+2);log(`You moved the worst of the deadline onto ${peer?peer.name:'someone else'}. The status report turned greener. The room around you turned colder.`,'bad');}}
+  ]);
+}
+function completeWorkProject(p,j){
+  const result=clamp(Math.round(p.quality+(p.progress-100)*.18+rnd(-8,8))),great=result>=72,failed=result<45;p.status=great?'excellent':failed?'failed':'completed';p.result=result;G.job.completedProjects=(G.job.completedProjects||0)+1;G.job.lastProject=Object.assign({},p);G.job.project=null;G.job.nextProjectYear=G.year+1;
+  G.job.perf=clamp(G.job.perf+(great?rnd(8,13):failed?-rnd(9,15):rnd(2,6)));G.job.recognition=clamp(G.job.recognition+(great?rnd(8,14):failed?-rnd(6,11):rnd(2,5)));G.job.security=clamp(G.job.security+(great?8:failed?-13:3));G.job.morale=clamp(G.job.morale+(great?5:failed?-7:2));
+  log(`The ${p.name} ${great?'landed cleanly and became the example leadership used in later meetings':failed?'missed its goals, its deadline, or both':'finished without disaster and with enough good work to matter'}. Your contribution was rated ${result}/100.${great?' People above your supervisor learned your name.':''}`,great?'good':failed?'bad':'');
+}
+function runWorkReview(j){
+  if(!G.job||G.job.lastReviewYear===G.year)return;const x=G.job,style=workStyle(),sup=npc(ensureWorkplace().supervisor),rating=clamp(Math.round(x.perf*.58+(x.recognition||0)*.18+workNetwork()*.14+(x.morale||50)*.1-(x.hrWarnings||0)*5+rnd(-7,7)));x.reviewRating=rating;x.lastReviewYear=G.year;const label=rating>=82?'Exceptional':rating>=68?'Strong':rating>=52?'Meets expectations':rating>=38?'Needs improvement':'Unsatisfactory';x.reviewHistory.push({year:G.year,rating,label,style:x.style,project:x.lastProject&&x.lastProject.name||null});if(x.reviewHistory.length>12)x.reviewHistory.shift();
+  x.security=clamp(x.security+(rating>=68?6:rating<45?-12:1));x.morale=clamp(x.morale+(rating>=68?4:rating<45?-6:0));
+  if(rating>=72&&chance(.48)){const raise=Math.round(j.pay*rnd(2,6)/100);x.bonus=(x.bonus||0)+raise;x.lastRaiseYear=G.year;log(`${sup?sup.name:'Your supervisor'} delivered an ${label.toLowerCase()} annual review. The company added ${money(raise)} to your yearly compensation. For once, the number at the bottom matched the praise above it.`,'money');}else log(`${sup?sup.name:'Your supervisor'} rated your year ${label.toLowerCase()} (${rating}/100). ${rating>=68?'Your work is building momentum.':rating<45?'You were given a formal improvement plan; another year like this could end the job.':'The review closed with goals, careful language, and no change to your pay.'}`,rating<45?'bad':rating>=68?'good':'');
+  const prior=x.reviewHistory[x.reviewHistory.length-2];if(rating<38&&prior&&prior.rating<45&&chance(.45)){const title=j.title;log(`Two poor reviews ended the argument. You were dismissed from the ${title} position and escorted through the familiar workplace as if you had never belonged there.`,'bad');quitJob(true,'dismissed after repeated poor reviews');return;}
+  const options=(j.next||[]).map(id=>JOB[id]).filter(Boolean).filter(n=>promotionReadiness(n).ready);if(options.length&&rating>=70&&!pendingChoice&&chance(.28+rating/250)){const next=pick(options);ask('The next office',`${sup?sup.name:'Your supervisor'} closes the annual-review folder and offers you ${next.title} at ${money(next.pay)}. The work that brought you here will no longer be the work expected of you.`,[{label:'Accept the promotion',fn:()=>{promoteJob(next.id);S.happiness=clamp(S.happiness+6);}},{label:'Stay in your current role',fn:()=>{G.job.lastPromotionReviewYear=G.year;G.job.morale=clamp(G.job.morale+3);S.stress=clamp(S.stress-4);log(`You declined the ${next.title} role. The title passed to somebody else; your evenings remained your own.`);}}]);}
+}
+function runWorkplaceYear(j,schedule){
+  if(!G.job)return;ensureWorkplace();const x=G.job,style=workStyle(),primary=workPrimarySkill(j),skill=(K[primary]||0),network=workNetwork(),p=x.project||(x.nextProjectYear==null||G.year>=x.nextProjectYear?assignWorkProject(j,true):null);
+  x.burnout=clamp(x.burnout+Math.max(0,schedule.hours-40)/3+style.stress*.55-3);x.morale=clamp(x.morale+Math.round((network-50)/22)-Math.round(x.burnout/35)+rnd(-2,2));
+  if(p){const support=clamp((network-45)/9,-4,7),pace=clamp(Math.round(27+schedule.perf*1.4+style.project+skill*.09+support+rnd(-8,8)),8,58),qualityDelta=Math.round((skill-45)/14+style.quality+(x.morale-50)/25+rnd(-3,4));p.progress=clamp(p.progress+pace,0,130);p.quality=clamp(p.quality+qualityDelta);p.phase=Math.min(2,Math.floor(p.progress/34));x.effort=(x.effort||0)+Math.max(2,Math.round(pace/8));x.perf=clamp(x.perf+Math.round((pace-28)/8)+(p.lead?1:0));x.recognition=clamp(x.recognition+Math.round((style.network+support)/3));if((G.year>=p.deadline&&p.progress<78)||chance(.12+style.risk/100))workProjectDecision(p,j);if(p.progress>=100||G.year>p.deadline)completeWorkProject(p,j);else log(`At work, the ${p.name} reached ${Math.round(p.progress)}% completion. ${WORK_PHASES[p.phase]}: quality is tracking at ${Math.round(p.quality)}/100, and ${p.deadline-G.year<=0?'the deadline is now':'the deadline is '+p.deadline}.`);}
+  if(!G.job)return;workTurnover(j);if(!G.job)return;runWorkReview(j);
+}
 function renderSheet(){
-  const income=annualIncome();
+  const income=annualIncome(),lifePressure=consequenceProfile(),highestPressure=Object.entries(lifePressure.scores).sort((a,b)=>b[1]-a[1])[0];
   const skillsHtml=Object.keys(SKILLS).map(k=>`<div><span>${SKILLS[k]}</span><b>${Math.round(K[k])}</b></div>`).join('');
   $('sheet').innerHTML=`
     <div class="name">${esc(G.first)} ${esc(G.last)}</div>
@@ -2171,6 +2344,7 @@ function renderSheet(){
     <div class="kv"><span>Status</span><span>${statusLine()}</span></div>
     <div class="kv"><span>Love</span><span>${relLine()}</span></div>
     <div class="kv"><span>Home</span><span>${homeLabel()}</span></div>
+    ${highestPressure&&highestPressure[1]>=38?`<div class="kv"><span>Life pressure</span><span style="color:${highestPressure[1]>=58?'var(--red)':'var(--gold)'}">${esc(CONSEQUENCE_DOMAINS[highestPressure[0]].name)} • ${consequencePressureWord(highestPressure[1])}</span></div>`:''}
     ${(G.arcs||[]).some(a=>!a.done)?`<div class="kv"><span>Ongoing stories</span><span>${G.arcs.filter(a=>!a.done).length}</span></div>`:''}
     ${G.talent?`<div class="kv"><span>Talent</span><span>${TALENTS[G.talent]?TALENTS[G.talent].name:capitalize(G.talent)}</span></div>`:''}
     ${G.addiction.alcohol>25?`<div class="kv"><span>Drinking</span><span style="color:var(--red)">${G.addiction.alcohol>60?'severe':'a problem'}</span></div>`:''}
@@ -2209,6 +2383,7 @@ let schoolOpen=null; // selected classmate or faculty member
 let datingCandidateDraft=null; // profile currently being considered in Love
 const MENU=[
  {id:'people', title:'Relationships', sub:'Family, friends, the people in your life', icon:'💞', body:tabLife},
+ {id:'consequences',title:'Consequences',sub:'See how every part of life affects the others',icon:'⚖️',body:tabConsequences},
  {id:'love',   title:'Love',          sub:'Dating, romance, and everything after', icon:'❤️', body:tabLove,        cond:()=>G.age>=13},
  {id:'work',   title:'Occupation',    sub:'Jobs, military, special careers, gigs', icon:'💼', body:tabWork},
  {id:'edu',    title:'Education',      sub:'School, degrees, and summer camps',     icon:'🎓', body:tabLearn},
@@ -2254,8 +2429,8 @@ function onActClick(e){
   const b=e.target.closest('button[data-act]'); if(!b)return;
   const act=b.dataset.act, arg=b.dataset.arg;
   const H={
-    activity:doActivity, gig:doGig, 'apply-job':a=>applyJob(a), 'work-harder':workHarder,
-    'ask-raise':askRaise, 'work-hours':openWorkHours, 'promotion-review':requestPromotion, 'retire-job':retireFromJob, 'claim-pension':claimPensionAction,
+    activity:doActivity, gig:doGig, 'apply-job':a=>applyJob(a),
+    'work-style':openWorkStyle, 'work-hours':openWorkHours, 'retire-job':retireFromJob, 'claim-pension':claimPensionAction,
     'work-collaborate':a=>workInteract(a,'collaborate'), 'work-network':a=>workInteract(a,'network'), 'work-befriend':a=>workInteract(a,'befriend'), 'work-confront':a=>workInteract(a,'confront'), 'work-steal':workTakeCredit, 'work-hr':workReportHR,
     'quit-job':()=>{quitJob();afterAction(0);}, 'start-special':startSpecialConfirm,
     'special-work':()=>specialWork(), 'special-train':specialTrain, 'career-action':careerAction, 'quit-special':quitSpecial,
@@ -2389,6 +2564,7 @@ function npcBreakup(id){ const n=npc(id);if(!n)return;if(n.role==='spouse'){open
 function jobEligible(j){
   if(G.age<j.age)return false;
   if(G.edu<(j.edu||0))return false;
+  if(j.clean&&(G.record||[]).length)return false;
   if(j.major&&!(G.major&&j.major.includes(G.major)))return false;
   for(const s in (j.skills||{})){ if((K[s]||0)<j.skills[s])return false; }
   if(j.prev&&j.prev.length){ return !!(G.job&&j.prev.includes(G.job.id)); }
@@ -2402,9 +2578,10 @@ function tabWork(){
     const m=G.military,mp=pensionEligibility('Military');
     h+=`<div class="grp"><h4>${m.branch}</h4><div class="note">${(m.officer?OFFICER:ENLISTED)[m.rank]} • ${G.military.years}y served • retirement pension ${mp.years}/${mp.rule.years} years${mp.ready?` • ${money(mp.annual)}/yr vested`:''}</div><div class="acts">${actBtn('activity','sportstrain','Train hard','$700')}${actBtn('discharge',null,mp.ready?'Retire from service':'Request discharge')}</div></div>`;
   } else if(G.job){
-    const j=JOB[G.job.id];ensureWorkplace();const schedule=workSchedule(),network=workNetwork(),pension=pensionEligibility(j.track);
-    h+=`<div class="grp"><h4>${j.title}</h4><div class="note">${money(jobAnnualPay())}/yr • ${schedule.hours} hrs/week • ${G.job.years}y in role<br>Performance ${Math.round(G.job.perf)}/100 • effort ${Math.round(G.job.effort)} • recognition ${Math.round(G.job.recognition)}/100 • network ${network}/100${G.job.hrWarnings?` • HR warnings ${G.job.hrWarnings}`:''}</div><div class="acts">${actBtn('work-harder',null,'Work harder')}${actBtn('work-hours',null,'Choose hours',`${schedule.hours}/week`)}${actBtn('ask-raise',null,'Ask for a raise',G.job.lastRaiseYear===G.year?'reviewed this year':'')}${pension.ready?actBtn('retire-job',null,'Retire',`${money(pension.annual)}/yr pension`):''}${actBtn('quit-job',null,'Quit')}</div></div>`;
-    for(const next of (j.next||[]).map(id=>JOB[id]).filter(Boolean)){const check=promotionReadiness(next),criteria=check.criteria.filter(x=>!(x.name==='Education'&&check.requirements.edu===0)).map(x=>`<div class="kv"><span>${x.met?'✓':'○'} ${esc(x.name)}</span><span>${x.text?`${esc(x.value)}${x.target?` / needs ${esc(x.target)}`:''}`:`${x.value}${x.suffix||''} / ${x.target}${x.suffix||''}`}</span></div>`).join('');h+=`<div class="grp"><h4>Promotion path: ${esc(next.title)}</h4>${criteria}<div class="acts" style="margin-top:8px">${actBtn('promotion-review',next.id,'Request promotion review',check.ready?(G.job.lastPromotionReviewYear===G.year?'already reviewed this year':money(next.pay)):'thresholds not met',!check.ready||G.job.lastPromotionReviewYear===G.year)}</div></div>`;}
+    const j=JOB[G.job.id];ensureWorkplace();const schedule=workSchedule(),network=workNetwork(),pension=pensionEligibility(j.track),style=workStyle(),p=G.job.project,last=G.job.reviewHistory&&G.job.reviewHistory[G.job.reviewHistory.length-1];
+    h+=`<div class="grp"><h4>${j.title}</h4><div class="note">${money(jobAnnualPay())}/yr • ${schedule.hours} hrs/week • ${G.job.years}y in role<br>${esc(style.name)} — ${esc(style.note)}</div><div class="workdash"><div class="workcard"><div class="wklabel">Performance</div><div class="wkvalue">${Math.round(G.job.perf)}/100</div><div class="wkdetail">Latest review: ${last?esc(last.label)+' '+last.rating+'/100':'not yet reviewed'}</div></div><div class="workcard"><div class="wklabel">Job security</div><div class="wkvalue">${Math.round(G.job.security)}/100</div><div class="wkdetail">${G.job.security>=70?'Stable':G.job.security>=45?'Watchful':'At risk'}</div></div><div class="workcard"><div class="wklabel">Recognition</div><div class="wkvalue">${Math.round(G.job.recognition)}/100</div><div class="wkdetail">Network ${network}/100</div></div><div class="workcard"><div class="wklabel">Work life</div><div class="wkvalue">${Math.round(G.job.morale)}/100 morale</div><div class="wkdetail">Burnout ${Math.round(G.job.burnout)}/100</div></div></div><div class="acts">${actBtn('work-style',null,'Choose work style',style.name)}${actBtn('work-hours',null,'Choose hours',`${schedule.hours}/week`)}${pension.ready?actBtn('retire-job',null,'Retire',`${money(pension.annual)}/yr pension`):''}${actBtn('quit-job',null,'Quit')}</div></div>`;
+    h+=`<div class="grp"><h4>Current assignment</h4>${p?`<div class="workproject"><b>${esc(p.name)}</b><div class="note">${p.lead?'Project lead':'Project team'} • ${WORK_PHASES[p.phase]} • deadline ${p.deadline}<br>Progress ${Math.round(p.progress)}% • quality ${Math.round(p.quality)}/100 • difficulty ${p.difficulty}/100</div>${miniBar('Progress',Math.min(100,p.progress),'smarts')}${miniBar('Quality',p.quality,'happy')}</div>`:`<div class="note">The last assignment is closed. Management will assign the next project ${G.job.nextProjectYear&&G.job.nextProjectYear>G.year?'next year':'during the next work cycle'}.</div>`}<div class="note">Assignments progress automatically when you age up. Your hours, work style, skills, team relationships, morale, and workplace events determine the result.</div></div>`;
+    for(const next of (j.next||[]).map(id=>JOB[id]).filter(Boolean)){const check=promotionReadiness(next),criteria=check.criteria.filter(x=>!(x.name==='Education'&&check.requirements.edu===0)).map(x=>`<div class="kv"><span>${x.met?'✓':'○'} ${esc(x.name)}</span><span>${x.text?`${esc(x.value)}${x.target?` / needs ${esc(x.target)}`:''}`:`${x.value}${x.suffix||''} / ${x.target}${x.suffix||''}`}</span></div>`).join('');h+=`<div class="grp"><h4>Management track: ${esc(next.title)}</h4>${criteria}<div class="note">Promotion reviews are automatic. Meeting every threshold makes you eligible; strong annual results and supervisor support determine whether an offer arrives.</div></div>`;}
     if(!(j.next||[]).length)h+=`<div class="note">You have reached the top of the ${esc(j.track.toLowerCase())} career ladder. Raises, hours, reputation, and retirement still matter.</div>`;
     const contacts=workContacts();h+=`<div class="grp"><h4>Your workplace</h4><div class="note">Relationships here affect promotion reviews. Open a person to collaborate, network, become friends, confront misconduct, report it, or take credit.</div><div class="list">${contacts.map(personRow).join('')}</div></div>`;
     if(pension.rule)h+=`<div class="grp"><h4>${esc(pension.rule.name)}</h4><div class="note">${pension.years}/${pension.rule.years} service years • retirement age ${pension.rule.age} • projected benefit ${money(pension.annual)}/yr${pension.claimed?' • already claimed':pension.ready?' • vested and available now':''}</div></div>`;
@@ -2422,7 +2599,11 @@ function tabWork(){
   h+=grp('Freelance & side income', gigs.length?gigs.map(g=>{const used=(G.flags.gigCounts&&G.flags.gigCounts[g.id])||0;return actBtn('gig',g.id,g.name,g.cap?`${used}/${g.cap} completed • about ${money(Math.round(g.base*0.8))}`:money(Math.round(g.base*0.8)),g.cap&&used>=g.cap);}).join(''):'', gigs.length?'One-off money. Babysitting and lawn mowing can each be completed four times per life.':'Build a skill (Mind & Body) to unlock freelance work.');
   return h;
 }
-function applyJob(id){ const j=JOB[id];if(G.job){toast('Promotions now require a formal review from your current occupation page.');return;}if(!j||!jobEligible(j)){toast("You don't qualify for that.");return;}setJob(id);afterAction(0); }
+function applyJob(id){
+ const j=JOB[id];if(G.job){toast('Career movement now happens through workplace reviews and offers.');return;}if(!j||!jobEligible(j)){toast("You don't qualify for that.");return;}if(!G.flags.jobApplications||G.flags.jobApplicationYear!==G.year){G.flags.jobApplications={};G.flags.jobApplicationYear=G.year;}if(G.flags.jobApplications[id]){toast('This employer has already considered you this year.');return;}G.flags.jobApplications[id]=true;
+ const consequence=ensureConsequences(),primary=workPrimarySkill(j),skill=K[primary]||0,educationFit=Math.max(0,G.edu-(j.edu||0)),recordPenalty=(G.record||[]).length*(j.clean?12:4),networkBoost=Math.min(10,(G.flags.collegeNetwork||0)/5),barrier=consequence.barriers.employmentUntil>=G.year?.14:0,educationBoost=consequence.barriers.educationBoostUntil>=G.year?.1:0,base=j.kind==='part'?.72:.58,odds=clamp(base+skill/260+S.smarts/650+K.charisma/700+educationFit*.04+networkBoost/100+educationBoost-recordPenalty/100-barrier,.12,.94);
+ if(chance(odds)){setJob(id);log(`The interview had awkward pauses and one answer you rewrote in your head on the way home. Then the offer arrived.`, 'good');}else{const consequenceText=barrier?` The application stopped after the background check; the old record had reached another new room.`:recordPenalty?` You could not tell whether the record made the decision, which is one of the ways a record keeps punishing you.`:educationBoost?` A strong referral got you into the room, but it could not make the final decision.`:'';log(`You applied for the ${j.title} position and sat through the practiced questions. The rejection arrived later, warm in tone and absolute in meaning.${consequenceText}`, 'bad');S.stress=clamp(S.stress+2);}afterAction(0);
+}
 function workHarder(){if(!G.job)return;if(!spendAct('work-harder'))return;ensureWorkplace();G.job.perf=clamp((G.job.perf||60)+rnd(5,11));G.job.effort=(G.job.effort||0)+rnd(7,12);G.job.recognition=clamp((G.job.recognition||0)+rnd(2,6));S.stress=clamp(S.stress+(G.job.hours>=50?8:6));const j=JOB[G.job.id];applyFx(j.gain);log(`You put your head down and made yourself visible: the hard assignment, the late revision, the problem nobody else volunteered to own. Your effort record and performance climbed, but the hours followed you home.`,'good');afterAction(0);}
 function askRaise(){if(!G.job)return;if(G.job.lastRaiseYear===G.year){toast('You have already had a compensation review this year.');return;}if(!spendAct('ask-raise'))return;G.job.lastRaiseYear=G.year;const odds=clamp(.18+G.job.perf/180+workNetwork()/350+(G.job.recognition||0)/400-(G.job.hrWarnings||0)*.05,.08,.88);if(chance(odds)){const r=Math.round(JOB[G.job.id].pay*rnd(3,9)/100);G.job.bonus=(G.job.bonus||0)+r;G.job.recognition=clamp(G.job.recognition+3);log(`You brought numbers, finished work, and a clear ask into the compensation meeting. It landed: ${money(r)} more a year. You floated to your car.`,'money');}else{log(`You asked for a raise. Your manager praised the work, talked about “the budget” and “timing,” and dressed no up as next quarter.`);S.stress=clamp(S.stress+4);G.job.perf=clamp(G.job.perf-3);}afterAction(0);}
 function startSpecialConfirm(type){
@@ -3499,6 +3680,8 @@ function collectStabilityIssues(){
  const livingSpouses=people.filter(n=>n.alive&&n.role==='spouse');
  if(livingSpouses.length>1)add('error','MULTIPLE_SPOUSES',`${livingSpouses.length} living NPCs are marked as the current spouse.`);
  if(G.job&&!JOB[G.job.id])add('error','JOB_REFERENCE_BROKEN',`The active job ID ${G.job.id} does not exist.`);
+ if(G.job&&JOB[G.job.id]){for(const key of ['perf','recognition','morale','security','burnout','reviewRating'])if(!Number.isFinite(G.job[key])||G.job[key]<0||G.job[key]>100)add('error','WORK_METER_RANGE',`${key} is outside 0–100.`);if(!WORK_STYLES[G.job.style])add('error','WORK_STYLE_INVALID','The active work style does not exist.');if(!Array.isArray(G.job.reviewHistory))add('error','WORK_REVIEW_SCHEMA','Work review history must be a list.');if(G.job.project&&(!Number.isFinite(G.job.project.progress)||!Number.isFinite(G.job.project.quality)))add('error','WORK_PROJECT_SCHEMA','The active workplace assignment is invalid.');}
+ const consequences=ensureConsequences();if(!Array.isArray(consequences.history)||!consequences.cooldowns||!consequences.barriers)add('error','CONSEQUENCE_SCHEMA','The life-consequence record is incomplete.');for(const key of Object.keys(CONSEQUENCE_DOMAINS))if(!Number.isFinite(consequences.scores[key])||consequences.scores[key]<0||consequences.scores[key]>100)add('error','CONSEQUENCE_RANGE',`${key} consequence pressure is outside 0–100.`);
  if(!G.rng||!Number.isFinite(G.rng.seed)||!Number.isFinite(G.rng.state))add('error','RNG_STATE_MISSING','This life has no reproducible random seed.');
  try{JSON.parse(JSON.stringify({G,NPCID}));}catch(e){add('error','SAVE_SERIALIZATION',`The current life cannot be serialized: ${e.message}`);}
  return issues;
@@ -3513,6 +3696,8 @@ function runCoreSelfTests(){
   test('Legacy loyalty changes bridge into conflict',()=>{const personality={};for(const key of Object.keys(PERSONALITY_TRAITS))personality[key]=50;const n={role:'friend',loyalty:30,personality,relationship:{connection:50,respect:50,attraction:20,conflict:10,familiarity:40,_legacyLoyalty:50},relationshipHistory:[]};const r=relationshipState(n);return r.connection===30&&r.conflict>10&&r.respect<50;});
  test('School record schema is complete',()=>G.school&&['achievements','disciplinaryLog','peerCouples','stageHistory','alumniIds'].every(k=>Array.isArray(G.school[k]))&&['attendance','behavior','popularity'].every(k=>Number.isFinite(G.school[k])&&G.school[k]>=0&&G.school[k]<=100));
  test('School relationships reference real people',()=>{const ids=new Set(G.npcs.map(n=>n.id));return [...G.school.classmateIds,...G.school.facultyIds,...G.school.alumniIds].every(id=>ids.has(id))&&G.school.peerCouples.every(c=>ids.has(c.a)&&ids.has(c.b)&&c.a!==c.b);});
+ test('Dynamic workplace schema',()=>!G.job||(JOB[G.job.id]&&WORK_STYLES[G.job.style]&&['perf','recognition','morale','security','burnout','reviewRating'].every(k=>Number.isFinite(G.job[k])&&G.job[k]>=0&&G.job[k]<=100)&&Array.isArray(G.job.reviewHistory)&&(!G.job.project||(Number.isFinite(G.job.project.progress)&&Number.isFinite(G.job.project.quality)))));
+ test('Life-consequence schema and ranges',()=>{const c=ensureConsequences(),p=consequenceProfile();return Array.isArray(c.history)&&c.cooldowns&&c.barriers&&Object.keys(CONSEQUENCE_DOMAINS).every(k=>Number.isFinite(p.scores[k])&&p.scores[k]>=0&&p.scores[k]<=100);});
  syncRandomState();return tests;
 }
 function buildStabilityReport(){return {gameVersion:GAME_VERSION,generatedAt:new Date().toISOString(),life:{name:G&&G.name,age:G&&G.age,year:G&&G.year,lifeStage:G&&G.lifeStage,seed:G&&G.rng&&G.rng.seed},issues:collectStabilityIssues(),selfTests:runCoreSelfTests()};}
@@ -3536,7 +3721,7 @@ function repairStability(){
 }
 function exportStabilityReport(){
  const report=buildStabilityReport(),blob=new Blob([JSON.stringify(report,null,2)],{type:'application/json'}),a=document.createElement('a');
- a.href=URL.createObjectURL(blob);a.download=`SMIS-diagnostic-seed-${report.life.seed}.json`;a.click();URL.revokeObjectURL(a.href);toast('Diagnostic report exported.');
+ a.href=URL.createObjectURL(blob);a.download=`LifeMachine-diagnostic-seed-${report.life.seed}.json`;a.click();URL.revokeObjectURL(a.href);toast('Diagnostic report exported.');
 }
 function openGod(){
   if(!G){toast('Start a life first.');return;}
@@ -3719,7 +3904,7 @@ function sanitizeSave(){
  if(!G)return;
  G.items=(G.items||[]).filter(it=>ITEM[it.id]);G.props=(G.props||[]).filter(p=>PROP[p.id]);
  if(G.job&&(!JOB[G.job.id]||['babysit','lawns'].includes(G.job.id)))G.job=null;if(G.special&&!SPECIAL[G.special.type])G.special=null;
- if(!G.flags)G.flags={};if(!G.flags.gigCounts||typeof G.flags.gigCounts!=='object')G.flags.gigCounts={};if(!G.addiction)G.addiction={alcohol:0,drugs:0};if(!G.social)G.social={};if(!G.pets)G.pets=[];if(!Array.isArray(G.conditions))G.conditions=[];G.conditions=G.conditions.filter(c=>DISEASE[c.id]);
+ if(!G.flags)G.flags={};if(!G.flags.gigCounts||typeof G.flags.gigCounts!=='object')G.flags.gigCounts={};if(!G.addiction)G.addiction={alcohol:0,drugs:0};if(!G.social)G.social={};if(!G.pets)G.pets=[];if(!Array.isArray(G.conditions))G.conditions=[];G.conditions=G.conditions.filter(c=>DISEASE[c.id]);ensureConsequences();
  if(!Array.isArray(G.pensions))G.pensions=[];if(!G.serviceYears||typeof G.serviceYears!=='object')G.serviceYears={};if(!G.highSalary||typeof G.highSalary!=='object')G.highSalary={};if(!Array.isArray(G.careerHistory))G.careerHistory=[];if(!Array.isArray(G.supportOrders))G.supportOrders=[];if(!Array.isArray(G.divorceHistory))G.divorceHistory=[];
  if(!G.familyWealth){const parentIncome=(G.npcs||[]).filter(n=>n.role==='parent').reduce((sum,n)=>sum+(n.income||0),0);G.familyWealth=parentIncome>=300000?'affluent':parentIncome>=170000?'wealthy':parentIncome>=90000?'comfortable':'modest';}
  const schoolDefaults={popularity:40,attendance:100,behavior:72,disciplinePoints:0,detentions:0,suspensions:0,clique:null,team:null,teamRole:null,seasonYear:null,type:'public',name:'Public school',classmateIds:[],facultyIds:[],alumniIds:[],danceYear:null,promAttended:false,promCourt:null,club:null,clubYear:null,schoolEvents:{},schoolChoiceYear:null,recommendation:false,achievements:[],disciplinaryLog:[],peerCouples:[],bullyId:null,crushId:null,counselorPlan:null,lastPeerYear:null,stageHistory:[]};G.school=Object.assign(schoolDefaults,G.school||{});G.school.popularity=clamp(Number.isFinite(G.school.popularity)?G.school.popularity:40);G.school.attendance=clamp(Number.isFinite(G.school.attendance)?G.school.attendance:100);G.school.behavior=clamp(Number.isFinite(G.school.behavior)?G.school.behavior:72);for(const k of ['disciplinePoints','detentions','suspensions'])G.school[k]=Math.max(0,Number.isFinite(G.school[k])?Math.round(G.school[k]):0);if(G.school.team&&!G.school.teamRole)G.school.teamRole='Player';for(const key of ['classmateIds','facultyIds','alumniIds','achievements','disciplinaryLog','peerCouples','stageHistory'])if(!Array.isArray(G.school[key]))G.school[key]=[];if(!G.school.schoolEvents||typeof G.school.schoolEvents!=='object')G.school.schoolEvents={};if(!SCHOOL_TYPES[G.school.type]){G.school.type='public';G.school.name='Public school';}if(G.school.club&&!SCHOOL_CLUBS[G.school.club])G.school.club=null;if(G.age>=5&&G.age<=17&&!G.inSchool&&G.special&&!G.flags.highSchoolDropout)G.flags.leftSchoolForCareer=true;if(!G.invest)G.invest={};if(!G.market)G.market={};if(!G.marketChg)G.marketChg={};
